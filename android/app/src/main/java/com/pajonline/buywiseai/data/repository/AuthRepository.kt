@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 sealed class AuthState {
     object Loading : AuthState()
-    object Guest : AuthState()
+    object Unauthenticated : AuthState()
     data class Authenticated(
         val userEmail: String,
         val displayName: String = "BuyWise Shopper",
@@ -27,7 +27,7 @@ class AuthRepository {
         }
     }
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Guest)
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     init {
@@ -42,12 +42,17 @@ class AuthRepository {
             val displayName = currentUser.displayName ?: userEmail.substringBefore("@")
             _authState.value = AuthState.Authenticated(userEmail, displayName, role)
         } else {
-            _authState.value = AuthState.Guest
+            _authState.value = AuthState.Unauthenticated
         }
     }
 
-    fun signInAsGuest() {
-        _authState.value = AuthState.Guest
+    fun signOut() {
+        try {
+            auth?.signOut()
+        } catch (e: Exception) {
+            // Ignore
+        }
+        _authState.value = AuthState.Unauthenticated
     }
 
     fun signInWithEmail(email: String, password: String, onResult: (Boolean, String) -> Unit) {
@@ -98,14 +103,6 @@ class AuthRepository {
         }
     }
 
-    fun signOut() {
-        try {
-            auth?.signOut()
-        } catch (e: Exception) {
-            // Ignore
-        }
-        _authState.value = AuthState.Guest
-    }
 
     fun sendPasswordResetEmail(email: String, onResult: (Boolean, String) -> Unit) {
         val targetAuth = auth

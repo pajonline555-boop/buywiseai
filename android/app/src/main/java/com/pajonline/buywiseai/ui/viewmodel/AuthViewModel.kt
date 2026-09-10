@@ -11,8 +11,8 @@ class AuthViewModel(
 
     val authState: StateFlow<AuthState> = authRepository.authState
 
-    fun signInAsGuest() {
-        authRepository.signInAsGuest()
+    fun checkAuthState() {
+        authRepository.checkAuthState()
     }
 
     fun signInWithEmail(email: String, password: String, onResult: (Boolean, String) -> Unit) {

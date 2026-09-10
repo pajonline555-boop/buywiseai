@@ -8,16 +8,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import com.pajonline.buywiseai.data.repository.AuthState
 import com.pajonline.buywiseai.ui.navigation.BuyWiseBottomBar
 import com.pajonline.buywiseai.ui.navigation.BuyWiseNavGraph
 import com.pajonline.buywiseai.ui.screens.ai.AiAssistantBottomSheet
+import com.pajonline.buywiseai.ui.screens.auth.MandatoryAuthScreen
 import com.pajonline.buywiseai.ui.theme.BuyWiseTheme
+import com.pajonline.buywiseai.ui.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -26,32 +30,43 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BuyWiseTheme {
-                val navController = rememberNavController()
-                var showAiSheet by remember { mutableStateOf(false) }
-                val sheetState = rememberModalBottomSheetState()
+                val authViewModel = remember { AuthViewModel() }
+                val authState by authViewModel.authState.collectAsState()
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = { BuyWiseBottomBar(navController = navController) }
-                ) { innerPadding ->
-                    BuyWiseNavGraph(
-                        navController = navController,
-                        paddingValues = innerPadding,
-                        onOpenAiAssistant = { showAiSheet = true }
+                if (authState is AuthState.Unauthenticated) {
+                    MandatoryAuthScreen(
+                        onAuthSuccess = { authViewModel.checkAuthState() },
+                        authViewModel = authViewModel
                     )
+                } else {
+                    val navController = rememberNavController()
+                    var showAiSheet by remember { mutableStateOf(false) }
+                    val sheetState = rememberModalBottomSheetState()
 
-                    if (showAiSheet) {
-                        AiAssistantBottomSheet(
-                            sheetState = sheetState,
-                            onDismiss = { showAiSheet = false },
-                            onNavigateToSearch = { query ->
-                                showAiSheet = false
-                                navController.navigate("search")
-                            }
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        bottomBar = { BuyWiseBottomBar(navController = navController) }
+                    ) { innerPadding ->
+                        BuyWiseNavGraph(
+                            navController = navController,
+                            paddingValues = innerPadding,
+                            onOpenAiAssistant = { showAiSheet = true }
                         )
+
+                        if (showAiSheet) {
+                            AiAssistantBottomSheet(
+                                sheetState = sheetState,
+                                onDismiss = { showAiSheet = false },
+                                onNavigateToSearch = { query ->
+                                    showAiSheet = false
+                                    navController.navigate("search")
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+

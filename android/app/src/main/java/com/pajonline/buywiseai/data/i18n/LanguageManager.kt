@@ -15,10 +15,18 @@ object LanguageManager {
     val supportedLanguages = listOf(
         LanguageOption("en", "English", "🇮🇳"),
         LanguageOption("hi", "हिंदी", "🇮🇳"),
+        LanguageOption("hi-en", "Hinglish", "🇮🇳"),
         LanguageOption("bn", "বাংলা", "🇮🇳"),
-        LanguageOption("ta", "தமிழ்", "🇮🇳"),
+        LanguageOption("mr", "मराठी", "🇮🇳"),
         LanguageOption("te", "తెలుగు", "🇮🇳"),
-        LanguageOption("mr", "मराठी", "🇮🇳")
+        LanguageOption("ta", "தமிழ்", "🇮🇳"),
+        LanguageOption("gu", "ગુજરાતી", "🇮🇳"),
+        LanguageOption("ur", "اردو", "🇮🇳"),
+        LanguageOption("kn", "ಕನ್ನಡ", "🇮🇳"),
+        LanguageOption("or", "ଓଡ଼ିଆ", "🇮🇳"),
+        LanguageOption("ml", "മലയാളം", "🇮🇳"),
+        LanguageOption("pa", "ਪੰਜਾਬੀ", "🇮🇳"),
+        LanguageOption("as", "অসমীয়া", "🇮🇳")
     )
 
     var currentLanguageCode by mutableStateOf("en")
@@ -51,6 +59,20 @@ object LanguageManager {
             "nav_comp" to "चैलेंज",
             "nav_vto" to "ट्राई-ऑन",
             "nav_profile" to "प्रोफ़ाइल"
+        ),
+        "hi-en" to mapOf(
+            "app_tagline" to "AI Shopping & Trial Room Deals",
+            "search_placeholder" to "Search saree, shoes, latest mobile...",
+            "compare_btn" to "Compare Prices Across 14 Stores ➔",
+            "competition_title" to "Weekly BuyWise Challenge",
+            "vote_now" to "Vote Entry",
+            "try_on_now" to "✨ Try On",
+            "ai_assistant" to "BuyWise Maya Assistant",
+            "nav_home" to "Home",
+            "nav_search" to "Compare",
+            "nav_comp" to "Challenge",
+            "nav_vto" to "Trial Room",
+            "nav_profile" to "Profile"
         ),
         "bn" to mapOf(
             "app_tagline" to "এআই শপিং ও ভার্চুয়াল ট্রাই-অন",
@@ -107,6 +129,104 @@ object LanguageManager {
             "nav_comp" to "चॅलेंज",
             "nav_vto" to "ट्राय-ऑन",
             "nav_profile" to "प्रोफाइल"
+        ),
+        "gu" to mapOf(
+            "app_tagline" to "AI શોપિંગ અને વર્ચ્યુઅલ ટ્રાય-ઓન",
+            "search_placeholder" to "સાડી, ચંપલ, ફોન શોધો...",
+            "compare_btn" to "14 સ્ટોર્સમાં કિંમતોની સરખામણી કરો ➔",
+            "competition_title" to "સાપ્તાહિક બાયવાઇઝ ચેલેન્જ",
+            "vote_now" to "વોટ આપો",
+            "try_on_now" to "✨ ટ્રાય કરો",
+            "ai_assistant" to "બાયવાઇઝ AI આસિસ્ટન્ટ",
+            "nav_home" to "હોમ",
+            "nav_search" to "સરખામણી",
+            "nav_comp" to "ચેલેન્જ",
+            "nav_vto" to "ટ્રાય-ઓન",
+            "nav_profile" to "પ્રોફાઇલ"
+        ),
+        "ur" to mapOf(
+            "app_tagline" to "AI شاپنگ اور ورچوئل ٹرائی آن",
+            "search_placeholder" to "ساڑی، جوتے، فون تلاش کریں...",
+            "compare_btn" to "14 اسٹورز میں قیمتوں کا موازنہ کریں ➔",
+            "competition_title" to "ہفتہ وار بائی وائز چیلنج",
+            "vote_now" to "ووث دیں",
+            "try_on_now" to "✨ ٹرائی کریں",
+            "ai_assistant" to "بائی وائز AI اسسٹنٹ",
+            "nav_home" to "ہوم",
+            "nav_search" to "موازنہ",
+            "nav_comp" to "چیلنج",
+            "nav_vto" to "ٹرائی آن",
+            "nav_profile" to "پروفائل"
+        ),
+        "kn" to mapOf(
+            "app_tagline" to "AI ಶಾಪಿಂಗ್ ಮತ್ತು ವರ್ಚುವಲ್ ಟ್ರೈ-ಆನ್",
+            "search_placeholder" to "ಸೀರೆ, ಷೂ, ಫೋನ್ ಹುಡುಕಿ...",
+            "compare_btn" to "14 ಅಂಗಡಿಗಳಲ್ಲಿ ಬೆಲೆ ಹೋಲಿಕೆ ಮಾಡಿ ➔",
+            "competition_title" to "ವಾರದ ಬೈವೈಸ್ ಚಾಲೆಂಜ್",
+            "vote_now" to "ಮತ ಹಾಕಿ",
+            "try_on_now" to "✨ ಟ್ರೈ ಮಾಡಿ",
+            "ai_assistant" to "ಬೈವೈಸ್ AI ಅಸಿಸ್ಟೆಂಟ್",
+            "nav_home" to "ಹೋಮ್",
+            "nav_search" to "ಹೋಲಿಕೆ",
+            "nav_comp" to "ಚಾಲೆಂಜ್",
+            "nav_vto" to "ಟ್ರೈ-ಆನ್",
+            "nav_profile" to "ಪ್ರೊಫೈಲ್"
+        ),
+        "or" to mapOf(
+            "app_tagline" to "AI ସପିଂ ଏବଂ ଭର୍ଚୁଆଲ୍ ଟ୍ରାଏ-ଅନ୍",
+            "search_placeholder" to "ଶାଢୀ, ଜୁତା, ଫୋନ୍ ଖୋଜନ୍ତୁ...",
+            "compare_btn" to "14 ଟି ଷ୍ଟୋରରେ ମୂଲ୍ୟ ତୁଳନା କରନ୍ତୁ ➔",
+            "competition_title" to "ସାପ୍ତାହିକ ବାଏୱାଇଜ୍ ଚ୍ୟାଲେଞ୍ଜ",
+            "vote_now" to "ଭୋଟ୍ ଦିଅନ୍ତୁ",
+            "try_on_now" to "✨ ଟ୍ରାଏ କରନ୍ତୁ",
+            "ai_assistant" to "ବାଏୱାଇଜ୍ AI ଆସିଷ୍ଟାଣ୍ଟ",
+            "nav_home" to "ହୋମ୍",
+            "nav_search" to "ତୁଳନା",
+            "nav_comp" to "ଚ୍ୟାଲେଞ୍ଜ",
+            "nav_vto" to "ଟ୍ରାଏ-ଅନ୍",
+            "nav_profile" to "ପ୍ରୋଫାଇଲ୍"
+        ),
+        "ml" to mapOf(
+            "app_tagline" to "AI ഷോപ്പിംഗ് & വെർച്വൽ ട്രൈ-ഓൺ",
+            "search_placeholder" to "സാരി, ഷൂസ്, ഫോൺ തിരയുക...",
+            "compare_btn" to "14 സ്റ്റോറുകളിൽ വില താരതമ്യം ചെയ്യുക ➔",
+            "competition_title" to "ആഴ്ചയിലെ ബൈവൈസ് ചലഞ്ച്",
+            "vote_now" to "വോട്ട് ചെയ്യുക",
+            "try_on_now" to "✨ ട്രൈ ചെയ്യുക",
+            "ai_assistant" to "ബൈവൈസ് AI അസിസ്റ്റന്റ്",
+            "nav_home" to "ഹോം",
+            "nav_search" to "താരതമ്യം",
+            "nav_comp" to "ചലഞ്ച്",
+            "nav_vto" to "ട്രൈ-ഓൺ",
+            "nav_profile" to "പ്രൊഫൈൽ"
+        ),
+        "pa" to mapOf(
+            "app_tagline" to "AI ਸ਼ਾਪਿੰਗ ਅਤੇ ਵਰਚੁਅਲ ਟਰਾਈ-ਆਨ",
+            "search_placeholder" to "ਸਾੜ੍ਹੀ, ਜੁੱਤੀਆਂ, ਫੋਨ ਖੋਜੋ...",
+            "compare_btn" to "14 ਸਟੋਰਾਂ ਵਿੱਚ ਕੀਮਤਾਂ ਦੀ ਤੁਲਨਾ ਕਰੋ ➔",
+            "competition_title" to "ਹਫਤਾਵਾਰੀ ਬਾਈਵਾਈਜ਼ ਚੈਲੇਂਜ",
+            "vote_now" to "ਵੋਟ ਦਿਓ",
+            "try_on_now" to "✨ ਟਰਾਈ ਕਰੋ",
+            "ai_assistant" to "ਬਾਈਵਾਈਜ਼ AI ਅਸਿਸਟੈਂਟ",
+            "nav_home" to "ਹੋਮ",
+            "nav_search" to "ਤੁਲਨਾ",
+            "nav_comp" to "ਚੈਲੇਂਜ",
+            "nav_vto" to "ਟਰਾਈ-ਆਨ",
+            "nav_profile" to "ਪ੍ਰੋਫਾਈਲ"
+        ),
+        "as" to mapOf(
+            "app_tagline" to "AI শ্বপিং আৰু ভাৰ্চুৱেল ট্ৰাই-অন",
+            "search_placeholder" to "শাৰী, জোতা, ফোন সন্ধান কৰক...",
+            "compare_btn" to "১৪ টা ষ্ট'ৰত মূল্য তুলনা কৰক ➔",
+            "competition_title" to "সপ্তাহেকীয়া বাইৱাইজ চেলেঞ্জ",
+            "vote_now" to "ভোট দিয়ক",
+            "try_on_now" to "✨ ট্ৰাই কৰক",
+            "ai_assistant" to "বাইৱাইজ AI সহকাৰী",
+            "nav_home" to "হোম",
+            "nav_search" to "তুলনা",
+            "nav_comp" to "চেলেঞ্জ",
+            "nav_vto" to "ট্ৰাই-অন",
+            "nav_profile" to "প্ৰফাইল"
         )
     )
 

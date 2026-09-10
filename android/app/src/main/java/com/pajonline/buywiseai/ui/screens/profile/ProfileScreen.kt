@@ -163,13 +163,13 @@ fun ProfileScreen(
                                 }
                                 else -> {
                                     Text(
-                                        text = "Guest Shopper",
+                                        text = "BuyWise Shopper",
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
                                     )
                                     Text(
-                                        text = "Local Encryption • Active",
+                                        text = "Encrypted Account • Active",
                                         fontSize = 12.sp,
                                         color = BuyWiseGold
                                     )
@@ -177,7 +177,7 @@ fun ProfileScreen(
                             }
                         }
 
-                        if (authState is AuthState.Guest) {
+                        if (authState is AuthState.Unauthenticated) {
                             Button(
                                 onClick = { showAuthDialog = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7)),

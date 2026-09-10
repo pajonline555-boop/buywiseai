@@ -68,7 +68,7 @@ fun AlertsScreen() {
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Guest Mode Active",
+                        text = "Price Drop Notifications Active",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
