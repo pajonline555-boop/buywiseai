@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Server-Authoritative Admin Check via Firebase Custom Claims
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true || 
+        request.auth.token.role == 'ADMIN'
+      );
+    }
+
+    // Global Partner Merchant Check
+    function isPartner() {
+      return request.auth != null && (
+        request.auth.token.role == 'PARTNER' || 
+        isAdmin()
+      );
+    }
+
+    // Authenticated User Check
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Helper: Prevent client modification of privileged identity & subscription fields
+    function isUnprivilegedUserFieldMutation() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'admin', 'subscriptionStatus', 'planId', 'credits', 'commission', 'payoutStatus']);
+    }
+
+    // 1. User Profiles (/users/{userId})
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if request.auth != null && request.auth.uid == userId 
+                    && (!request.resource.data.keys().hasAny(['role', 'admin']) || isAdmin());
+      allow update: if (isOwner(userId) && isUnprivilegedUserFieldMutation()) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // 2. Price Alerts (/alerts/{alertId})
+    match /alerts/{alertId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 3. Coupons & Deals (/coupons/{couponId})
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 4. Partner Products (/partner_products/{productId})
+    match /partner_products/{productId} {
+      allow read: if true;
+      allow create: if isPartner() && request.resource.data.partnerId == request.auth.uid;
+      allow update, delete: if isPartner() && (resource.data.partnerId == request.auth.uid || isAdmin());
+    }
+
+    // 5. Partner Orders (/partner_orders/{orderId})
+    match /partner_orders/{orderId} {
+      allow read: if isPartner() && (resource.data.partnerId == request.auth.uid || resource.data.shopperId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if isPartner() && (resource.data.partnerId == request.auth.uid || isAdmin())
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['commission', 'payoutStatus']);
+      allow delete: if isAdmin();
+    }
+
+    // 6. Competition Submissions (/competitionSubmissions/{submissionId})
+    match /competitionSubmissions/{submissionId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // 7. User Authorized Reviews (/user_authorized_reviews/{reviewId})
+    match /user_authorized_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // 8. Security Audit Logs (/security_audit_logs/{logId})
+    match /security_audit_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 9. Subscriptions (/subscriptions/{subId})
+    match /subscriptions/{subId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 10. Subscription Events (/subscription_events/{eventId})
+    match /subscription_events/{eventId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 11. Entitlements (/entitlements/{entId})
+    match /entitlements/{entId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 12. VTO Usage & Credit Logs (/vto_usage/{usageId})
+    match /vto_usage/{usageId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 13. Payment Events (/payment_events/{eventId})
+    match /payment_events/{eventId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Default Deny All Unmatched Documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

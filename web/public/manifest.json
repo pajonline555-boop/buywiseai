@@ -1,0 +1,17 @@
+{
+  "name": "BuyWise AI - AI Visual & Price Real-Time Comparison",
+  "short_name": "BuyWise AI",
+  "description": "Compare live deals & prices across Amazon, Flipkart, Croma, Myntra, and Meesho in Indian Rupees (₹) with AI Virtual Try-On.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C0A14",
+  "theme_color": "#0C0A14",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

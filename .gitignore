@@ -1,0 +1,88 @@
+# BuyWise AI Root .gitignore
+
+# Dependencies
+node_modules/
+web/node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Web Build Outputs
+web/.next/
+web/out/
+web/build/
+web/coverage/
+web/.firebase/
+.firebase/
+web/*.tsbuildinfo
+web/next-env.d.ts
+
+# Environment Files & Secrets (Never Commit Real Keys)
+.env
+.env.*
+!.env.example
+web/.env
+web/.env.*
+!web/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Android Build & Private Metadata
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties
+**/build/
+**/.gradle/
+**/.kotlin/
+
+# IDE Metadata & Machine Files
+.idea/
+.vscode/
+*.suo
+*.ntvsopt
+*.njsproj
+*.sln
+*.sw?
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary Files & Scratch Test Scripts
+*.tmp
+*.temp
+web/tmp/
+scratch/
+web/scratch/
+
+
+# Firebase Admin & Private Key Credentials
+service-account*.json
+firebase-admin*.json
+google-services*.json
+*.pem
+*.p12
+*.jks
+
+# Zip Archives & Large Build Bundles (GitHub 100MB Limit)
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.apk
+*.aab
+

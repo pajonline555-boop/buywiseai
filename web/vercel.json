@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/notifications/cron?window=MORNING_10_10",
+      "schedule": "40 4 * * *"
+    },
+    {
+      "path": "/api/notifications/cron?window=MIDDAY_14_15",
+      "schedule": "45 8 * * *"
+    },
+    {
+      "path": "/api/notifications/cron?window=EVENING_20_10",
+      "schedule": "40 14 * * *"
+    }
+  ]
+}

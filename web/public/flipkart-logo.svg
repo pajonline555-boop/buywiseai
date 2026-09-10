@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="100%" height="100%">
+  <!-- Yellow FK Shopping Bag -->
+  <g transform="translate(10, 10)">
+    <rect x="15" y="20" width="65" height="65" rx="14" fill="#FFE500" />
+    <path d="M 38 20 C 38 8 58 8 58 20" fill="none" stroke="#2874F0" stroke-width="6" stroke-linecap="round" />
+    <text x="47" y="67" fill="#2874F0" font-size="42" font-weight="900" font-style="italic" text-anchor="middle" font-family="sans-serif">f</text>
+    <line x1="18" y1="36" x2="28" y2="36" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+    <line x1="15" y1="44" x2="25" y2="44" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+  </g>
+  <!-- Flipkart White Text -->
+  <text x="100" y="72" fill="#ffffff" font-size="52" font-weight="900" font-style="italic" font-family="Arial, sans-serif" letter-spacing="-1">Flipkart</text>
+  <text x="315" y="45" fill="#FFE500" font-size="28" font-weight="900" font-style="italic" font-family="Arial, sans-serif">Plus</text>
+</svg>
