@@ -1,5 +1,6 @@
 package com.pajonline.buywiseai.ui.screens.profile
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -295,6 +296,17 @@ fun ProfileScreen(
                 accentColor = BuyWiseEmerald,
                 onClick = {
                     showInfoDialogText = "Offline English & Hindi price search NLP models are active."
+                }
+            )
+            ProfileMenuItem(
+                title = "App Guide (Replay Tutorial)",
+                actionText = "Replay ➔",
+                icon = Icons.Default.Info,
+                accentColor = BuyWiseGold,
+                onClick = {
+                    val prefs = context.getSharedPreferences("buywise_app_prefs", Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("has_completed_buywise_onboarding", false).apply()
+                    showInfoDialogText = "App Guide onboarding reset! Restart BuyWise AI or open Home to view the 7-card tutorial guide."
                 }
             )
 

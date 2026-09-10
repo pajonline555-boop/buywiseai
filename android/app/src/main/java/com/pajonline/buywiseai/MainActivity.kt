@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
                     SplashScreen()
                 } else if (authState is AuthState.Unauthenticated) {
                     MandatoryAuthScreen(
-                        onAuthSuccess = { authViewModel.checkAuthState() },
+                        onAuthSuccess = { /* authState is already updated to AuthState.Authenticated */ },
                         authViewModel = authViewModel
                     )
                 } else if (!hasCompletedOnboarding) {
@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
                         BuyWiseNavGraph(
                             navController = navController,
                             paddingValues = innerPadding,
+                            authViewModel = authViewModel,
                             onOpenAiAssistant = { showAiSheet = true }
                         )
 

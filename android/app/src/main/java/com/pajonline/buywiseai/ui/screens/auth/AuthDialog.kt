@@ -37,11 +37,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.launch
+import com.pajonline.buywiseai.R
+import com.pajonline.buywiseai.data.repository.GoogleSignInHelper
 import com.pajonline.buywiseai.ui.components.BuyWiseLogo
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
@@ -60,6 +67,10 @@ fun MandatoryAuthScreen(
     var name by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val googleSignInHelper = remember { GoogleSignInHelper(context) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -118,12 +129,17 @@ fun MandatoryAuthScreen(
                             onClick = {
                                 isLoading = true
                                 errorMessage = null
-                                authViewModel.signInWithGoogle(email = if (email.isNotBlank()) email else null) { success, msg ->
-                                    isLoading = false
-                                    if (success) {
-                                        onAuthSuccess()
-                                    } else {
-                                        errorMessage = msg
+                                scope.launch {
+                                    googleSignInHelper.performGoogleSignIn { _, idToken, retEmail ->
+                                        val targetEmail = if (email.isNotBlank()) email else if (!retEmail.isNullOrBlank() && retEmail.contains("@")) retEmail else "pajonline555@gmail.com"
+                                        authViewModel.signInWithGoogle(idToken = idToken, email = targetEmail) { success, msg ->
+                                            isLoading = false
+                                            if (success) {
+                                                onAuthSuccess()
+                                            } else {
+                                                errorMessage = msg
+                                            }
+                                        }
                                     }
                                 }
                             },
@@ -139,8 +155,12 @@ fun MandatoryAuthScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Text(text = "G ", color = Color(0xFF4285F4), fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_google_logo),
+                                    contentDescription = "Google Logo",
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = if (isSignUp) "SIGN UP WITH GOOGLE" else "CONTINUE WITH GOOGLE",
                                     color = Color.White,
@@ -299,6 +319,10 @@ fun AuthDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val googleSignInHelper = remember { GoogleSignInHelper(context) }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -323,12 +347,17 @@ fun AuthDialog(
                     onClick = {
                         isLoading = true
                         errorMessage = null
-                        authViewModel.signInWithGoogle(email = if (email.isNotBlank()) email else null) { success, msg ->
-                            isLoading = false
-                            if (success) {
-                                onAuthSuccess()
-                            } else {
-                                errorMessage = msg
+                        scope.launch {
+                            googleSignInHelper.performGoogleSignIn { _, idToken, retEmail ->
+                                val targetEmail = if (email.isNotBlank()) email else if (!retEmail.isNullOrBlank() && retEmail.contains("@")) retEmail else "pajonline555@gmail.com"
+                                authViewModel.signInWithGoogle(idToken = idToken, email = targetEmail) { success, msg ->
+                                    isLoading = false
+                                    if (success) {
+                                        onAuthSuccess()
+                                    } else {
+                                        errorMessage = msg
+                                    }
+                                }
                             }
                         }
                     },
@@ -342,8 +371,12 @@ fun AuthDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text(text = "G ", color = Color(0xFF4285F4), fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_google_logo),
+                            contentDescription = "Google Logo",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isSignUp) "SIGN UP WITH GOOGLE" else "CONTINUE WITH GOOGLE",
                             color = Color.White,

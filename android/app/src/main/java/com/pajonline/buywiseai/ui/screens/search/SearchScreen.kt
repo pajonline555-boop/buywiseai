@@ -1,6 +1,7 @@
 package com.pajonline.buywiseai.ui.screens.search
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -77,7 +80,7 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Search Bar with Voice (🎙) & Camera OCR (📷)
+            // Search Bar with Prominent Voice (🎙️) Search Button
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = query,
@@ -86,29 +89,18 @@ fun SearchScreen(
                     placeholder = { Text("Search iPhone, Saree, Shoes...", color = Color.Gray) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = BuyWiseCyan) },
                     trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "🎙",
-                                fontSize = 18.sp,
-                                modifier = Modifier
-                                    .clickable {
-                                        // Voice search trigger (Hindi / English / Hinglish)
-                                        query = "red saree under 3000"
-                                        viewModel.performSearch(query)
-                                    }
-                                    .padding(horizontal = 4.dp)
-                            )
-                            Text(
-                                text = "📷",
-                                fontSize = 18.sp,
-                                modifier = Modifier
-                                    .clickable {
-                                        // Product Image OCR trigger
-                                        query = "Samsung Galaxy S24 Ultra"
-                                        viewModel.performSearch(query)
-                                    }
-                                    .padding(horizontal = 6.dp)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .background(BuyWiseCyan.copy(alpha = 0.25f), CircleShape)
+                                .border(1.dp, BuyWiseCyan, CircleShape)
+                                .clickable {
+                                    query = "red saree under 3000"
+                                    viewModel.performSearch(query)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "🎙️", fontSize = 16.sp)
                         }
                     },
                     shape = RoundedCornerShape(12.dp),

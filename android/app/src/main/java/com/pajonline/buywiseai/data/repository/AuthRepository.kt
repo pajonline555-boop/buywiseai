@@ -138,6 +138,7 @@ class AuthRepository {
 
     fun signInWithGoogle(idToken: String? = null, email: String? = null, displayName: String? = null, onResult: (Boolean, String) -> Unit) {
         val targetAuth = auth
+        android.util.Log.d("BuyWiseAuthRepo", "signInWithGoogle called. targetAuth=$targetAuth, idTokenPresent=${!idToken.isNullOrBlank()}, email=$email")
         if (targetAuth != null && !idToken.isNullOrBlank()) {
             try {
                 val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
@@ -149,12 +150,15 @@ class AuthRepository {
                             val role = if (userEmail == "pajonline555@gmail.com" || userEmail == "akshayman224@gmail.com") "ADMIN" else "SHOPPER"
                             val name = user?.displayName ?: displayName ?: userEmail.substringBefore("@")
                             _authState.value = AuthState.Authenticated(userEmail, name, role)
+                            android.util.Log.d("BuyWiseAuthRepo", "Firebase Google Auth Success for $userEmail")
                             onResult(true, "Signed in with Google as $userEmail!")
                         } else {
+                            android.util.Log.e("BuyWiseAuthRepo", "Firebase Google Auth Failed", task.exception)
                             onResult(false, task.exception?.localizedMessage ?: "Google sign in failed.")
                         }
                     }
             } catch (e: Exception) {
+                android.util.Log.e("BuyWiseAuthRepo", "Firebase Google Auth Exception", e)
                 onResult(false, "Google credential authentication error: ${e.localizedMessage}")
             }
         } else {
@@ -162,6 +166,7 @@ class AuthRepository {
             val userDisplayName = if (!displayName.isNullOrBlank()) displayName else "Google Shopper"
             val role = if (userEmail == "pajonline555@gmail.com" || userEmail == "akshayman224@gmail.com") "ADMIN" else "SHOPPER"
             _authState.value = AuthState.Authenticated(userEmail, userDisplayName, role)
+            android.util.Log.d("BuyWiseAuthRepo", "Local Google Auth Success for $userEmail")
             onResult(true, "Signed in with Google ($userEmail)")
         }
     }

@@ -218,8 +218,21 @@ fun HomeScreen(
                             placeholder = { Text(tr("search_placeholder"), color = Color.Gray) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = BuyWiseCyan) },
                             trailingIcon = {
-                                IconButton(onClick = onOpenAiAssistant) {
-                                    Text("📷", fontSize = 18.sp)
+                                IconButton(
+                                    onClick = {
+                                        searchQuery = "red saree under 3000"
+                                        onNavigateToSearch(searchQuery)
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .background(BuyWiseCyan.copy(alpha = 0.25f), CircleShape)
+                                            .border(1.dp, BuyWiseCyan, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("🎙️", fontSize = 16.sp)
+                                    }
                                 }
                             },
                             shape = RoundedCornerShape(12.dp),
@@ -237,7 +250,7 @@ fun HomeScreen(
                         ) {
                             Button(
                                 onClick = { if (searchQuery.isNotBlank()) onNavigateToSearch(searchQuery) else onNavigateToSearch("iPhone 17") },
-                                modifier = Modifier.weight(1.2f),
+                                modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -245,13 +258,12 @@ fun HomeScreen(
                             }
 
                             Button(
-                                onClick = onOpenAiAssistant,
+                                onClick = onNavigateToVto,
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink.copy(alpha = 0.25f)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseNeonPink),
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text(text = "📷 Maya Photo AI", color = BuyWiseNeonPink, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                                Text(text = "✨ AI Trial Room", color = Color.White, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -436,34 +448,7 @@ fun HomeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(80.dp))
-            }
-
-            // FLOATING ACTION BUTTON: BUYWISE AI ASSISTANT (MAYA)
-            FloatingActionButton(
-                onClick = onOpenAiAssistant,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 20.dp, end = 16.dp),
-                containerColor = BuyWiseNeonPink,
-                contentColor = Color.White
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.maya_ai_avatar),
-                        contentDescription = "Maya AI Avatar",
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .border(1.5.dp, BuyWiseEmerald, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Maya AI 📷", fontWeight = FontWeight.Black, fontSize = 13.sp)
-                }
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }

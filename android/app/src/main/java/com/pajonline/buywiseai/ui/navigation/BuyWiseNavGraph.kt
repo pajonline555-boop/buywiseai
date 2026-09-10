@@ -16,6 +16,7 @@ import com.pajonline.buywiseai.ui.screens.home.HomeScreen
 import com.pajonline.buywiseai.ui.screens.profile.ProfileScreen
 import com.pajonline.buywiseai.ui.screens.search.SearchScreen
 import com.pajonline.buywiseai.ui.screens.vto.VtoScreen
+import com.pajonline.buywiseai.ui.viewmodel.AuthViewModel
 import com.pajonline.buywiseai.ui.viewmodel.SmartCompareViewModel
 
 @Composable
@@ -23,6 +24,7 @@ fun BuyWiseNavGraph(
     navController: NavHostController,
     paddingValues: PaddingValues,
     compareViewModel: SmartCompareViewModel = remember { SmartCompareViewModel() },
+    authViewModel: AuthViewModel = remember { AuthViewModel() },
     onOpenAiAssistant: () -> Unit = {}
 ) {
     NavHost(
@@ -79,6 +81,7 @@ fun BuyWiseNavGraph(
         }
         composable(Screen.Profile.route) {
             ProfileScreen(
+                authViewModel = authViewModel,
                 onNavigateToWeb = { title, url ->
                     try {
                         val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
