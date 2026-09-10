@@ -1,5 +1,6 @@
 package com.pajonline.buywiseai.ui.screens.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,9 +46,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import com.pajonline.buywiseai.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pajonline.buywiseai.data.i18n.LanguageManager
@@ -444,11 +449,19 @@ fun HomeScreen(
                 contentColor = Color.White
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("✨", fontSize = 18.sp)
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.maya_ai_avatar),
+                        contentDescription = "Maya AI Avatar",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, BuyWiseEmerald, CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Maya AI 📷", fontWeight = FontWeight.Black, fontSize = 13.sp)
                 }
             }

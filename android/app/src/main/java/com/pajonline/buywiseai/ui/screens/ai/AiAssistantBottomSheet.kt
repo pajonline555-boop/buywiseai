@@ -44,6 +44,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.pajonline.buywiseai.R
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseGold
@@ -90,15 +95,15 @@ fun AiAssistantBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
+                    Image(
+                        painter = painterResource(id = R.drawable.maya_ai_avatar),
+                        contentDescription = "Maya AI Avatar",
                         modifier = Modifier
-                            .size(42.dp)
-                            .background(BuyWisePurple, CircleShape)
-                            .border(1.5.dp, BuyWiseNeonPink, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "✨", fontSize = 22.sp)
-                    }
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, BuyWiseEmerald, CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
