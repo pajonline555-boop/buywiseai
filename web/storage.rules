@@ -1,0 +1,46 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Global Server-Authoritative Admin Check via Firebase Custom Claims
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true || 
+        request.auth.token.role == 'ADMIN'
+      );
+    }
+
+    // Helper: Validate image content-type and file size (Max 10MB)
+    function isValidImageUpload() {
+      return request.resource.size <= 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/jpeg')
+            || request.resource.contentType.matches('image/png')
+            || request.resource.contentType.matches('image/webp'));
+    }
+
+    // User Avatar & Profile Photos (/users/{userId}/*)
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if (request.auth != null && request.auth.uid == userId && isValidImageUpload()) || isAdmin();
+      allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+
+    // VTO User Input & Try-On Photo Studio Uploads (/try-on/{userId}/*)
+    match /try-on/{userId}/{allPaths=**} {
+      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow write: if (request.auth != null && request.auth.uid == userId && isValidImageUpload()) || isAdmin();
+      allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+
+    // Static Merchant & Product Media (/products/*)
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default Deny All Unmatched Storage Paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
