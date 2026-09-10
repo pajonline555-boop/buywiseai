@@ -1,5 +1,6 @@
 package com.pajonline.buywiseai.data.api
 
+import com.pajonline.buywiseai.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -8,8 +9,8 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    // Dev LAN IP for physical device connection to development PC
-    const val BASE_URL = "http://10.38.255.216:3000"
+    // Production Canonical Web Endpoint with BuildConfig fallback
+    val BASE_URL: String = if (BuildConfig.BASE_URL.isNotBlank()) BuildConfig.BASE_URL else "https://buywiseai.pajonline.co.in"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.HEADERS
