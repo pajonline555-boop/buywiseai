@@ -76,6 +76,20 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.work.runtime)
 
+    // Google Identity / Credential Manager
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
+    implementation(libs.play.services.auth)
+
+    // AdMob / Mobile Ads SDK
+    implementation(libs.play.services.ads)
+
+    // ML Kit On-Demand & Unbundled Services
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language.id)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

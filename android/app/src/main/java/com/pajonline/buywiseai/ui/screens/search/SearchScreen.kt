@@ -77,14 +77,40 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Search Bar
+            // Search Bar with Voice (🎙) & Camera OCR (📷)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Search iPhone, Saree, Shoes...", color = Color.Gray) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = BuyWiseCyan) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = BuyWiseCyan) },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🎙",
+                                fontSize = 18.sp,
+                                modifier = Modifier
+                                    .clickable {
+                                        // Voice search trigger (Hindi / English / Hinglish)
+                                        query = "red saree under 3000"
+                                        viewModel.performSearch(query)
+                                    }
+                                    .padding(horizontal = 4.dp)
+                            )
+                            Text(
+                                text = "📷",
+                                fontSize = 18.sp,
+                                modifier = Modifier
+                                    .clickable {
+                                        // Product Image OCR trigger
+                                        query = "Samsung Galaxy S24 Ultra"
+                                        viewModel.performSearch(query)
+                                    }
+                                    .padding(horizontal = 6.dp)
+                            )
+                        }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BuyWiseCyan,
@@ -103,7 +129,12 @@ fun SearchScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Non-Intrusive AdMob Banner Ad View
+            com.pajonline.buywiseai.core.ads.BannerAdView()
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             when (val state = uiState) {
                 is SmartCompareUiState.Loading -> {

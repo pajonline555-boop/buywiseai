@@ -157,6 +157,27 @@ export default function AppHeader() {
             </Link>
           )}
 
+          <Link href="/search" style={{ textDecoration: 'none' }}>
+            <button
+              title="Voice Search (English, Hindi, Hinglish)"
+              style={{
+                padding: '8px 12px',
+                fontSize: '14px',
+                fontWeight: 800,
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              🎙️
+            </button>
+          </Link>
+
           <Link href="/try-on" style={{ textDecoration: 'none' }}>
             <button 
               style={{ 
