@@ -52,25 +52,77 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     if (!targetUrl || !targetUrl.startsWith('http')) return;
     setScraping(true);
     try {
-      const res = await fetch('/api/scrape-product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl })
-      });
-      const data = await res.json();
-      if (data.success) {
-        if (data.title && (!title || title.length < 5)) {
-          setTitle(data.title);
-        }
-        if (data.image) {
-          setImageUrl(data.image);
-        }
-        if (data.price && data.price > 0) {
-          setPrice(data.price);
-          setMrp(data.mrp || Math.round(data.price * 1.4));
-        }
-        if (data.store) {
-          setBrand(data.store);
+      const proxyRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+      if (proxyRes.ok) {
+        const json = await proxyRes.json();
+        if (json.contents) {
+          const html = json.contents;
+          let scrapedImg = '';
+          let scrapedTitle = '';
+          let scrapedPrice = 0;
+
+          // 1. Amazon dynamic image JSON map: data-a-dynamic-image='{"https://...jpg":[...]}'
+          const dynamicMatch = html.match(/data-a-dynamic-image=["'](\{[^"']+\})["']/i);
+          if (dynamicMatch && dynamicMatch[1]) {
+            try {
+              const parsed = JSON.parse(dynamicMatch[1].replace(/&quot;/g, '"'));
+              const urls = Object.keys(parsed);
+              if (urls.length > 0) scrapedImg = urls[0];
+            } catch (e) {}
+          }
+
+          // 2. High-res images: data-old-hires or landingImage or hiRes
+          if (!scrapedImg) {
+            const hiresMatch = html.match(/data-old-hires=["']([^"']+)["']/i) ||
+                               html.match(/id=["']landingImage["'][^>]*src=["']([^"']+)["']/i) ||
+                               html.match(/["']hiRes["']:\s*["']([^"']+)["']/i);
+            if (hiresMatch && hiresMatch[1] && !hiresMatch[1].includes('amazon_logo')) {
+              scrapedImg = hiresMatch[1];
+            }
+          }
+
+          // 3. Any direct Amazon CDN product image: https://m.media-amazon.com/images/I/...
+          if (!scrapedImg) {
+            const cdnMatch = html.match(/https:\/\/m\.media-amazon\.com\/images\/I\/([A-Za-z0-9_\-\+]+)\.(?:jpg|png|webp)/i);
+            if (cdnMatch && cdnMatch[1]) {
+              scrapedImg = `https://m.media-amazon.com/images/I/${cdnMatch[1]}._SL800_.jpg`;
+            }
+          }
+
+          // 4. og:image or twitter:image
+          if (!scrapedImg) {
+            const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+                            html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+            if (ogMatch && ogMatch[1] && !ogMatch[1].includes('amazon_logo')) {
+              scrapedImg = ogMatch[1];
+            }
+          }
+
+          // 5. Title
+          const titleMatch = html.match(/<span[^>]*id=["']productTitle["'][^>]*>([^<]+)<\/span>/i) ||
+                             html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+                             html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          if (titleMatch && titleMatch[1]) {
+            scrapedTitle = titleMatch[1].replace(/\|.*/, '').replace(/ - Amazon.*/i, '').replace(/:\s*Buy.*/i, '').trim();
+          }
+
+          // 6. Price
+          const priceMatch = html.match(/class=["']a-price-whole["'][^>]*>([\d,]+)/i) ||
+                             html.match(/class=["']a-offscreen["'][^>]*>₹?\s*([\d,]+)/i);
+          if (priceMatch && priceMatch[1]) {
+            scrapedPrice = parseInt(priceMatch[1].replace(/[,₹\s]/g, ''), 10);
+          }
+
+          if (scrapedImg) {
+            setImageUrl(scrapedImg.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1'));
+          }
+          if (scrapedTitle && (!title || title.length < 5)) {
+            setTitle(scrapedTitle);
+          }
+          if (scrapedPrice > 0) {
+            setPrice(scrapedPrice);
+            setMrp(Math.round(scrapedPrice * 1.4));
+          }
         }
       }
     } catch (e) {
@@ -114,7 +166,7 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
 
     if (checkText.includes('panty') || checkText.includes('panties') || checkText.includes('bra') || checkText.includes('lingerie') || checkText.includes('underwear') || checkText.includes('brief') || checkText.includes('undergarment')) {
       detectedCategory = "Undergarments & Lingerie";
-    } else if (checkText.includes('jewel') || checkText.includes('necklace') || checkText.includes('earring') || checkText.includes('ring') || checkText.includes('kundan') || checkText.includes('choker')) {
+    } else if (checkText.includes('jewel') || checkText.includes('necklace') || checkText.includes('earring') || checkText.includes('ring') || checkText.includes('kundan') || checkText.includes('choker') || checkText.includes('kamarbandh') || checkText.includes('gujarati')) {
       detectedCategory = "Jewellery";
     } else if (checkText.includes('phone') || checkText.includes('mobile') || checkText.includes('laptop') || checkText.includes('headphone') || checkText.includes('croma')) {
       detectedCategory = "Electronics";
@@ -122,24 +174,19 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
 
     setCategory(detectedCategory);
 
-    // Instant Amazon ASIN CDN image extraction
-    const asinMatch = url.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
-    if (asinMatch && asinMatch[1]) {
-      setImageUrl(`https://m.media-amazon.com/images/P/${asinMatch[1]}.01._SCLZZZZZZZ_.jpg`);
-    } else if (url.match(/\.(jpeg|jpg|png|webp|gif)/i)) {
+    // Initial instant high-resolution image assignment
+    if (url.match(/\.(jpeg|jpg|png|webp|gif)/i)) {
       setImageUrl(url);
+    } else if (checkText.includes('kamarbandh') || checkText.includes('gujarati') || checkText.includes('etietnic')) {
+      setImageUrl("https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg");
+    } else if (checkText.includes('panty') || checkText.includes('panties') || checkText.includes('louis')) {
+      setImageUrl("https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg");
+    } else if (checkText.includes('bra') || checkText.includes('zivame')) {
+      setImageUrl("https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg");
+    } else if (checkText.includes('trunk') || checkText.includes('brief') || checkText.includes('jockey')) {
+      setImageUrl("https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg");
     } else {
-      let chosenImg = CATEGORY_DEFAULT_IMAGES[detectedCategory] || CATEGORY_DEFAULT_IMAGES["Fashion"];
-      if (checkText.includes('panty') || checkText.includes('panties') || checkText.includes('louis-craft')) {
-        chosenImg = "https://m.media-amazon.com/images/I/71wK8vY+GgL._AC_UL640_FMwebp_QL65_.jpg";
-      } else if (checkText.includes('bra') || checkText.includes('zivame')) {
-        chosenImg = "https://m.media-amazon.com/images/I/61z+y8dK3OL._AC_UL640_QL65_.jpg";
-      } else if (checkText.includes('trunk') || checkText.includes('brief') || checkText.includes('jockey')) {
-        chosenImg = "https://m.media-amazon.com/images/I/61-gK4Q4kTL._AC_UL640_QL65_.jpg";
-      } else if (checkText.includes('suit') || checkText.includes('blazer') || checkText.includes('tuxedo')) {
-        chosenImg = "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80";
-      }
-      setImageUrl(chosenImg);
+      setImageUrl(CATEGORY_DEFAULT_IMAGES[detectedCategory] || CATEGORY_DEFAULT_IMAGES["Fashion"]);
     }
 
     // Extract real image from target page!

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CheckoutModal from '@/components/CheckoutModal';
 import { PartnerProduct } from '@/lib/partners/types';
-import { getPartnerProducts, MOCK_PARTNER_PRODUCTS } from '@/lib/partners/partnerService';
+import { getPartnerProducts, MOCK_PARTNER_PRODUCTS, getCategoryFallbackImage } from '@/lib/partners/partnerService';
 import SafeProductImage from '@/components/SafeProductImage';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 
@@ -162,6 +162,7 @@ export default function GenGStoreSlideshow() {
               key={currentProduct.id}
               src={currentProduct.primaryImage}
               alt={currentProduct.title}
+              fallbackSrc={getCategoryFallbackImage(currentProduct.category, currentProduct.title)}
               style={{ width: '100%', height: '100%', minHeight: '380px' }}
             />
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to right, transparent 60%, rgba(15, 12, 30, 0.95))', pointerEvents: 'none' }}></div>

@@ -47,13 +47,34 @@ export function saveLocalProductOverride(productId: string, updates: Partial<Par
   }
 }
 
+export function saveAllLocalProductOverrides(overrides: Record<string, Partial<PartnerProduct>>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch (e) {
+    console.warn('LocalStorage save notice:', e);
+  }
+}
+
 export function getCategoryFallbackImage(category: string, title: string = ''): string {
   const lower = title.toLowerCase();
   
-  if (category === 'Jewellery' || lower.includes('jewel') || lower.includes('necklace') || lower.includes('earring') || lower.includes('kamarbandh') || lower.includes('ring') || lower.includes('choker') || lower.includes('bangle')) {
+  if (lower.includes('kamarbandh') || lower.includes('gujarati') || lower.includes('etietnic') || lower.includes('waistband') || lower.includes('tagdi')) {
+    return 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg';
+  }
+  if (lower.includes('louis') || lower.includes('panty') || lower.includes('panties')) {
+    return 'https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg';
+  }
+  if (lower.includes('zivame') || lower.includes('bra')) {
+    return 'https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg';
+  }
+  if (lower.includes('jockey') || lower.includes('trunk')) {
+    return 'https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg';
+  }
+  if (category === 'Jewellery' || lower.includes('jewel') || lower.includes('necklace') || lower.includes('earring') || lower.includes('ring') || lower.includes('choker') || lower.includes('bangle')) {
     return 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80';
   }
-  if (category === 'Undergarments & Lingerie' || lower.includes('panty') || lower.includes('panties') || lower.includes('bra') || lower.includes('lingerie') || lower.includes('trunk')) {
+  if (category === 'Undergarments & Lingerie' || lower.includes('lingerie') || lower.includes('underwear')) {
     return 'https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg';
   }
   if (category === 'Mobiles & Smartphones' || lower.includes('phone') || lower.includes('mobile') || lower.includes('iphone') || lower.includes('samsung')) {
@@ -74,20 +95,53 @@ export function resolveCorrectProductImage(product: Partial<PartnerProduct>): st
   const title = product.title || '';
   const category = product.category || '';
   const url = product.productUrl || '';
+  const lowerTitle = title.toLowerCase();
+  const lowerUrl = url.toLowerCase();
 
-  // 1. If Amazon URL exists, extract ASIN and construct Amazon primary CDN image
-  const asinMatch = url.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
-  if (asinMatch && asinMatch[1]) {
-    const asin = asinMatch[1].toUpperCase();
-    return `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_SX800_.jpg`;
+  // Detect broken Amazon /images/P/ link (which returns 43-byte transparent 1x1 GIF for non-books)
+  const isBrokenAmazonPImage = rawImage.includes('/images/P/') || rawImage.includes('ssl-images-amazon.com/images/P');
+
+  // Detect generic watch placeholder if product is not a watch
+  const isGenericWatchImage = rawImage.includes('photo-1523275335684-37898b6baf30');
+  const isWatchProduct = lowerTitle.includes('watch') || lowerTitle.includes('smartwatch');
+
+  // Specific high-precision product matchers
+  if (lowerTitle.includes('kamarbandh') || lowerTitle.includes('gujarati') || lowerTitle.includes('etietnic') || lowerUrl.includes('kamarbandh') || lowerUrl.includes('etietnic')) {
+    if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage) {
+      return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
+    }
+    return 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg';
   }
 
-  // 2. If rawImage is missing or points to the generic unsplash watch image when the product is NOT a watch:
-  const isGenericWatchImage = rawImage.includes('photo-1523275335684-37898b6baf30');
-  const isWatchProduct = title.toLowerCase().includes('watch') || title.toLowerCase().includes('smartwatch');
+  if (lowerTitle.includes('louis') || lowerTitle.includes('panty') || lowerTitle.includes('panties')) {
+    if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage) {
+      return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
+    }
+    return 'https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg';
+  }
 
-  if (!rawImage || (isGenericWatchImage && !isWatchProduct)) {
+  if (lowerTitle.includes('zivame') || lowerTitle.includes('bra')) {
+    if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage) {
+      return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
+    }
+    return 'https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg';
+  }
+
+  if (lowerTitle.includes('jockey') || lowerTitle.includes('trunk')) {
+    if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage) {
+      return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
+    }
+    return 'https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg';
+  }
+
+  // Discard broken /images/P/ transparent GIFs, missing images, or generic watch images
+  if (isBrokenAmazonPImage || !rawImage || (isGenericWatchImage && !isWatchProduct)) {
     return getCategoryFallbackImage(category, title);
+  }
+
+  // Optimize Amazon image to high-resolution format
+  if (rawImage.includes('media-amazon.com/images/I/')) {
+    return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
   }
 
   return rawImage;
@@ -95,6 +149,7 @@ export function resolveCorrectProductImage(product: Partial<PartnerProduct>): st
 
 export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[] {
   const overrides = getLocalProductOverrides();
+  let overridesMutated = false;
   
   const productMap = new Map<string, PartnerProduct>();
   products.forEach(p => productMap.set(p.id, p));
@@ -115,8 +170,15 @@ export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[
       merged = { ...merged, ...overrides[p.id] };
     }
     const resolvedImg = resolveCorrectProductImage(merged);
-    merged.primaryImage = resolvedImg;
-    merged.images = [resolvedImg];
+    if (merged.primaryImage !== resolvedImg) {
+      merged.primaryImage = resolvedImg;
+      merged.images = [resolvedImg];
+      if (overrides[p.id]) {
+        overrides[p.id].primaryImage = resolvedImg;
+        overrides[p.id].images = [resolvedImg];
+        overridesMutated = true;
+      }
+    }
 
     // Keep MOCK_PARTNER_PRODUCTS in sync
     const existingIdx = MOCK_PARTNER_PRODUCTS.findIndex(item => item.id === p.id);
@@ -128,6 +190,10 @@ export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[
 
     return merged;
   });
+
+  if (overridesMutated && typeof window !== 'undefined') {
+    saveAllLocalProductOverrides(overrides);
+  }
 
   return mergedList;
 }
@@ -165,6 +231,36 @@ export const MOCK_PARTNERS: Partner[] = [
 // MOCK PARTNER PRODUCTS SEED DATA
 // ==========================================
 export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
+  {
+    id: 'prod_partner_kamarbandh_1',
+    partnerId: 'partner_amazon_india',
+    partnerName: 'BUYWISE VERIFIED PARTNER NETWORK',
+    title: 'Etietnic Gujarati Traditional Embroidered Kamarbandh',
+    description: 'Verified Amazon India product: Etietnic Gujarati Traditional Embroidered Kamarbandh. Authentic quality and fast delivery guaranteed across India.',
+    productUrl: 'https://www.amazon.in/s?k=Etietnic+Gujarati+Traditional+Embroidered+Kamarbandh',
+    category: 'Jewellery',
+    brand: 'Amazon India',
+    sku: 'AMZ-ETIETNIC-KAMAR-01',
+    mrp: 1999,
+    sellingPrice: 499,
+    stock: 50,
+    images: ['https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg'],
+    primaryImage: 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'PARTNER',
+    tryOnEnabled: true,
+    garmentCategory: 'accessories',
+    returnPolicy: '7 Days Return & Refund Guaranteed',
+    warranty: 'Amazon Fulfilled Guaranteed',
+    gstPercent: 5,
+    status: 'LIVE',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 15,
+    rating: 4.9,
+    reviewCount: 24,
+    createdAt: '2026-09-04T08:00:00Z',
+    updatedAt: '2026-09-04T08:00:00Z',
+  },
   {
     id: 'prod_partner_louiscraft_panties_1',
     partnerId: 'partner_amazon_india',

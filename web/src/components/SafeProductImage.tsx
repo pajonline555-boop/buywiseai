@@ -12,6 +12,33 @@ interface SafeProductImageProps {
   height?: number;
   objectFit?: "cover" | "contain" | "fill" | "none";
   aspectRatio?: string;
+  fallbackSrc?: string;
+}
+
+function getSmartImageByAlt(altText: string): string {
+  const lower = (altText || "").toLowerCase();
+  if (lower.includes("kamarbandh") || lower.includes("gujarati") || lower.includes("etietnic") || lower.includes("waistband")) {
+    return "https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg";
+  }
+  if (lower.includes("panty") || lower.includes("panties") || lower.includes("louis")) {
+    return "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg";
+  }
+  if (lower.includes("bra") || lower.includes("zivame")) {
+    return "https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg";
+  }
+  if (lower.includes("trunk") || lower.includes("boxer") || lower.includes("jockey")) {
+    return "https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg";
+  }
+  if (lower.includes("jewel") || lower.includes("necklace") || lower.includes("earring") || lower.includes("ring")) {
+    return "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80";
+  }
+  if (lower.includes("phone") || lower.includes("iphone") || lower.includes("samsung")) {
+    return "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80";
+  }
+  if (lower.includes("headphone") || lower.includes("earphone") || lower.includes("sony")) {
+    return "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80";
+  }
+  return "";
 }
 
 export default function SafeProductImage({
@@ -23,19 +50,27 @@ export default function SafeProductImage({
   height,
   objectFit = "cover",
   aspectRatio = "4/3",
+  fallbackSrc,
 }: SafeProductImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [attemptedFallback, setAttemptedFallback] = useState(false);
 
-  const cleanSrc = src && typeof src === "string" ? src.trim() : "";
-  const proxiedUrl = cleanSrc ? getProxiedImageUrl(cleanSrc) : "";
+  const rawCleanSrc = src && typeof src === "string" ? src.trim() : "";
+  const isBrokenAmazonPImage = rawCleanSrc.includes("/images/P/") || rawCleanSrc.includes("ssl-images-amazon.com/images/P");
+  
+  // If raw source is the broken Amazon P link, immediately use smart fallback
+  const smartFallback = fallbackSrc || getSmartImageByAlt(alt);
+  const effectiveSrc = (isBrokenAmazonPImage || !rawCleanSrc) ? (smartFallback || rawCleanSrc) : rawCleanSrc;
+  const proxiedUrl = effectiveSrc ? getProxiedImageUrl(effectiveSrc) : "";
 
   useEffect(() => {
     setHasError(false);
     setIsLoading(true);
+    setAttemptedFallback(false);
   }, [src]);
 
-  const isUnavailable = !cleanSrc || hasError || !proxiedUrl;
+  const isUnavailable = (!effectiveSrc || hasError || !proxiedUrl) && !smartFallback;
 
   if (isUnavailable) {
     return (
@@ -59,13 +94,15 @@ export default function SafeProductImage({
           ...style,
         }}
       >
-        <div style={{ fontSize: "24px", marginBottom: "6px", opacity: 0.6 }}>🖼️</div>
+        <div style={{ fontSize: "24px", marginBottom: "6px", opacity: 0.6 }}>🛍️</div>
         <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.5px" }}>
-          Image Unavailable
+          Verified Partner Offer
         </div>
       </div>
     );
   }
+
+  const activeDisplayUrl = hasError && smartFallback && !attemptedFallback ? smartFallback : proxiedUrl;
 
   return (
     <div
@@ -96,14 +133,33 @@ export default function SafeProductImage({
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={proxiedUrl}
+        src={activeDisplayUrl}
         alt={alt}
         loading="lazy"
         decoding="async"
-        onLoad={() => setIsLoading(false)}
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          // Guard against 1x1 transparent GIFs returned by defective Amazon CDN links
+          if (img.naturalWidth <= 10 && img.naturalHeight <= 10) {
+            if (smartFallback && !attemptedFallback) {
+              setAttemptedFallback(true);
+              setHasError(true);
+            } else {
+              setHasError(true);
+              setIsLoading(false);
+            }
+          } else {
+            setIsLoading(false);
+          }
+        }}
         onError={() => {
-          setIsLoading(false);
-          setHasError(true);
+          if (smartFallback && !attemptedFallback) {
+            setAttemptedFallback(true);
+            setHasError(true);
+          } else {
+            setIsLoading(false);
+            setHasError(true);
+          }
         }}
         style={{
           width: "100%",
