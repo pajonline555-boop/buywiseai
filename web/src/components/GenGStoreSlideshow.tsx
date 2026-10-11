@@ -8,6 +8,7 @@ import { PartnerProduct } from '@/lib/partners/types';
 import { getPartnerProducts, MOCK_PARTNER_PRODUCTS, getCategoryFallbackImage } from '@/lib/partners/partnerService';
 import SafeProductImage from '@/components/SafeProductImage';
 import { useTranslation } from '@/lib/i18n/i18nContext';
+import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 export default function GenGStoreSlideshow() {
   const [products, setProducts] = useState<PartnerProduct[]>(MOCK_PARTNER_PRODUCTS);
@@ -15,6 +16,7 @@ export default function GenGStoreSlideshow() {
   const [isPaused, setIsPaused] = useState(false);
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<PartnerProduct | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -66,12 +68,47 @@ export default function GenGStoreSlideshow() {
   };
 
   const handleBuyNow = (prod: PartnerProduct) => {
-    setSelectedProductForCheckout(prod);
-    setIsCheckoutOpen(true);
+    // Send user directly to affiliate outbound destination
+    const rawUrl = prod.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(prod.title)}`;
+    const affiliateUrl = buildAffiliateUrl(rawUrl, prod.brand || prod.partnerName || 'Amazon India', 'GEN_G_STORE');
+    if (typeof window !== 'undefined') {
+      window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleShareProduct = async (prod: PartnerProduct) => {
+    const slug = prod.slug || prod.id || prod.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const shareUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/product/${slug}`
+      : `https://buywiseai.pajonline.co.in/product/${slug}`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: prod.title,
+          text: `Check out ${prod.title} on BuyWise AI! Compare prices & try on with AI:`,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        // User cancelled share sheet or not supported; proceed to clipboard copy
+      }
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2500);
+      }
+    } catch (e) {
+      console.warn('Share copy error:', e);
+    }
   };
 
   return (
     <section 
+      id="trending-geng"
       className="container"
       style={{ marginBottom: '50px', marginTop: '20px' }}
       onMouseEnter={() => setIsPaused(true)}
@@ -157,7 +194,10 @@ export default function GenGStoreSlideshow() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', minHeight: '440px' }}>
           
           {/* Slide Image Side */}
-          <div style={{ position: 'relative', width: '100%', minHeight: '380px', background: '#05030a' }}>
+          <Link 
+            href={`/product/${currentProduct.slug || currentProduct.id}`}
+            style={{ position: 'relative', width: '100%', minHeight: '380px', background: '#05030a', display: 'block', textDecoration: 'none' }}
+          >
             <SafeProductImage
               key={currentProduct.id}
               src={currentProduct.primaryImage}
@@ -203,7 +243,7 @@ export default function GenGStoreSlideshow() {
             }}>
               {discountPercent}% {t('off_special_deal')}
             </span>
-          </div>
+          </Link>
 
           {/* Slide Product Details Side */}
           <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -217,9 +257,11 @@ export default function GenGStoreSlideshow() {
                 </span>
               </div>
 
-              <h3 style={{ fontSize: '26px', fontWeight: 900, color: '#ffffff', marginBottom: '14px', lineHeight: 1.25 }}>
-                {currentProduct.title}
-              </h3>
+              <Link href={`/product/${currentProduct.slug || currentProduct.id}`} style={{ textDecoration: 'none' }}>
+                <h3 style={{ fontSize: '26px', fontWeight: 900, color: '#ffffff', marginBottom: '14px', lineHeight: 1.25, cursor: 'pointer' }}>
+                  {currentProduct.title}
+                </h3>
+              </Link>
 
               <p style={{ fontSize: '14px', color: '#cbd5e1', marginBottom: '24px', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {currentProduct.description}
@@ -228,7 +270,7 @@ export default function GenGStoreSlideshow() {
 
             <div>
               {/* Pricing Box */}
-              <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.18)', padding: '16px 20px', borderRadius: '20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.18)', padding: '16px 20px', borderRadius: '20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <span style={{ fontSize: '11px', color: '#cbd5e1', display: 'block', marginBottom: '2px', fontWeight: 700 }}>{t('geng_store_price')}</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
@@ -242,23 +284,24 @@ export default function GenGStoreSlideshow() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              {/* Action Buttons Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.9fr', gap: '10px' }}>
                 <button
                   onClick={() => handleTryOn(currentProduct)}
+                  title="Try on with BuyWise AI"
                   style={{
-                    padding: '14px',
+                    padding: '13px 10px',
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 0, 128, 0.5)',
                     background: 'linear-gradient(135deg, rgba(255, 0, 128, 0.25), rgba(121, 40, 202, 0.25))',
                     color: 'white',
                     fontWeight: 800,
-                    fontSize: '14px',
+                    fontSize: '13px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}
                 >
                   {t('ai_try_on_btn')}
@@ -267,17 +310,90 @@ export default function GenGStoreSlideshow() {
                 <button
                   onClick={() => handleBuyNow(currentProduct)}
                   className="btn-primary"
+                  title="Buy Now on Verified Partner Store"
                   style={{
-                    padding: '14px',
+                    padding: '13px 10px',
                     borderRadius: '16px',
                     fontSize: '14px',
                     fontWeight: 900,
                     background: 'var(--gradient-accent)',
-                    color: '#ffffff'
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
                   }}
                 >
-                  {t('buy_now_btn')}
+                  <span>🛍️</span> {t('buy_now_btn')}
                 </button>
+
+                <button
+                  onClick={() => handleShareProduct(currentProduct)}
+                  title="Copy shareable link for social media"
+                  style={{
+                    padding: '13px 10px',
+                    borderRadius: '16px',
+                    border: copiedShare ? '1px solid #00ff88' : '1px solid rgba(255, 255, 255, 0.25)',
+                    background: copiedShare ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                    color: copiedShare ? '#00ff88' : '#ffffff',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>{copiedShare ? '✓' : '🔗'}</span>
+                  <span>{copiedShare ? 'Copied!' : 'Share'}</span>
+                </button>
+              </div>
+
+              {/* Quick Social Media Direct Share Row */}
+              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '11px', color: '#94a3b8' }}>
+                <span style={{ fontWeight: 700 }}>Share to Social Media:</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${currentProduct.title} on BuyWise AI! Compare prices & try on: ${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${currentProduct.slug || currentProduct.id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      background: 'rgba(37, 211, 102, 0.15)',
+                      border: '1px solid rgba(37, 211, 102, 0.4)',
+                      color: '#25d366',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>💬</span> WhatsApp
+                  </a>
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out ${currentProduct.title} on BuyWise AI!`)}&url=${encodeURIComponent(`${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${currentProduct.slug || currentProduct.id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      background: 'rgba(29, 161, 242, 0.15)',
+                      border: '1px solid rgba(29, 161, 242, 0.4)',
+                      color: '#38bdf8',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>🐦</span> X / Twitter
+                  </a>
+                </div>
               </div>
             </div>
 

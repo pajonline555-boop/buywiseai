@@ -8,6 +8,7 @@ import { PartnerProduct, PartnerCategory } from '@/lib/partners/types';
 import { getPartnerProducts } from '@/lib/partners/partnerService';
 import { getProxiedImageUrl } from '@/lib/imageUtils';
 import { useTranslation } from '@/lib/i18n/i18nContext';
+import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 const CATEGORY_TABS: { id: string; label: string; icon: string }[] = [
   { id: 'All', label: '⚡ All Gen-G Store Items', icon: '⚡' },
@@ -29,6 +30,7 @@ export default function PartnersStorefront() {
   const [loading, setLoading] = useState(true);
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<PartnerProduct | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -61,8 +63,37 @@ export default function PartnersStorefront() {
   };
 
   const handleBuyNow = (product: PartnerProduct) => {
-    setSelectedProductForCheckout(product);
-    setIsCheckoutOpen(true);
+    const rawUrl = product.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.title)}`;
+    const affiliateUrl = buildAffiliateUrl(rawUrl, product.brand || product.partnerName || 'Amazon India', 'GEN_G_STORE');
+    if (typeof window !== 'undefined') {
+      window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleShareProduct = async (product: PartnerProduct) => {
+    const slug = product.slug || product.id || product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const shareUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/product/${slug}`
+      : `https://buywiseai.pajonline.co.in/product/${slug}`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: product.title,
+          text: `Check out ${product.title} on BuyWise AI! Compare prices & try on:`,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {}
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedId(product.id);
+        setTimeout(() => setCopiedId(null), 2500);
+      }
+    } catch (e) {}
   };
 
   return (
@@ -169,7 +200,10 @@ export default function PartnersStorefront() {
                   }}
                 >
                   {/* Image Header with Badges */}
-                  <div style={{ position: 'relative', width: '100%', height: '260px', background: '#05030a' }}>
+                  <Link 
+                    href={`/product/${prod.slug || prod.id}`}
+                    style={{ position: 'relative', width: '100%', height: '260px', background: '#05030a', display: 'block' }}
+                  >
                     <Image
                       src={getProxiedImageUrl(prod.primaryImage)}
                       alt={prod.title}
@@ -215,7 +249,7 @@ export default function PartnersStorefront() {
                     }}>
                       ⭐ {prod.rating || 4.9} ({prod.reviewCount || 20})
                     </span>
-                  </div>
+                  </Link>
 
                   {/* Product Details & Actions */}
                   <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -224,9 +258,11 @@ export default function PartnersStorefront() {
                         {prod.partnerName}
                       </div>
 
-                      <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'white', marginBottom: '10px', lineHeight: 1.35, height: '48px', overflow: 'hidden' }}>
-                        {t(prod.title)}
-                      </h3>
+                      <Link href={`/product/${prod.slug || prod.id}`} style={{ textDecoration: 'none' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'white', marginBottom: '10px', lineHeight: 1.35, height: '48px', overflow: 'hidden', cursor: 'pointer' }}>
+                          {t(prod.title)}
+                        </h3>
+                      </Link>
 
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '18px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {t(prod.description)}
@@ -249,12 +285,13 @@ export default function PartnersStorefront() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div style={{ display: 'grid', gridTemplateColumns: prod.tryOnEnabled ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: prod.tryOnEnabled ? '1fr 1.2fr 44px' : '1fr 44px', gap: '10px', alignItems: 'center' }}>
                         {prod.tryOnEnabled && (
                           <button
                             onClick={() => handleTryOn(prod)}
+                            title="Try on with AI"
                             style={{
-                              padding: '12px',
+                              padding: '12px 8px',
                               borderRadius: '14px',
                               border: '1px solid rgba(255, 0, 128, 0.4)',
                               background: 'linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(121, 40, 202, 0.2))',
@@ -275,16 +312,38 @@ export default function PartnersStorefront() {
                         <button
                           onClick={() => handleBuyNow(prod)}
                           className="btn-primary"
+                          title="Buy Now on Verified Partner Store"
                           style={{
-                            padding: '12px',
+                            padding: '12px 10px',
                             borderRadius: '14px',
                             fontSize: '13px',
-                            fontWeight: 800,
-                            background: 'linear-gradient(90deg, #00ff88, #00d4ff)',
-                            color: '#070510'
+                            fontWeight: 900,
+                            background: 'var(--gradient-accent)',
+                            color: '#ffffff',
+                            cursor: 'pointer'
                           }}
                         >
-                          {t('buy_now_btn')}
+                          🛍️ {t('buy_now_btn')}
+                        </button>
+
+                        <button
+                          onClick={() => handleShareProduct(prod)}
+                          title="Share Product Link"
+                          style={{
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '14px',
+                            border: copiedId === prod.id ? '1px solid #00ff88' : '1px solid var(--glass-border)',
+                            background: copiedId === prod.id ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                            color: copiedId === prod.id ? '#00ff88' : '#ffffff',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {copiedId === prod.id ? '✓' : '🔗'}
                         </button>
                       </div>
                     </div>

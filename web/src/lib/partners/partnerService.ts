@@ -256,6 +256,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     partnerId: 'partner_amazon_india',
     partnerName: 'BUYWISE VERIFIED PARTNER NETWORK',
     title: 'Etietnic Gujarati Traditional Embroidered Kamarbandh',
+    slug: 'etietnic-gujarati-traditional-embroidered-kamarbandh',
     description: 'Verified Amazon India product: Etietnic Gujarati Traditional Embroidered Kamarbandh. Authentic quality and fast delivery guaranteed across India.',
     productUrl: 'https://www.amazon.in/s?k=Etietnic+Gujarati+Traditional+Embroidered+Kamarbandh',
     category: 'Jewellery',
@@ -1024,6 +1025,7 @@ export function mapPartnerProductToBestsellerProduct(p: PartnerProduct): Bestsel
     category: p.category,
     image: p.primaryImage || (p.images && p.images[0]) || '',
     youtubeUrl: p.youtubeUrl,
+    productUrl: p.productUrl,
     productSource: p.source || 'PARTNER',
     fulfillmentType: p.fulfillment || 'PARTNER_FULFILLED',
     environment: (p as any).environment || 'PRODUCTION',
@@ -1036,17 +1038,17 @@ export function mapPartnerProductToBestsellerProduct(p: PartnerProduct): Bestsel
     reviewsCount: p.reviewCount || 100,
     lowestPrice: p.sellingPrice,
     originalPrice: p.mrp || p.sellingPrice,
-    bestStore: p.partnerName || 'BuyWise Store',
+    bestStore: p.partnerName || 'Amazon India',
     specs: [
-      { label: 'Brand', value: p.brand || 'BuyWise Partner' },
+      { label: 'Brand', value: p.brand || 'Amazon India' },
       { label: 'Fulfillment', value: p.fulfillment === 'PARTNER_FULFILLED' ? 'Direct BuyWise Partner Dispatch' : 'BuyWise Fulfilled' },
       { label: 'Return Policy', value: p.returnPolicy || '7-Day Return Policy' }
     ],
     prices: [
       {
-        store: p.partnerName || 'BuyWise Store',
+        store: p.partnerName || 'Amazon India',
         price: p.sellingPrice,
-        url: `/checkout?product=${encodeURIComponent(slug)}`,
+        url: p.productUrl || `/checkout?product=${encodeURIComponent(slug)}`,
         inStock: p.stock > 0 && (p.status === 'LIVE' || (p.status as any) === 'ACTIVE'),
         productSource: p.source || 'PARTNER',
         fulfillmentType: p.fulfillment || 'PARTNER_FULFILLED'

@@ -62,10 +62,13 @@ export default function ProductIntelligenceHeader({
   };
 
   const handleCopyShareLink = () => {
-    const shareUrl = generateBuyWiseShareUrl(product.slug || product.id);
-    navigator.clipboard.writeText(shareUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in';
+    const shareUrl = generateBuyWiseShareUrl(product.slug || product.id, origin);
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
   };
 
   const handleSaveProduct = () => {
@@ -86,8 +89,10 @@ export default function ProductIntelligenceHeader({
     }
   };
 
-  const rawOutboundUrl = product.prices?.[0]?.url || product.productUrl || '/search';
-  const outboundAffiliateUrl = buildAffiliateUrl(rawOutboundUrl, product.bestStore);
+  const rawOutboundUrl = (product.prices?.[0]?.url && product.prices[0].url.startsWith('http'))
+    ? product.prices[0].url
+    : product.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`;
+  const outboundAffiliateUrl = buildAffiliateUrl(rawOutboundUrl, product.bestStore || 'Amazon India', 'GEN_G_STORE');
 
   return (
     <section 
@@ -203,7 +208,12 @@ export default function ProductIntelligenceHeader({
                   {addedToCart ? '✓ ADDED TO CART' : '🛒 ADD TO CART'}
                 </button>
 
-                <Link href="/checkout" style={{ flex: 1, minWidth: '160px', textDecoration: 'none' }}>
+                <a
+                  href={outboundAffiliateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flex: 1, minWidth: '160px', textDecoration: 'none' }}
+                >
                   <button
                     style={{
                       width: '100%',
@@ -218,9 +228,9 @@ export default function ProductIntelligenceHeader({
                       cursor: 'pointer'
                     }}
                   >
-                    ⚡ BUY NOW
+                    ⚡ BUY NOW ➔
                   </button>
-                </Link>
+                </a>
               </>
             ) : (
               <a
@@ -281,6 +291,31 @@ export default function ProductIntelligenceHeader({
             >
               {copiedLink ? '✓ LINK COPIED!' : '🔗 SHARE STORE LINK'}
             </button>
+
+            <a
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${product.name} on BuyWise AI! Compare prices & try on: ${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${product.slug || product.id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: 'none' }}
+            >
+              <button
+                style={{
+                  padding: '16px 20px',
+                  borderRadius: '18px',
+                  background: 'rgba(37, 211, 102, 0.15)',
+                  border: '1px solid rgba(37, 211, 102, 0.4)',
+                  color: '#25d366',
+                  fontWeight: 900,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>💬</span> WHATSAPP
+              </button>
+            </a>
 
             {isTryOn && (
               <Link href="/try-on" style={{ textDecoration: 'none' }}>

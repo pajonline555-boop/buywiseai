@@ -103,46 +103,27 @@ export default function WhereToBuyTable({ product }: WhereToBuyTableProps) {
 
                   {/* Action Link Button */}
                   <td style={{ padding: '16px', textAlign: 'right' }}>
-                    {item.productSource === 'PARTNER' || item.productSource === 'DIRECT' ? (
-                      <a href={item.url.startsWith('/') ? item.url : `/checkout`} style={{ textDecoration: 'none' }}>
-                        <button
-                          style={{
-                            padding: '8px 18px',
-                            borderRadius: '12px',
-                            background: isBest ? 'linear-gradient(135deg, #a855f7, #ff007f)' : 'rgba(255, 255, 255, 0.1)',
-                            border: isBest ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          BUY NOW ➔
-                        </button>
-                      </a>
-                    ) : (
-                      <a
-                        href={item.url.startsWith('http') ? buildAffiliateUrl(item.url, item.store) : `/search?q=${encodeURIComponent(product.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ textDecoration: 'none' }}
+                    <a
+                      href={buildAffiliateUrl(item.url && item.url.startsWith('http') ? item.url : `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`, item.store)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <button
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: '12px',
+                          background: isBest ? 'var(--gradient-accent)' : 'rgba(255, 255, 255, 0.1)',
+                          border: isBest ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
+                          color: '#ffffff',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
                       >
-                        <button
-                          style={{
-                            padding: '8px 18px',
-                            borderRadius: '12px',
-                            background: isBest ? 'var(--gradient-accent)' : 'rgba(255, 255, 255, 0.1)',
-                            border: isBest ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          BUY NOW ➔
-                        </button>
-                      </a>
-                    )}
+                        BUY NOW ➔
+                      </button>
+                    </a>
                   </td>
                 </tr>
               );

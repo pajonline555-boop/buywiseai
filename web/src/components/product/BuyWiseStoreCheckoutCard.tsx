@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { BestsellerProduct } from '@/lib/categoryData';
+import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 interface BuyWiseStoreCheckoutCardProps {
   product: BestsellerProduct;
@@ -11,6 +12,11 @@ export default function BuyWiseStoreCheckoutCard({ product }: BuyWiseStoreChecko
   const isPartner = product.productSource === 'PARTNER' || product.source === 'PARTNER';
 
   if (!isPartner) return null;
+
+  const rawUrl = (product.prices?.[0]?.url && product.prices[0].url.startsWith('http'))
+    ? product.prices[0].url
+    : product.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`;
+  const outboundAffiliateUrl = buildAffiliateUrl(rawUrl, product.bestStore || 'Amazon India', 'GEN_G_STORE');
 
   return (
     <div 
@@ -63,7 +69,12 @@ export default function BuyWiseStoreCheckoutCard({ product }: BuyWiseStoreChecko
       </div>
 
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-        <Link href="/checkout" style={{ textDecoration: 'none' }}>
+        <a 
+          href={outboundAffiliateUrl} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={{ textDecoration: 'none' }}
+        >
           <button
             style={{
               padding: '12px 28px',
@@ -76,9 +87,9 @@ export default function BuyWiseStoreCheckoutCard({ product }: BuyWiseStoreChecko
               cursor: 'pointer'
             }}
           >
-            PROCEED TO BUYWISE CHECKOUT ➔
+            PROCEED TO BUY NOW ➔
           </button>
-        </Link>
+        </a>
       </div>
     </div>
   );
