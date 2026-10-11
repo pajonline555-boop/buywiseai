@@ -123,10 +123,19 @@ export default function AdminDashboard() {
           <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginBottom: '24px', lineHeight: 1.6 }}>
             The Admin Control Center is restricted to authorized BuyWise administrators.
           </p>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <button className="btn-primary" style={{ padding: '12px 28px', fontSize: '14px', fontWeight: 800 }}>
-              Return to BuyWise Home ➔
-            </button>
+          <Link
+            href="/"
+            className="btn-primary"
+            style={{
+              padding: '12px 28px',
+              fontSize: '14px',
+              fontWeight: 800,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            Return to BuyWise Home ➔
           </Link>
         </div>
       </main>
@@ -153,15 +162,46 @@ export default function AdminDashboard() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <Link href="/" style={{ textDecoration: 'none' }}>
-              <button style={{ padding: '10px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-                Storefront ↗
-              </button>
+            <Link
+              href="/"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '10px 18px',
+                borderRadius: '14px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'white',
+                fontWeight: 800,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Storefront ↗
             </Link>
-            <Link href="/admin/inventory" style={{ textDecoration: 'none' }}>
-              <button className="btn-primary" style={{ padding: '10px 20px', borderRadius: '14px', fontSize: '13px', fontWeight: 900, background: 'linear-gradient(135deg, #00d4ff, #00ff88)', color: '#000' }}>
-                📊 Inventory Workspace ↗
-              </button>
+            <Link
+              href="/admin/inventory"
+              id="header-inventory-link"
+              className="btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                borderRadius: '14px',
+                fontSize: '13px',
+                fontWeight: 900,
+                background: 'linear-gradient(135deg, #00d4ff, #00ff88)',
+                color: '#000',
+                textDecoration: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(0, 212, 255, 0.4)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              📊 Inventory Workspace ↗
             </Link>
           </div>
         </div>
@@ -247,7 +287,14 @@ export default function AdminDashboard() {
               label="📊 INVENTORY CONTROL"
               color="#00d4ff"
               active={activeTab === 'INVENTORY'}
-              onClick={() => setActiveTab('INVENTORY')}
+              href="/admin/inventory"
+              onClick={() => {
+                setActiveTab('INVENTORY');
+                setTimeout(() => {
+                  const el = document.getElementById('inventory-control-panel');
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+              }}
             />
             <QuickActionButton
               label="🏪 MANAGE PARTNERS"
@@ -342,7 +389,15 @@ export default function AdminDashboard() {
           ].map(t => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
+              onClick={() => {
+                setActiveTab(t.id as any);
+                if (t.id === 'INVENTORY') {
+                  setTimeout(() => {
+                    const el = document.getElementById('inventory-control-panel');
+                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 80);
+                }
+              }}
               style={{
                 padding: '11px 18px',
                 borderRadius: '16px',
@@ -491,7 +546,13 @@ function QuickActionButton({
 
   if (href) {
     return (
-      <Link href={href} style={commonStyle}>
+      <Link 
+        href={href} 
+        style={commonStyle}
+        onClick={() => {
+          if (onClick) onClick();
+        }}
+      >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         <span style={{ fontSize: '11px', opacity: 0.8, marginLeft: '6px', flexShrink: 0 }}>↗</span>
       </Link>
@@ -580,7 +641,7 @@ function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal
   const pausedCount = products.length - liveCount;
 
   return (
-    <div className="glass" style={{ padding: '32px', borderRadius: '24px', marginBottom: '40px', border: '1px solid rgba(0, 212, 255, 0.35)' }}>
+    <div id="inventory-control-panel" className="glass" style={{ padding: '32px', borderRadius: '24px', marginBottom: '40px', border: '1px solid rgba(0, 212, 255, 0.35)' }}>
       {/* Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -600,10 +661,24 @@ function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal
           >
             ➕ Onboard New Partner Product
           </button>
-          <Link href="/admin/inventory" style={{ textDecoration: 'none' }}>
-            <button style={{ padding: '10px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-              Full Workspace ↗
-            </button>
+          <Link
+            href="/admin/inventory"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '10px 18px',
+              borderRadius: '14px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            Full Workspace ↗
           </Link>
         </div>
       </div>
@@ -1132,10 +1207,24 @@ function AdminMerchandisingPanel() {
             Control storefront featured collection carousels, algorithmic scoring &amp; publication gates.
           </p>
         </div>
-        <Link href="/admin/merchandising" style={{ textDecoration: 'none' }}>
-          <button style={{ padding: '10px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-            Full Merchandising Command ↗
-          </button>
+        <Link
+          href="/admin/merchandising"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '10px 18px',
+            borderRadius: '14px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: 'white',
+            fontWeight: 800,
+            fontSize: '13px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Full Merchandising Command ↗
         </Link>
       </div>
 
@@ -1200,10 +1289,24 @@ function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) 
           <button onClick={onOpenAddModal} className="btn-primary" style={{ padding: '10px 18px', borderRadius: '14px', fontSize: '13px', fontWeight: 900 }}>
             + Onboard Product
           </button>
-          <Link href="/admin/partners" style={{ textDecoration: 'none' }}>
-            <button style={{ padding: '10px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-              Partners Hub ↗
-            </button>
+          <Link
+            href="/admin/partners"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '10px 18px',
+              borderRadius: '14px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            Partners Hub ↗
           </Link>
         </div>
       </div>
@@ -1275,10 +1378,24 @@ function AdminFulfillmentPanel() {
           <button onClick={handleRetry} disabled={retrying} className="btn-primary" style={{ padding: '10px 18px', borderRadius: '14px', fontSize: '13px', fontWeight: 900, background: 'linear-gradient(135deg, #00ff88, #00d4ff)', color: '#000' }}>
             {retrying ? 'Retrying...' : '⚡ Trigger Dispatch Retries'}
           </button>
-          <Link href="/admin/fulfillment" style={{ textDecoration: 'none' }}>
-            <button style={{ padding: '10px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-              Full Fulfillment Console ↗
-            </button>
+          <Link
+            href="/admin/fulfillment"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '10px 18px',
+              borderRadius: '14px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            Full Fulfillment Console ↗
           </Link>
         </div>
       </div>
@@ -1328,10 +1445,24 @@ function AdminCouponsPanel() {
             Live retailer and partner discount codes with genuine effective price mathematical verification.
           </p>
         </div>
-        <Link href="/admin/coupons" style={{ textDecoration: 'none' }}>
-          <button style={{ padding: '10px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-            Coupons Workspace ↗
-          </button>
+        <Link
+          href="/admin/coupons"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '10px 18px',
+            borderRadius: '14px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: 'white',
+            fontWeight: 800,
+            fontSize: '13px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Coupons Workspace ↗
         </Link>
       </div>
 
@@ -1385,10 +1516,24 @@ function AdminSecurityLogs() {
             Audit trail tracking all admin logins, media reviews, vote freezes, and authorization events.
           </p>
         </div>
-        <Link href="/admin/security/media-review" style={{ textDecoration: 'none' }}>
-          <button style={{ padding: '8px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
-            ✨ VTO Media Review Hub ↗
-          </button>
+        <Link
+          href="/admin/security/media-review"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: 'white',
+            fontWeight: 800,
+            fontSize: '12px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          ✨ VTO Media Review Hub ↗
         </Link>
       </div>
 

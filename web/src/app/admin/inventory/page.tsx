@@ -366,15 +366,37 @@ export default function InventoryPage() {
             Partner Product Onboarding &amp; Inventory Control is restricted to authorized BuyWise administrators.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <Link href="/admin" style={{ textDecoration: 'none' }}>
-              <button className="btn-primary" style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 800 }}>
-                Admin Control Center ➔
-              </button>
+            <Link
+              href="/admin"
+              className="btn-primary"
+              style={{
+                padding: '12px 24px',
+                fontSize: '14px',
+                fontWeight: 800,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Admin Control Center ➔
             </Link>
-            <Link href="/" style={{ textDecoration: 'none' }}>
-              <button style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 800, borderRadius: '14px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', cursor: 'pointer' }}>
-                BuyWise Home ➔
-              </button>
+            <Link
+              href="/"
+              style={{
+                padding: '12px 24px',
+                fontSize: '14px',
+                fontWeight: 800,
+                borderRadius: '14px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'white',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              BuyWise Home ➔
             </Link>
           </div>
         </div>
