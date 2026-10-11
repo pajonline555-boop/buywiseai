@@ -76,12 +76,18 @@ fun BuyWiseNavGraph(
         composable(Screen.Vto.route) {
             VtoScreen()
         }
+        composable(Screen.Prime.route) {
+            com.pajonline.buywiseai.ui.screens.prime.PrimeMembershipScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable(Screen.Alerts.route) {
             AlertsScreen()
         }
         composable(Screen.Profile.route) {
             ProfileScreen(
                 authViewModel = authViewModel,
+                onNavigateToPrime = { navController.navigate(Screen.Prime.route) },
                 onNavigateToWeb = { title, url ->
                     try {
                         val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")

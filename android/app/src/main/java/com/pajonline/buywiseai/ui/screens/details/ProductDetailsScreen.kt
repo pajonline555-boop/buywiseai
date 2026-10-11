@@ -46,6 +46,36 @@ import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseGold
 import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
 
+import android.content.Context
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
+private fun isWearableProduct(title: String): Boolean {
+    val lower = title.lowercase().trim()
+
+    val nonWearables = listOf(
+        "foil", "paper", "wrap", "tissue", "kitchen", "phone", "iphone", "samsung",
+        "macbook", "laptop", "headphone", "airpod", "earbud", "charger", "gadget",
+        "tv", "appliance", "fryer", "tool", "grocery", "cleaner", "soap", "shampoo",
+        "bottle", "cover", "case", "cable", "battery", "mouse", "keyboard", "hamper", "chocolates"
+    )
+    if (nonWearables.any { lower.contains(it) }) {
+        return false
+    }
+
+    val wearables = listOf(
+        "saree", "dress", "shirt", "t-shirt", "top", "jeans", "pant", "trousers",
+        "kurti", "lehenga", "suit", "jacket", "coat", "hoodie", "sweater", "cardigan",
+        "skirt", "outfit", "gown", "innerwear", "bra", "trunk", "pajama", "ethnic",
+        "shoe", "sneaker", "boot", "sandal", "heel", "wear", "apparel", "clothing",
+        "necklace", "jewellery", "jewelry", "ring", "earring", "bangle", "bracelet"
+    )
+    return wearables.any { lower.contains(it) }
+}
+
 @Composable
 fun ProductDetailsScreen(
     offer: StoreOffer?,
@@ -77,6 +107,12 @@ fun ProductDetailsScreen(
         }
 
         val isPartner = offer.productSource == "PARTNER"
+        val isWearable = isWearableProduct(offer.title)
+
+        var isSaved by remember(offer.id) {
+            val sharedPrefs = context.getSharedPreferences("buywise_saved_products", Context.MODE_PRIVATE)
+            mutableStateOf(sharedPrefs.getBoolean(offer.id, false))
+        }
 
         Column(
             modifier = Modifier
@@ -210,7 +246,7 @@ fun ProductDetailsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Action Buttons (Separated for BuyWise Partner Checkout vs Affiliate External Checkout)
+            // Action Buttons
             if (isPartner) {
                 Button(
                     onClick = onNavigateToCheckout,
@@ -226,10 +262,27 @@ fun ProductDetailsScreen(
                 Button(
                     onClick = {
                         try {
-                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(offer.url))
+                            var targetUrl = offer.url.trim()
+                            if (offer.store.contains("Amazon", ignoreCase = true) && !targetUrl.contains("tag=")) {
+                                targetUrl = if (targetUrl.contains("?")) "$targetUrl&tag=pajonline-21" else "$targetUrl?tag=pajonline-21"
+                            }
+                            val validUri = Uri.parse(targetUrl)
+                            val browserIntent = Intent(Intent.ACTION_VIEW, validUri).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
                             context.startActivity(browserIntent)
                         } catch (e: Exception) {
-                            // Handle malformed URL gracefully
+                            e.printStackTrace()
+                            val safeQuery = try { java.net.URLEncoder.encode(offer.title, "UTF-8") } catch (ex: Exception) { "product" }
+                            val fallbackAmazonUrl = "https://www.amazon.in/s?k=$safeQuery&tag=pajonline-21"
+                            try {
+                                val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse(fallbackAmazonUrl)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(fallbackIntent)
+                            } catch (ex: Exception) {
+                                android.widget.Toast.makeText(context, "Could not open store link. Please try again.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -242,28 +295,54 @@ fun ProductDetailsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            OutlinedButton(
-                onClick = onNavigateToVto,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Icon(Icons.Default.Face, contentDescription = null, tint = BuyWiseNeonPink)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "TRY ON THIS OUTFIT", color = BuyWiseNeonPink, fontWeight = FontWeight.Bold)
+            // Only show Try-On option for wearable items (clothing, sarees, dresses, jewellery, shoes)
+            if (isWearable) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onNavigateToVto,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Default.Face, contentDescription = null, tint = BuyWiseNeonPink)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "TRY ON THIS OUTFIT", color = BuyWiseNeonPink, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // Active Save Product to My BuyWise button with persistence and visual feedback
             OutlinedButton(
-                onClick = { /* Save to Favorites */ },
+                onClick = {
+                    val sharedPrefs = context.getSharedPreferences("buywise_saved_products", Context.MODE_PRIVATE)
+                    val newState = !isSaved
+                    isSaved = newState
+                    sharedPrefs.edit().putBoolean(offer.id, newState).apply()
+
+                    val toastMsg = if (newState) "❤️ Saved product to My BuyWise!" else "Removed product from My BuyWise"
+                    android.widget.Toast.makeText(context, toastMsg, android.widget.Toast.LENGTH_SHORT).show()
+                },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isSaved) BuyWiseNeonPink else Color.DarkGray
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (isSaved) BuyWiseNeonPink.copy(alpha = 0.15f) else Color.Transparent
+                )
             ) {
-                Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = Color.LightGray)
+                Icon(
+                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = if (isSaved) BuyWiseNeonPink else Color.LightGray
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "SAVE PRODUCT TO MY BUYWISE", color = Color.LightGray)
+                Text(
+                    text = if (isSaved) "SAVED TO MY BUYWISE ❤️" else "SAVE PRODUCT TO MY BUYWISE",
+                    color = if (isSaved) BuyWiseNeonPink else Color.LightGray,
+                    fontWeight = if (isSaved) FontWeight.Bold else FontWeight.Normal
+                )
             }
         }
     }

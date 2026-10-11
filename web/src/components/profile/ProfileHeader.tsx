@@ -10,7 +10,7 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
-  const { user, userProfile, isAdmin } = useAuth();
+  const { user, userProfile, isAdmin, logout } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -37,18 +37,10 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
     ? { background: 'rgba(0, 212, 255, 0.15)', color: '#00d4ff', border: '1px solid rgba(0, 212, 255, 0.3)' }
     : { background: 'rgba(255, 255, 255, 0.1)', color: 'rgba(255, 255, 255, 0.85)' };
 
-  const displayName = isGuest ? t('guest_shopper') : userProfile?.displayName || user?.displayName || t('buywise_shopper');
-  const email = isGuest ? t('guest_access_no_signup') : user?.email || userProfile?.email || 'shopper@buywise.ai';
+  const displayName = userProfile?.displayName || user?.displayName || (isGuest ? t('guest_shopper') : t('buywise_shopper'));
+  const email = isGuest ? (userProfile?.email || t('guest_access_no_signup')) : user?.email || userProfile?.email || 'shopper@buywise.ai';
   const isVerified = user?.emailVerified ?? false;
   const photoURL = userProfile?.photoURL || user?.photoURL || '';
-
-  const handleActionClick = () => {
-    if (isGuest) {
-      router.push('/login');
-    } else {
-      onEditClick();
-    }
-  };
 
   return (
     <div
@@ -69,14 +61,18 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
       }}
     >
       {/* Avatar Container */}
-      <div style={{ position: 'relative', width: '90px', height: '90px' }}>
+      <div
+        onClick={onEditClick}
+        title="Click to edit profile & photo"
+        style={{ position: 'relative', width: '90px', height: '90px', cursor: 'pointer' }}
+      >
         <div
           style={{
             width: '90px',
             height: '90px',
             borderRadius: '50%',
             overflow: 'hidden',
-            border: '3px solid rgba(255, 255, 255, 0.2)',
+            border: '3px solid rgba(0, 255, 136, 0.4)',
             background: 'linear-gradient(135deg, #7928ca, #ff007f)',
             display: 'flex',
             alignItems: 'center',
@@ -94,9 +90,31 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
             />
           ) : (
             <span style={{ fontSize: '36px', fontWeight: 900, color: 'white' }}>
-              {isGuest ? '👤' : displayName.charAt(0).toUpperCase()}
+              {displayName ? displayName.charAt(0).toUpperCase() : '👤'}
             </span>
           )}
+        </div>
+
+        {/* Camera badge overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '2px',
+            right: '2px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: '#00ff88',
+            color: '#090d16',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            border: '2px solid #0c0a14',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+          }}
+        >
+          📷
         </div>
       </div>
 
@@ -146,25 +164,83 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
         </div>
       </div>
 
-      {/* Action CTA */}
-      <button
-        onClick={handleActionClick}
-        style={{
-          marginTop: '4px',
-          padding: '10px 24px',
-          borderRadius: '12px',
-          background: isGuest ? 'linear-gradient(90deg, #ff007f, #7928ca)' : 'rgba(255, 255, 255, 0.08)',
-          border: isGuest ? 'none' : '1px solid rgba(255, 255, 255, 0.18)',
-          color: 'white',
-          fontWeight: 800,
-          fontSize: '14px',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          boxShadow: isGuest ? '0 4px 14px rgba(255, 0, 128, 0.4)' : 'none',
-        }}
-      >
-        {isGuest ? `🔑 ${t('sign_in_sync')}` : `✏️ ${t('edit_profile')}`}
-      </button>
+      {/* Action CTA Buttons */}
+      <div style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {isUserAdmin && (
+          <button
+            onClick={() => router.push('/admin')}
+            style={{
+              padding: '10px 22px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #00ff88, #00d4ff)',
+              border: 'none',
+              color: '#090d16',
+              fontWeight: 900,
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(0, 255, 136, 0.4)',
+            }}
+          >
+            ⚡ OPEN ADMIN PANEL
+          </button>
+        )}
+
+        <button
+          onClick={onEditClick}
+          style={{
+            padding: '10px 22px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05))',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            color: 'white',
+            fontWeight: 800,
+            fontSize: '14px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          ✏️ {t('edit_profile')}
+        </button>
+
+        {!isGuest ? (
+          <button
+            onClick={async () => {
+              await logout();
+              router.push('/login');
+            }}
+            style={{
+              padding: '10px 22px',
+              borderRadius: '12px',
+              background: 'rgba(255, 68, 68, 0.15)',
+              border: '1px solid rgba(255, 68, 68, 0.4)',
+              color: '#ff6b6b',
+              fontWeight: 800,
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            🚪 {t('sign_out')}
+          </button>
+        ) : (
+          <button
+            onClick={() => router.push('/login')}
+            style={{
+              padding: '10px 22px',
+              borderRadius: '12px',
+              background: 'linear-gradient(90deg, #ff007f, #7928ca)',
+              border: 'none',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(255, 0, 128, 0.4)',
+            }}
+          >
+            🔑 {t('sign_in_sync')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

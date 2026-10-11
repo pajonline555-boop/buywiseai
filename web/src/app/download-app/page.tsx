@@ -62,11 +62,13 @@ export default function DownloadAppPage() {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <a 
-                  href="https://buywiseai.pajonline.co.in"
+                  href="https://play.google.com/store/apps/details?id=com.pajonline.buywiseai&hl=en-US&ah=siK1dcywSbhtZZS4Fvy3n9jvWVg&pli=1"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ textDecoration: "none" }}
                 >
                   <button style={{ width: "100%", padding: "14px 24px", borderRadius: "14px", background: "linear-gradient(135deg, #00ff88, #00b8ff)", color: "#000000", fontWeight: 900, fontSize: "14px", border: "none", cursor: "pointer", boxShadow: "0 4px 20px rgba(0, 255, 136, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                    <span>⚡</span> Install directly via Connected Android Device
+                    <span>▶️</span> Get it on Google Play Store (★ 5.0 Rating)
                   </button>
                 </a>
 

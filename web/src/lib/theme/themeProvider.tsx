@@ -1,7 +1,7 @@
 "use client"
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type ThemeMode = 'system' | 'dark' | 'light';
+export type ThemeMode = 'system' | 'dark' | 'light' | 'high-contrast';
 
 export interface ThemeColorBall {
   id: string;
@@ -23,7 +23,7 @@ export const PRESET_COLOR_BALLS: ThemeColorBall[] = [
 interface ThemeContextType {
   theme: ThemeMode;
   setTheme: (mode: ThemeMode) => void;
-  activeTheme: 'dark' | 'light';
+  activeTheme: ThemeMode;
   accentColor: string;
   setAccentColor: (color: string) => void;
   presetBalls: ThemeColorBall[];
@@ -33,7 +33,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>('dark');
-  const [activeTheme, setActiveTheme] = useState<'dark' | 'light'>('dark');
+  const [activeTheme, setActiveTheme] = useState<ThemeMode>('dark');
   const [accentColor, setAccentColorState] = useState<string>('#a855f7');
 
   useEffect(() => {
@@ -49,11 +49,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    let resolved: 'dark' | 'light' = 'dark';
+    let resolved: ThemeMode = 'dark';
 
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      resolved = prefersDark ? 'dark' : 'dark';
+      resolved = prefersDark ? 'dark' : 'light';
     } else {
       resolved = theme;
     }
@@ -67,12 +67,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${accentColor}, #ff007f)`);
 
     if (resolved === 'light') {
-      root.style.setProperty('--bg-primary', '#0f172a');
-      root.style.setProperty('--bg-color', '#070510');
-      root.style.setProperty('--text-primary', '#ffffff');
-      root.style.setProperty('--text-secondary', '#cbd5e1');
-      root.style.setProperty('--glass-bg', 'rgba(14, 10, 26, 0.95)');
-      root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.15)');
+      root.style.setProperty('--bg-primary', '#f8fafc');
+      root.style.setProperty('--bg-color', '#f1f5f9');
+      root.style.setProperty('--text-primary', '#0f172a');
+      root.style.setProperty('--text-secondary', '#475569');
+      root.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.94)');
+      root.style.setProperty('--glass-border', 'rgba(15, 23, 42, 0.15)');
+      root.style.setProperty('--card-bg', '#ffffff');
+    } else if (resolved === 'high-contrast') {
+      root.style.setProperty('--bg-primary', '#000000');
+      root.style.setProperty('--bg-color', '#000000');
+      root.style.setProperty('--text-primary', '#ffff00');
+      root.style.setProperty('--text-secondary', '#ffffff');
+      root.style.setProperty('--glass-bg', '#0d0d0d');
+      root.style.setProperty('--glass-border', '#00ffff');
+      root.style.setProperty('--card-bg', '#111111');
     } else {
       root.style.setProperty('--bg-primary', '#0C0A14');
       root.style.setProperty('--bg-color', '#070510');
@@ -80,6 +89,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--text-secondary', '#cbd5e1');
       root.style.setProperty('--glass-bg', 'rgba(14, 10, 26, 0.95)');
       root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.15)');
+      root.style.setProperty('--card-bg', '#141026');
     }
   }, [theme, accentColor]);
 

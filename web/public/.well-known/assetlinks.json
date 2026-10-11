@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pajonline.buywiseai",
+      "sha256_cert_fingerprints": [
+        "4F:7C:70:84:37:23:40:1A:FE:4F:5F:D1:F6:7E:9A:C3:B9:40:D9:5F:A9:0E:3B:16:0A:5A:EA:D3:AC:1C:8A:85"
+      ]
+    }
+  }
+]

@@ -1,6 +1,7 @@
 "use client";
 
 import { BestsellerProduct } from '@/lib/categoryData';
+import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 interface WhereToBuyTableProps {
   product: BestsellerProduct;
@@ -121,7 +122,7 @@ export default function WhereToBuyTable({ product }: WhereToBuyTableProps) {
                       </a>
                     ) : (
                       <a
-                        href={item.url.startsWith('http') ? item.url : `/search?q=${encodeURIComponent(product.name)}`}
+                        href={item.url.startsWith('http') ? buildAffiliateUrl(item.url, item.store) : `/search?q=${encodeURIComponent(product.name)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ textDecoration: 'none' }}

@@ -2,11 +2,14 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import PhotoUploadModal from "@/components/PhotoUploadModal";
+import VoiceSearchModal from "@/components/VoiceSearchModal";
 import { ComparisonResponse, StoreOffer } from "@/lib/retailers/types";
 import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import SafeProductImage from "@/components/SafeProductImage";
+import { parseSearchIntent } from "@/lib/search/ProductIntentParser";
+import { getCategoryCapabilities } from "@/lib/search/CategoryCapabilityMatrix";
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -26,6 +29,7 @@ function SearchContent() {
   const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles"); // Default to Tiles Mode
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -213,6 +217,27 @@ function SearchContent() {
             />
             <button
               type="button"
+              onClick={() => setIsVoiceModalOpen(true)}
+              title="Voice Search (Speech Recognition)"
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "18px",
+                cursor: "pointer",
+                marginRight: "8px",
+              }}
+            >
+              🎙️
+            </button>
+            <button
+              type="button"
               onClick={() => setIsPhotoModalOpen(true)}
               title="Search by Photo (BuyWise AI Vision)"
               style={{
@@ -236,27 +261,35 @@ function SearchContent() {
           </form>
         </div>
 
-        {/* Identified Product Header Card */}
-        {searchQuery && (
-          <div className="glass" style={{ padding: "24px 28px", borderRadius: "20px", marginBottom: "28px", border: "1px solid var(--glass-border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-              <div>
-                <div style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 700, letterSpacing: "1px", marginBottom: "4px" }}>
-                  INDIAN E-COMMERCE COMPARISON
+        {/* Identified Product Header Card with Normalized Intent */}
+        {searchQuery && (() => {
+          const parsed = parseSearchIntent(searchQuery);
+          const caps = getCategoryCapabilities(parsed.intent.category);
+          return (
+            <div className="glass" style={{ padding: "24px 28px", borderRadius: "20px", marginBottom: "28px", border: "1px solid var(--glass-border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 700, letterSpacing: "1px", marginBottom: "4px" }}>
+                    INDIAN E-COMMERCE COMPARISON • {parsed.intent.category} → {parsed.intent.subcategory}
+                  </div>
+                  <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "4px" }}>
+                    {parsed.intent.normalizedQuery}
+                  </h2>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", marginTop: "6px" }}>
+                    <span>Intent: <strong style={{ color: "#00d4ff" }}>{parsed.queryType}</strong></span>
+                    <span>•</span>
+                    <span>VTO Status: <strong style={{ color: caps.tryOnSupported ? "#00ff88" : "#ff0066" }}>{caps.tryOnSupported ? "✨ Supported" : "🚫 Not Applicable"}</strong></span>
+                  </div>
                 </div>
-                <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "4px" }}>{searchQuery}</h2>
-                <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                  Search Mode: <strong style={{ color: "white" }}>{modeParam.toUpperCase()} MATCH</strong> • Currency: <strong style={{ color: "#00ff88" }}>INR (₹)</strong>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <span style={{ background: "rgba(138, 43, 226, 0.15)", border: "1px solid var(--primary)", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "var(--primary)" }}>
+                    ✓ AI CONFIDENCE {Math.round(parsed.confidence * 100)}%
+                  </span>
                 </div>
-              </div>
-              <div style={{ display: "flex", gap: "12px" }}>
-                <span style={{ background: "rgba(138, 43, 226, 0.15)", border: "1px solid var(--primary)", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "var(--primary)" }}>
-                  ✓ AI CONFIDENCE 95%
-                </span>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Stores Checked Summary Bar */}
         {data?.summary && (
@@ -412,6 +445,18 @@ function SearchContent() {
       <PhotoUploadModal
         isOpen={isPhotoModalOpen}
         onClose={() => setIsPhotoModalOpen(false)}
+      />
+
+      {/* Voice Search Modal Trigger */}
+      <VoiceSearchModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onTranscript={(text) => {
+          if (text && text.trim()) {
+            setSearchInput(text.trim());
+            router.push(`/search?q=${encodeURIComponent(text.trim())}`);
+          }
+        }}
       />
     </main>
   );

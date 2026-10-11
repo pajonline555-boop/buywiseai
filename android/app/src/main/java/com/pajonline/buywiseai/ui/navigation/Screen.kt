@@ -14,6 +14,7 @@ sealed class Screen(val route: String, val titleKey: String, val icon: ImageVect
     object Search : Screen("search", "nav_search", Icons.Default.Search)
     object Competition : Screen("competition", "nav_comp", Icons.Default.Star)
     object Vto : Screen("vto", "nav_vto", Icons.Default.Face)
+    object Prime : Screen("prime", "Prime", Icons.Default.Star)
     object Alerts : Screen("alerts", "Alerts", Icons.Default.Notifications)
     object Profile : Screen("profile", "nav_profile", Icons.Default.Person)
 

@@ -115,10 +115,8 @@ export default function FitAssistantModal({ isOpen, onClose, product }: Props) {
                 style={{
                   width: "48px",
                   height: "48px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  border: "2px solid #00ff88",
-                  boxShadow: "0 0 15px rgba(0, 255, 136, 0.4)"
+                  objectFit: "contain",
+                  filter: "drop-shadow(0 0 10px rgba(0, 255, 136, 0.4))"
                 }}
               />
               <span
@@ -262,7 +260,7 @@ export default function FitAssistantModal({ isOpen, onClose, product }: Props) {
                 <img
                   src="/ai-assistant.png"
                   alt="Maya AI Stylist"
-                  style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1.5px solid #00d4ff" }}
+                  style={{ width: "32px", height: "32px", objectFit: "contain" }}
                 />
                 <div>
                   <span style={{ fontSize: "14px", fontWeight: 800, color: "#00d4ff", display: "block" }}>Maya's Personal Styling Advice</span>

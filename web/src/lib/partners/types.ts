@@ -106,6 +106,7 @@ export interface PartnerProduct {
   rating?: number;
   reviewCount?: number;
   slug?: string;
+  youtubeUrl?: string;
   smartValueScore?: number;
   shoppingTrustScore?: number;
   shippingEstimate?: string;

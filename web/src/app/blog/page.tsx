@@ -15,8 +15,10 @@ function MarkdownContent({ content }: { content: string }) {
   let tableRows: string[][] = [];
 
   const parseFormattedText = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*)/g);
+    const parts = text.split(/(!?\[.*?\]\(.*?\))|(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
+      if (!part) return null;
+
       if (part.startsWith("**") && part.endsWith("**")) {
         return (
           <strong key={i} style={{ color: "#00ff88", fontWeight: 800 }}>
@@ -24,22 +26,87 @@ function MarkdownContent({ content }: { content: string }) {
           </strong>
         );
       }
-      const linkMatch = part.match(/\[(.*?)\]\((.*?)\)/);
+
+      const imgMatch = part.match(/^!\[(.*?)\]\((.*?)\)$/);
+      if (imgMatch) {
+        return (
+          <span key={i} style={{ display: "block", margin: "16px 0", textAlign: "center" }}>
+            <img
+              src={imgMatch[2]}
+              alt={imgMatch[1]}
+              style={{ maxWidth: "100%", maxHeight: "400px", objectFit: "contain", borderRadius: "16px", border: "1px solid var(--glass-border)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}
+            />
+            {imgMatch[1] && <span style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", fontStyle: "italic" }}>{imgMatch[1]}</span>}
+          </span>
+        );
+      }
+
+      const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
       if (linkMatch) {
+        const isExternal = linkMatch[2].startsWith("http://") || linkMatch[2].startsWith("https://");
+        const isAmazon = linkMatch[2].includes("amazon.in") || linkMatch[2].includes("amazon.com");
+
+        if (isExternal) {
+          return (
+            <a
+              key={i}
+              href={linkMatch[2]}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: "none", display: "inline-block", margin: "6px 0" }}
+            >
+              <button
+                className="btn-primary"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 22px",
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  background: isAmazon ? "linear-gradient(135deg, #ff9900 0%, #ff5500 100%)" : undefined,
+                  color: "#ffffff",
+                  border: isAmazon ? "none" : undefined
+                }}
+              >
+                {linkMatch[1]} {isAmazon ? "🛒" : "↗"}
+              </button>
+            </a>
+          );
+        }
+
         return (
           <Link key={i} href={linkMatch[2]} style={{ textDecoration: "none" }}>
-            <button className="btn-primary" style={{ display: "inline-block", margin: "10px 0", padding: "10px 22px", fontSize: "14px", fontWeight: 800 }}>
+            <button className="btn-primary" style={{ display: "inline-block", margin: "6px 0", padding: "10px 22px", fontSize: "14px", fontWeight: 800 }}>
               {linkMatch[1]} ↗
             </button>
           </Link>
         );
       }
+
       return part;
     });
   };
 
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
+
+    if (trimmed.startsWith("![") && trimmed.endsWith(")")) {
+      const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+      if (imgMatch) {
+        elements.push(
+          <div key={`img-${idx}`} style={{ margin: "24px 0", textAlign: "center" }}>
+            <img
+              src={imgMatch[2]}
+              alt={imgMatch[1]}
+              style={{ maxWidth: "100%", maxHeight: "420px", width: "auto", borderRadius: "16px", border: "1px solid var(--glass-border)", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
+            />
+            {imgMatch[1] && <span style={{ display: "block", fontSize: "13px", color: "var(--text-secondary)", marginTop: "8px", fontStyle: "italic" }}>{imgMatch[1]}</span>}
+          </div>
+        );
+        return;
+      }
+    }
 
     if (trimmed.startsWith("|")) {
       inTable = true;
@@ -173,7 +240,7 @@ export default function BlogPage() {
     }
   };
 
-  const categories = ["All", "Mobiles & Tech", "Laptops & Computers", "Audio & Accessories", "Festive Deals"];
+  const categories = ["All", "Fashion & Lifestyle", "Festive Deals", "Mobiles & Tech", "Laptops & Computers", "Audio & Accessories"];
   const filteredPosts = activeCategory === "All" ? posts : posts.filter(p => p.category?.toLowerCase().includes(activeCategory.toLowerCase()));
 
   return (

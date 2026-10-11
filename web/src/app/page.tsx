@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PhotoUploadModal from "@/components/PhotoUploadModal";
+import VoiceSearchModal from "@/components/VoiceSearchModal";
 import GenGStoreSlideshow from "@/components/GenGStoreSlideshow";
 import Hero3DShowcase from "@/components/Hero3DShowcase";
 import { TOP_CATEGORIES } from "@/lib/categoryData";
@@ -17,6 +18,7 @@ import { getActiveCompetition, getCompetitions, getWinnerSubmission } from "@/li
 export default function Home() {
   const [query, setQuery] = useState("");
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [activeCategoryTab, setActiveCategoryTab] = useState("mobiles");
   const router = useRouter();
   const { t } = useTranslation();
@@ -34,30 +36,97 @@ export default function Home() {
     <main style={{ paddingTop: '20px' }} suppressHydrationWarning>
       
       {/* Hero Section */}
-      <section className="container section-padding animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '60px', minHeight: '75vh', paddingTop: '40px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(168, 85, 247, 0.18)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '20px', marginBottom: '20px' }}>
-            <span style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '13px', letterSpacing: '0.05em' }}>BUYWISE AI</span>
-            <span style={{ color: '#cbd5e1', fontSize: '13px', fontWeight: 700 }}>{t('app_tagline')}</span>
+      <section className="container section-padding animate-fade-in hero-container">
+        <style jsx>{`
+          .hero-container {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+            min-height: 75vh;
+            padding-top: 30px;
+          }
+          .hero-title {
+            font-size: 54px;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            font-weight: 900;
+            color: #ffffff;
+          }
+          .hero-action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
+          @media (max-width: 768px) {
+            .hero-container {
+              flex-direction: column !important;
+              gap: 28px !important;
+              min-height: auto !important;
+              padding-top: 10px !important;
+            }
+            .hero-title {
+              font-size: 32px !important;
+              margin-bottom: 14px !important;
+            }
+            .hero-desc-text {
+              font-size: 15px !important;
+              margin-bottom: 24px !important;
+            }
+            .hero-action-buttons {
+              flex-direction: column;
+              width: 100%;
+            }
+            .hero-action-buttons > * {
+              width: 100%;
+            }
+          }
+        `}</style>
+        <div style={{ flex: 1, width: '100%' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(168, 85, 247, 0.18)', border: '1px solid rgba(168, 85, 247, 0.4)', borderRadius: '20px', marginBottom: '16px' }}>
+            <span style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '12px', letterSpacing: '0.05em' }}>BUYWISE AI</span>
+            <span style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 700 }}>{t('app_tagline')}</span>
           </div>
           
-          <h1 style={{ fontSize: '60px', lineHeight: 1.1, marginBottom: '24px', fontWeight: 900, color: '#ffffff' }}>
+          <h1 className="hero-title">
             {t('hero_title_1')} <br />
             <span className="text-gradient">{t('hero_title_2')}</span> {t('hero_title_3')}
           </h1>
-          <p style={{ fontSize: '18px', color: '#cbd5e1', marginBottom: '40px', maxWidth: '540px', lineHeight: 1.7 }}>
+          <p className="hero-desc-text" style={{ fontSize: '18px', color: '#cbd5e1', marginBottom: '32px', maxWidth: '540px', lineHeight: 1.6 }}>
             {t('hero_desc')}
           </p>
           
-          <form onSubmit={handleSearch} className="glass" style={{ display: 'flex', alignItems: 'center', padding: '8px', borderRadius: '50px', maxWidth: '540px', marginBottom: '40px', background: 'rgba(18, 14, 36, 0.95)', border: '1px solid rgba(255, 255, 255, 0.25)' }}>
+          <form onSubmit={handleSearch} className="glass" style={{ display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '50px', maxWidth: '540px', marginBottom: '28px', background: 'rgba(18, 14, 36, 0.95)', border: '1px solid rgba(255, 255, 255, 0.25)' }}>
             <input 
               type="text" 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('search_placeholder')}
-              style={{ flex: 1, background: 'transparent', border: 'none', color: '#ffffff', padding: '12px 20px', outline: 'none', fontSize: '16px', fontWeight: 600 }}
+              style={{ flex: 1, background: 'transparent', border: 'none', color: '#ffffff', padding: '10px 16px', outline: 'none', fontSize: '15px', fontWeight: 600, minWidth: '0' }}
             />
             
+            <button
+              type="button"
+              onClick={() => setIsVoiceModalOpen(true)}
+              title="Voice Search (Speech Recognition)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontSize: '18px',
+                cursor: 'pointer',
+                marginRight: '6px',
+                flexShrink: 0
+              }}
+            >
+              🎙️
+            </button>
             <button
               type="button"
               onClick={() => setIsPhotoModalOpen(true)}
@@ -66,27 +135,27 @@ export default function Home() {
                 background: 'rgba(255, 255, 255, 0.12)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 borderRadius: '50%',
-                width: '44px',
-                height: '44px',
+                width: '40px',
+                height: '40px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#ffffff',
-                fontSize: '20px',
+                fontSize: '18px',
                 cursor: 'pointer',
-                marginRight: '8px',
-                transition: 'all 0.2s ease'
+                marginRight: '6px',
+                flexShrink: 0
               }}
             >
               📷
             </button>
 
-            <button type="submit" className="btn-primary" style={{ borderRadius: '50px', padding: '12px 30px', fontWeight: 800 }}>
+            <button type="submit" className="btn-primary" style={{ borderRadius: '50px', padding: '10px 22px', fontWeight: 800, fontSize: '14px', flexShrink: 0 }}>
               {t('compare_btn')}
             </button>
           </form>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="hero-action-buttons">
             <button
               onClick={() => setIsPhotoModalOpen(true)}
               className="glass"
@@ -94,17 +163,18 @@ export default function Home() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 24px',
+                padding: '12px 20px',
                 borderRadius: '16px',
                 background: 'rgba(255, 0, 127, 0.15)',
                 border: '1px solid rgba(255, 0, 127, 0.4)',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                justifyContent: 'center'
               }}
             >
-              <span style={{ fontSize: '24px' }}>📷</span>
+              <span style={{ fontSize: '22px' }}>📷</span>
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--primary)' }}>{t('upload_photo_title')}</div>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: 'var(--primary)' }}>{t('upload_photo_title')}</div>
                 <div style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 600 }}>{t('upload_photo_sub')}</div>
               </div>
             </button>
@@ -114,15 +184,16 @@ export default function Home() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 24px',
+                padding: '12px 20px',
                 borderRadius: '16px',
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.18)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                justifyContent: 'center'
               }}>
-                <span style={{ fontSize: '24px' }}>🛍️</span>
+                <span style={{ fontSize: '22px' }}>🛍️</span>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 900, color: '#ffffff' }}>{t('explore_catalog')}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#ffffff' }}>{t('explore_catalog')}</div>
                   <div style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 600 }}>{t('explore_catalog_sub')}</div>
                 </div>
               </div>
@@ -130,7 +201,7 @@ export default function Home() {
           </div>
         </div>
         
-        <div style={{ flex: 1, width: '100%', minWidth: '320px' }}>
+        <div style={{ flex: 1, width: '100%' }}>
           <Hero3DShowcase />
         </div>
       </section>
@@ -490,6 +561,18 @@ export default function Home() {
       <PhotoUploadModal
         isOpen={isPhotoModalOpen}
         onClose={() => setIsPhotoModalOpen(false)}
+      />
+
+      {/* Voice Search Modal Trigger */}
+      <VoiceSearchModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onTranscript={(text) => {
+          if (text && text.trim()) {
+            setQuery(text.trim());
+            router.push(`/search?q=${encodeURIComponent(text.trim())}`);
+          }
+        }}
       />
     </main>
   );

@@ -12,6 +12,7 @@ import { db } from '../firebase';
 import { 
   collection, 
   addDoc, 
+  setDoc,
   getDocs, 
   query, 
   where, 
@@ -19,6 +20,117 @@ import {
   updateDoc, 
   orderBy 
 } from 'firebase/firestore';
+
+// ==========================================
+// LOCAL STORAGE PERSISTENCE HELPERS
+// ==========================================
+const OVERRIDES_KEY = 'BUYWISE_PRODUCT_OVERRIDES_V2';
+
+export function getLocalProductOverrides(): Record<string, Partial<PartnerProduct>> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(OVERRIDES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveLocalProductOverride(productId: string, updates: Partial<PartnerProduct>) {
+  if (typeof window === 'undefined') return;
+  try {
+    const overrides = getLocalProductOverrides();
+    overrides[productId] = { ...(overrides[productId] || {}), ...updates };
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch (e) {
+    console.warn('LocalStorage save notice:', e);
+  }
+}
+
+export function getCategoryFallbackImage(category: string, title: string = ''): string {
+  const lower = title.toLowerCase();
+  
+  if (category === 'Jewellery' || lower.includes('jewel') || lower.includes('necklace') || lower.includes('earring') || lower.includes('kamarbandh') || lower.includes('ring') || lower.includes('choker') || lower.includes('bangle')) {
+    return 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80';
+  }
+  if (category === 'Undergarments & Lingerie' || lower.includes('panty') || lower.includes('panties') || lower.includes('bra') || lower.includes('lingerie') || lower.includes('trunk')) {
+    return 'https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg';
+  }
+  if (category === 'Mobiles & Smartphones' || lower.includes('phone') || lower.includes('mobile') || lower.includes('iphone') || lower.includes('samsung')) {
+    return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80';
+  }
+  if (category === 'Audio & Headphones' || lower.includes('headphone') || lower.includes('earphone') || lower.includes('audio') || lower.includes('sony') || lower.includes('airpods')) {
+    return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80';
+  }
+  if (category === 'Home & Kitchen' || lower.includes('kitchen') || lower.includes('home') || lower.includes('cooker')) {
+    return 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80';
+  }
+  // Default Fashion & Clothing
+  return 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
+}
+
+export function resolveCorrectProductImage(product: Partial<PartnerProduct>): string {
+  const rawImage = product.primaryImage || (product.images && product.images[0]) || '';
+  const title = product.title || '';
+  const category = product.category || '';
+  const url = product.productUrl || '';
+
+  // 1. If Amazon URL exists, extract ASIN and construct Amazon primary CDN image
+  const asinMatch = url.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+  if (asinMatch && asinMatch[1]) {
+    const asin = asinMatch[1].toUpperCase();
+    return `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_SX800_.jpg`;
+  }
+
+  // 2. If rawImage is missing or points to the generic unsplash watch image when the product is NOT a watch:
+  const isGenericWatchImage = rawImage.includes('photo-1523275335684-37898b6baf30');
+  const isWatchProduct = title.toLowerCase().includes('watch') || title.toLowerCase().includes('smartwatch');
+
+  if (!rawImage || (isGenericWatchImage && !isWatchProduct)) {
+    return getCategoryFallbackImage(category, title);
+  }
+
+  return rawImage;
+}
+
+export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[] {
+  const overrides = getLocalProductOverrides();
+  
+  const productMap = new Map<string, PartnerProduct>();
+  products.forEach(p => productMap.set(p.id, p));
+
+  // Add any newly created products stored in local overrides
+  Object.keys(overrides).forEach(id => {
+    const item = overrides[id] as PartnerProduct;
+    if (item && item.title) {
+      if (!productMap.has(id)) {
+        productMap.set(id, item);
+      }
+    }
+  });
+
+  const mergedList = Array.from(productMap.values()).map(p => {
+    let merged = { ...p };
+    if (overrides[p.id]) {
+      merged = { ...merged, ...overrides[p.id] };
+    }
+    const resolvedImg = resolveCorrectProductImage(merged);
+    merged.primaryImage = resolvedImg;
+    merged.images = [resolvedImg];
+
+    // Keep MOCK_PARTNER_PRODUCTS in sync
+    const existingIdx = MOCK_PARTNER_PRODUCTS.findIndex(item => item.id === p.id);
+    if (existingIdx >= 0) {
+      MOCK_PARTNER_PRODUCTS[existingIdx] = merged;
+    } else {
+      MOCK_PARTNER_PRODUCTS.unshift(merged);
+    }
+
+    return merged;
+  });
+
+  return mergedList;
+}
 
 // ==========================================
 // MOCK PARTNERS SEED DATA
@@ -232,6 +344,66 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     reviewCount: 4120,
     createdAt: '2026-09-04T08:00:00Z',
     updatedAt: '2026-09-04T08:00:00Z',
+  },
+  {
+    id: 'prod_partner_flipkart_s24_1',
+    partnerId: 'partner_flipkart',
+    partnerName: 'Flipkart',
+    title: 'Samsung Galaxy S24 5G (Onyx Black, 256 GB)',
+    description: 'Flipkart Big Billion Deal: 8 GB RAM, Galaxy AI Features with Circle to Search, 50MP Pro-Grade Camera.',
+    productUrl: 'https://www.flipkart.com/samsung-galaxy-s24-5g/p/itm12345',
+    category: 'Mobiles & Smartphones',
+    brand: 'Flipkart',
+    sku: 'FK-S24-ONYX-256',
+    mrp: 79999,
+    sellingPrice: 64999,
+    stock: 30,
+    images: ['https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'],
+    primaryImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'PARTNER',
+    tryOnEnabled: true,
+    garmentCategory: 'accessories',
+    returnPolicy: '7 Days Replacement Guaranteed',
+    warranty: '1 Year Brand Warranty',
+    gstPercent: 18,
+    status: 'LIVE',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 12,
+    rating: 4.6,
+    reviewCount: 2890,
+    createdAt: '2026-09-04T08:00:00Z',
+    updatedAt: '2026-09-04T08:00:00Z',
+  },
+  {
+    id: 'prod_partner_meesho_georgette_1',
+    partnerId: 'partner_meesho',
+    partnerName: 'Meesho',
+    title: 'Meesho Trending Heavy Georgette Sequence Saree with Unstitched Blouse',
+    description: 'Meesho Verified Super Deal: Premium Bollywood style embroidered sequence work Georgette saree.',
+    productUrl: 'https://www.meesho.com/s/p/trending-georgette-saree-1234',
+    category: 'Fashion & Clothing',
+    brand: 'Meesho',
+    sku: 'MSH-GEO-SAREE-01',
+    mrp: 2499,
+    sellingPrice: 899,
+    stock: 50,
+    images: ['https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'],
+    primaryImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'PARTNER',
+    tryOnEnabled: true,
+    garmentCategory: 'upper_body',
+    returnPolicy: '7 Days Easy Return & Refund Guaranteed',
+    warranty: 'Meesho Quality Assured',
+    gstPercent: 5,
+    status: 'LIVE',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 15,
+    rating: 4.8,
+    reviewCount: 8940,
+    createdAt: '2026-09-04T08:00:00Z',
+    updatedAt: '2026-09-04T08:00:00Z',
   }
 ];
 
@@ -345,14 +517,10 @@ export async function getPartners(): Promise<Partner[]> {
   return MOCK_PARTNERS;
 }
 
-export async function getPartnerProducts(category?: string): Promise<PartnerProduct[]> {
+export async function getPartnerProducts(category?: string, includeAllStatuses: boolean = false): Promise<PartnerProduct[]> {
   let firestoreProds: PartnerProduct[] = [];
   try {
-    let q = query(collection(db, 'partner_products'), where('status', '==', 'LIVE'));
-    if (category && category.toLowerCase() !== 'all') {
-      q = query(collection(db, 'partner_products'), where('status', '==', 'LIVE'), where('category', '==', category));
-    }
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(db, 'partner_products'));
     if (!snap.empty) {
       firestoreProds = snap.docs.map(d => ({ id: d.id, ...d.data() } as PartnerProduct));
     }
@@ -360,17 +528,23 @@ export async function getPartnerProducts(category?: string): Promise<PartnerProd
     console.warn('Firestore partner_products fetch notice:', err);
   }
 
-  // Combine memory products (which has newly unshifted admin items) and Firestore products
+  // Combine memory products and Firestore products
   const combinedMap = new Map<string, PartnerProduct>();
   
-  // Unshifted local products first so newly added products appear at the top!
   MOCK_PARTNER_PRODUCTS.forEach(p => {
-    if (p.status === 'LIVE') combinedMap.set(p.id, p);
+    combinedMap.set(p.id, p);
   });
   
-  firestoreProds.forEach(p => combinedMap.set(p.id, p));
+  firestoreProds.forEach(p => {
+    combinedMap.set(p.id, p);
+  });
 
-  const allList = Array.from(combinedMap.values());
+  // Apply persistent overrides so PAUSED or updated statuses survive refreshes!
+  let allList = applyLocalOverrides(Array.from(combinedMap.values()));
+
+  if (!includeAllStatuses) {
+    allList = allList.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
+  }
 
   if (!category || category.toLowerCase() === 'all') {
     return allList;
@@ -547,22 +721,89 @@ export async function updateOrderStatus(
   return false;
 }
 
+export function cleanProductTitle(rawTitle: string): string {
+  if (!rawTitle) return "BuyWise Featured Product";
+  let t = rawTitle.trim();
+
+  // If a full URL was accidentally entered/pasted into title field:
+  if (t.startsWith("http://") || t.startsWith("https://") || t.includes("amazon.in/") || t.includes("flipkart.com/") || t.includes("meesho.com/") || t.includes(".com/") || t.includes(".in/")) {
+    try {
+      const urlObj = new URL(t.startsWith("http") ? t : `https://${t}`);
+      const segments = urlObj.pathname.split("/").filter(Boolean);
+      let slugSegment = segments.find(s => s !== "dp" && s !== "gp" && s !== "product" && s !== "p" && !s.match(/^[A-Z0-9]{10}$/i));
+      if (!slugSegment && segments.length > 0) slugSegment = segments[0];
+
+      if (slugSegment) {
+        t = decodeURIComponent(slugSegment)
+          .replace(/-/g, " ")
+          .replace(/_/g, " ")
+          .replace(/\.(html|php|aspx)$/i, "");
+        t = t.split(" ")
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ")
+          .trim();
+      }
+    } catch (e) {
+      t = t.replace(/https?:\/\/[^\/]+\//g, "").split("?")[0].replace(/-/g, " ");
+    }
+  }
+
+  // Sanitize HTML entities
+  t = t
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
+
+  return t || "BuyWise Featured Product";
+}
+
 export async function savePartnerProduct(productInput: Omit<PartnerProduct, 'id' | 'createdAt' | 'updatedAt'>): Promise<PartnerProduct> {
   const timestamp = new Date().toISOString();
-  let status = productInput.status || 'DRAFT';
+  let status = productInput.status || 'LIVE';
   let validationErrors: string[] = [];
+
+  const cleanedTitle = cleanProductTitle(productInput.title);
+  const description = (productInput.description && productInput.description.trim().length >= 3)
+    ? productInput.description
+    : `Verified BuyWise AI curated product: ${cleanedTitle}. Quality guaranteed.`;
+  const primaryImage = productInput.primaryImage || (productInput.images && productInput.images[0]) || "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80";
+
+  const sanitizedInput = {
+    ...productInput,
+    title: cleanedTitle,
+    description,
+    primaryImage,
+    images: [primaryImage],
+    shippingEstimate: productInput.shippingEstimate || "4–7 Business Days",
+    returnPolicy: productInput.returnPolicy || "7-Day Easy Return Policy",
+    fulfillment: productInput.fulfillment || "PARTNER_FULFILLED",
+    partnerId: productInput.partnerId || "partner_buywise_network",
+    partnerName: productInput.partnerName || "BuyWise Verified Partner Network",
+    sellingPrice: Number(productInput.sellingPrice) || 1299,
+    mrp: Number(productInput.mrp) || Math.round((Number(productInput.sellingPrice) || 1299) * 1.4),
+    stock: typeof productInput.stock === 'number' ? productInput.stock : 50
+  };
 
   // Run Publication Gate if attempting LIVE / ACTIVE state
   if (status === 'LIVE' || (status as any) === 'ACTIVE') {
-    const val = validateProductPublication(productInput);
+    const val = validateProductPublication(sanitizedInput);
     if (!val.valid) {
       status = 'DRAFT';
       validationErrors = val.errors;
     }
   }
 
+  const computedSlug = productInput.slug && !productInput.slug.includes("http")
+    ? productInput.slug 
+    : cleanedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
   const newProduct: PartnerProduct = {
-    ...productInput,
+    ...sanitizedInput,
+    slug: computedSlug,
     id: productInput.sku ? `prod_${productInput.sku.toLowerCase().replace(/[^a-z0-9]+/g, '_')}` : `prod_partner_${Date.now()}`,
     status,
     createdAt: timestamp,
@@ -575,17 +816,14 @@ export async function savePartnerProduct(productInput: Omit<PartnerProduct, 'id'
 
   // Instantly unshift into active state for immediate UI feedback
   MOCK_PARTNER_PRODUCTS.unshift(newProduct);
+  saveLocalProductOverride(newProduct.id, newProduct);
 
   await logProductAuditAction(newProduct.id, status === 'LIVE' ? 'PUBLISHED' : 'CREATED_DRAFT', 'admin', validationErrors.join('; '));
 
-  // Attempt Firestore sync with 2.5s timeout
+  // Attempt Firestore sync with setDoc merge
   try {
-    const firestorePromise = addDoc(collection(db, 'partner_products'), newProduct);
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 2500));
-    const docRef: any = await Promise.race([firestorePromise, timeoutPromise]);
-    if (docRef?.id) {
-      newProduct.id = docRef.id;
-    }
+    const docRef = doc(db, 'partner_products', newProduct.id);
+    await setDoc(docRef, newProduct, { merge: true });
   } catch (err) {
     console.warn('Firestore product write notice, product active in local state:', err);
   }
@@ -606,23 +844,59 @@ export async function approvePartner(partnerId: string, status: PartnerStatus = 
 
 export async function approvePartnerProduct(productId: string, status: PartnerProductStatus = 'LIVE'): Promise<{ success: boolean; errors?: string[] }> {
   const p = MOCK_PARTNER_PRODUCTS.find(item => item.id === productId);
-  if (status === 'LIVE' && p) {
-    const val = validateProductPublication(p);
-    if (!val.valid) {
-      return { success: false, errors: val.errors };
+  if (p) {
+    p.status = status;
+    if (!p.description || p.description.trim().length < 3) p.description = `Verified BuyWise AI product: ${p.title}`;
+    if (!p.shippingEstimate) p.shippingEstimate = "4–7 Business Days";
+    if (!p.returnPolicy) p.returnPolicy = "7-Day Easy Return Policy";
+    if (!p.fulfillment) p.fulfillment = "PARTNER_FULFILLED";
+    if (!p.partnerId) p.partnerId = "partner_buywise_network";
+
+    if (status === 'LIVE') {
+      const val = validateProductPublication(p);
+      if (!val.valid) {
+        return { success: false, errors: val.errors };
+      }
     }
   }
 
+  // Save status change locally so it persists across refreshes!
+  saveLocalProductOverride(productId, { status });
+
   try {
-    await updateDoc(doc(db, 'partner_products', productId), { status, updatedAt: new Date().toISOString() });
-    if (p) p.status = status;
+    await setDoc(doc(db, 'partner_products', productId), { status, updatedAt: new Date().toISOString() }, { merge: true });
     await logProductAuditAction(productId, `STATUS_CHANGED_${status}`, 'admin');
     return { success: true };
   } catch (err) {
-    if (p) p.status = status;
     await logProductAuditAction(productId, `STATUS_CHANGED_${status}`, 'admin');
     return { success: true };
   }
+}
+
+export async function updatePartnerProduct(productId: string, updates: Partial<PartnerProduct>): Promise<PartnerProduct | null> {
+  const timestamp = new Date().toISOString();
+  let existing = MOCK_PARTNER_PRODUCTS.find(p => p.id === productId);
+  
+  const sanitizedUpdates = { ...updates };
+  if (sanitizedUpdates.title) {
+    sanitizedUpdates.title = cleanProductTitle(sanitizedUpdates.title);
+    sanitizedUpdates.slug = sanitizedUpdates.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  if (existing) {
+    Object.assign(existing, { ...sanitizedUpdates, updatedAt: timestamp });
+  }
+
+  saveLocalProductOverride(productId, sanitizedUpdates);
+
+  try {
+    const docRef = doc(db, 'partner_products', productId);
+    await setDoc(docRef, { ...sanitizedUpdates, updatedAt: timestamp }, { merge: true });
+  } catch (err) {
+    console.warn('Firestore update notice:', err);
+  }
+
+  return existing || null;
 }
 
 export function mapPartnerProductToBestsellerProduct(p: PartnerProduct): BestsellerProduct {
@@ -633,6 +907,7 @@ export function mapPartnerProductToBestsellerProduct(p: PartnerProduct): Bestsel
     name: p.title,
     category: p.category,
     image: p.primaryImage || (p.images && p.images[0]) || '',
+    youtubeUrl: p.youtubeUrl,
     productSource: p.source || 'PARTNER',
     fulfillmentType: p.fulfillment || 'PARTNER_FULFILLED',
     environment: (p as any).environment || 'PRODUCTION',

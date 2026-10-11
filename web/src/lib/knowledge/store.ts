@@ -616,7 +616,11 @@ export function getKnowledgeArticles(category?: string, query?: string): Knowled
 }
 
 export function getArticleBySlug(slug: string): KnowledgeArticle | undefined {
-  return KNOWLEDGE_ARTICLES.find((a) => a.slug === slug);
+  if (!slug) return undefined;
+  const normalized = slug.trim().toLowerCase();
+  return KNOWLEDGE_ARTICLES.find(
+    (a) => a.slug.toLowerCase() === normalized || a.id.toLowerCase() === normalized
+  );
 }
 
 export function generateDailyAIKnowledgeArticle(category?: KnowledgeCategory): KnowledgeArticle {

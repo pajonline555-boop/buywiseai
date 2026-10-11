@@ -72,33 +72,11 @@ export class AmazonAdapter implements RetailerAdapter {
     const affiliateUrl = `https://www.amazon.in/s?k=${encodeURIComponent(cleanQuery)}&tag=${partnerTag}`;
 
     if (!accessKey || !secretKey) {
-      const price = calculateLowestPriceForQuery(cleanQuery, 0); // ₹82,900 for iPhone 17
-
-      const offer: StoreOffer = {
-        id: `amz-${Date.now()}`,
-        retailerId: this.id,
-        store: this.name,
-        title: `${cleanQuery} (Amazon India Lowest Deal with Bank Offer)`,
-        url: affiliateUrl,
-        price,
-        currency: 'INR',
-        originalPrice: Math.round(price * 1.1),
-        mrp: Math.round(price * 1.1),
-        discount: Math.round(price * 0.1),
-        logo: this.logo,
-        rating: 4.7,
-        reviewCount: 14200,
-        availability: 'in_stock',
-        checkedAt: timestamp,
-        sourceType: 'api',
-        verificationStatus: 'verified_live',
-        isLowest: true,
-      };
-
       return {
         retailer: { id: this.id, name: this.name, country: this.country, currency: this.currency, enabled: this.enabled, logo: this.logo },
-        offers: [offer],
-        success: true,
+        offers: [],
+        success: false,
+        error: 'Amazon PA-API live credentials required (AMAZON_PAAPI_KEY / AMAZON_PAAPI_SECRET). Connection status: CREDENTIALS_REQUIRED.',
         checkedAt: timestamp,
       };
     }

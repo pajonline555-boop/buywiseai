@@ -1,73 +1,77 @@
 export const dynamic = "force-static";
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
+import { MayaKnowledgeService, MayaLanguage } from '@/lib/ai/mayaKnowledgeService';
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json();
+    const { messages, lang, liveContext, context } = await request.json();
+    const lastUserMessage = messages && messages.length > 0 ? messages[messages.length - 1].content : '';
+    const preferredLang: MayaLanguage = lang || 'en';
+
+    // 1. Query Central Authoritative Knowledge Service with Conversation Context
+    const kbResult = await MayaKnowledgeService.getAuthoritativeAnswer(lastUserMessage, preferredLang, liveContext, context);
 
     const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    const openAiKey = process.env.OPENAI_API_KEY;
 
-    // 1. Prefer Google Gemini if GEMINI_API_KEY is configured
-    if (geminiKey && !geminiKey.includes('your-actual')) {
-      const ai = new GoogleGenAI({ apiKey: geminiKey });
-      
-      // Convert OpenAI style messages to Gemini contents format
-      const formattedHistory = messages.map((m: any) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
-      
-      const systemInstruction = "You are Maya, the official BuyWise AI Shopping & Personal Fashion Assistant. You help users compare prices across Amazon, Flipkart, and eBay, find smart deals, recommend outfits, check price history, and assist with virtual try-on selections. Speak warmly, smartly, and concisely as BuyWise AI's official assistant.";
+    // 2. If Gemini API is available and match is NOT unknown/prompt injection, format response with Gemini 2.5 Flash
+    if (geminiKey && !geminiKey.includes('your-actual') && kbResult.intent !== 'UNKNOWN' && kbResult.intent !== 'PROMPT_INJECTION') {
+      try {
+        const systemPrompt = `You are Maya, the official BuyWise AI Shopping & Personal Fashion Assistant.
+        
+AUTHORITATIVE KNOWLEDGE BASE FACT:
+"${kbResult.answer}"
 
-      const response = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        contents: `${systemInstruction}\n\nChat History:\n${formattedHistory}\n\nAssistant:`,
-      });
+STRICT ANSWERING RULES:
+1. Deliver this exact authoritative information clearly, concisely, and naturally in the user's requested language (${kbResult.languageUsed}).
+2. Do NOT invent prices, dates, competition prizes, winners, or guarantees.
+3. Keep response friendly, helpful, and concise.`;
 
-      return NextResponse.json({
-        role: 'assistant',
-        content: response.text || "Hello! I'm Maya, your BuyWise AI Assistant. How can I help you today?"
-      });
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: 'user', parts: [{ text: lastUserMessage }] }]
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (replyText && replyText.trim()) {
+            return NextResponse.json({
+              role: 'assistant',
+              content: replyText.trim(),
+              intent: kbResult.intent,
+              isAuthoritative: true,
+              context: kbResult.updatedContext
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Gemini formatting failed, returning raw KB answer:", err);
+      }
     }
 
-    // 2. Fallback to OpenAI if OPENAI_API_KEY is configured
-    if (openAiKey && !openAiKey.includes('your-actual')) {
-      const openai = new OpenAI({ apiKey: openAiKey });
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { 
-            role: "system", 
-            content: "You are Maya, the official BuyWise AI Shopping & Personal Fashion Assistant. You help users compare prices across Amazon, Flipkart, and eBay, find smart deals, recommend outfits, check price history, and assist with virtual try-on selections. Speak warmly, smartly, and concisely as BuyWise AI's official assistant." 
-          },
-          ...messages
-        ],
-        temperature: 0.7,
-      });
-
-      return NextResponse.json(response.choices[0].message);
-    }
-
-    // 3. Fallback when neither key is configured
-    return NextResponse.json({ 
-      role: 'assistant', 
-      content: "Hello! I'm Maya, your BuyWise AI Assistant. (No active GEMINI_API_KEY or OPENAI_API_KEY found in .env.local. Please configure your API key)." 
+    // 3. Return Direct Authoritative Knowledge Base Result
+    return NextResponse.json({
+      role: 'assistant',
+      content: kbResult.answer,
+      intent: kbResult.intent,
+      isAuthoritative: true,
+      context: kbResult.updatedContext
     });
 
   } catch (error: any) {
-    console.error('AI Route Error:', error);
-    
-    if (error?.status === 429 || error?.code === 'credit_balance_exhausted' || error?.type === 'insufficient_quota') {
-      return NextResponse.json({ 
-        role: 'assistant', 
-        content: "⚠️ OpenAI API Error 429: Credit Balance Exhausted (Insufficient Quota).\n\nYour OpenAI account has $0 remaining billing credits. Add credits or switch to GEMINI_API_KEY in .env.local." 
-      });
-    }
-
+    console.error('AI Chat Error:', error);
     return NextResponse.json({ 
       role: 'assistant',
-      content: `AI Error: ${error?.message || 'Failed to communicate with AI model'}` 
+      content: "Sorry, I'm having trouble connecting right now. Please try again!",
+      intent: 'UNKNOWN',
+      isAuthoritative: false
     });
   }
 }
+
+
+

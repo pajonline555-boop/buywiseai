@@ -7,16 +7,26 @@ plugins {
 
 android {
     namespace = "com.pajonline.buywiseai"
-    compileSdk = 35
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "com.pajonline.buywiseai"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 36
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("C:/APPS/BUYWISE AI/buywise-release-key.jks")
+            storePassword = "Ramkanaam@108"
+            keyAlias = "buywise_key"
+            keyPassword = "Ramkanaam@108"
+        }
     }
 
     buildTypes {
@@ -24,9 +34,13 @@ android {
             buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000\"")
         }
         release {
+            signingConfig = signingConfigs.getByName("release")
             buildConfigField("String", "BASE_URL", "\"https://buywiseai.pajonline.co.in\"")
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -82,8 +96,10 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.play.services.auth)
 
-    // AdMob / Mobile Ads SDK
+    // AdMob / Mobile Ads SDK & Google Play In-App Updates & Billing
     implementation(libs.play.services.ads)
+    implementation(libs.play.app.update)
+    implementation(libs.play.billing.ktx)
 
     // ML Kit On-Demand & Unbundled Services
     implementation(libs.mlkit.text.recognition)

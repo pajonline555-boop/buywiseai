@@ -118,16 +118,37 @@ export default function RateBuyWiseDialog({ isOpen, onClose }: RateBuyWiseDialog
             {rating === 5 ? (
               <div
                 style={{
-                  padding: '14px',
-                  borderRadius: '12px',
+                  padding: '16px',
+                  borderRadius: '16px',
                   background: 'rgba(0, 255, 136, 0.12)',
                   border: '1px solid rgba(0, 255, 136, 0.3)',
                   color: '#00ff88',
                   fontSize: '13px',
                   fontWeight: 700,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  alignItems: 'center',
                 }}
               >
-                🎉 5 Stars! We are thrilled you love BuyWise AI.
+                <div>🎉 5 Stars! We are thrilled you love BuyWise AI.</div>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.pajonline.buywiseai&hl=en-US&ah=siK1dcywSbhtZZS4Fvy3n9jvWVg&pli=1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    background: '#00ff88',
+                    color: '#000000',
+                    fontWeight: 900,
+                    fontSize: '12px',
+                    textDecoration: 'none',
+                    display: 'inline-block',
+                  }}
+                >
+                  ▶️ Rate &amp; Review on Google Play Store ➔
+                </a>
               </div>
             ) : (
               <div>

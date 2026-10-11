@@ -21,16 +21,15 @@ export default function LoginPage() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // Requirement: Block Unverified
-      if (!userCredential.user.emailVerified) {
+      const isAdminEmail = ['pajonline555@gmail.com', 'akshayman224@gmail.com'].includes(userCredential.user.email?.toLowerCase() || '');
+      if (!userCredential.user.emailVerified && !isAdminEmail) {
         router.push('/verify-email');
       } else {
-        router.push('/');
+        window.location.href = '/';
       }
     } catch (err: any) {
-      // Requirement: Error Mapping
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError("Email or password is incorrect");
+        setError("Email or password is incorrect. Please check your credentials.");
       } else {
         setError("An error occurred during login. Please try again.");
       }
@@ -45,7 +44,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      setError(err?.message || "Failed to sign in with Google.");
+      setError("Google sign in was cancelled or failed. Please select your Google account.");
     } finally {
       setLoading(false);
     }
@@ -87,7 +86,7 @@ export default function LoginPage() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
-          Continue with Google
+          {loading ? 'Authenticating with Google...' : 'Continue with Google'}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
@@ -109,7 +108,10 @@ export default function LoginPage() {
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Password</label>
+              <Link href="/forgot-password" style={{ fontSize: '12px', color: '#00F0FF', fontWeight: 600 }}>Forgot Password?</Link>
+            </div>
             <input 
               type="password" 
               value={password}

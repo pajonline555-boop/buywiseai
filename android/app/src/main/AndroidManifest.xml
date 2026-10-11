@@ -22,10 +22,10 @@
         android:theme="@style/Theme.BuyWiseAI"
         tools:targetApi="31">
 
-        <!-- Google Mobile Ads (AdMob) Official Test Application ID -->
+        <!-- Google Mobile Ads (AdMob) Production Application ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-7229466318707515~8895158400" />
 
         <activity
             android:name=".MainActivity"

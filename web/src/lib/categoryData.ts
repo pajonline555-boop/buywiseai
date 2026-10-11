@@ -9,6 +9,7 @@ export interface BestsellerProduct {
   name: string;
   category: string;
   image: string;
+  youtubeUrl?: string;
   externalProductId?: string;
   productUrl?: string;
   source?: string;
@@ -511,9 +512,14 @@ export const DYNAMIC_PARTNER_PRODUCTS: BestsellerProduct[] = [
   }
 ];
 
+import { MOCK_PARTNER_PRODUCTS, mapPartnerProductToBestsellerProduct, applyLocalOverrides } from './partners/partnerService';
+
 export function findProductBySlug(slug: string): BestsellerProduct | undefined {
   const normalizedSlug = slug.toLowerCase().trim();
+  const allPartnerProds = applyLocalOverrides(MOCK_PARTNER_PRODUCTS || []);
+  const mappedPartnerProds = allPartnerProds.map(mapPartnerProductToBestsellerProduct);
   const allProducts = [
+    ...mappedPartnerProds,
     ...TOP_CATEGORIES.flatMap(c => c.products),
     ...DYNAMIC_PARTNER_PRODUCTS
   ];
@@ -524,7 +530,10 @@ export function findProductBySlug(slug: string): BestsellerProduct | undefined {
 }
 
 export function getProductionProducts(): BestsellerProduct[] {
+  const allPartnerProds = applyLocalOverrides(MOCK_PARTNER_PRODUCTS || []);
+  const mappedPartnerProds = allPartnerProds.map(mapPartnerProductToBestsellerProduct);
   const all = [
+    ...mappedPartnerProds,
     ...TOP_CATEGORIES.flatMap(c => c.products),
     ...DYNAMIC_PARTNER_PRODUCTS
   ];

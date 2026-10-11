@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { savePartnerProduct } from '@/lib/partners/partnerService';
+import { generateBuyWiseShareUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 interface AddProductByLinkModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
   const [price, setPrice] = useState<number>(2999);
   const [mrp, setMrp] = useState<number>(4999);
   const [imageUrl, setImageUrl] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [category, setCategory] = useState<typeof CATEGORY_OPTIONS[number]>('Fashion');
   const [brand, setBrand] = useState('Featured Brand');
   const [stock, setStock] = useState<number>(50);
@@ -185,11 +187,15 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     }
 
     try {
+      const createdSlug = cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
       await savePartnerProduct({
         partnerId: 'partner_gen_g_admin',
         partnerName: brand || 'Gen-G Store',
         title: cleanTitle,
+        slug: createdSlug,
         productUrl: productUrl,
+        youtubeUrl: youtubeUrl.trim() || undefined,
         description: `Imported via Admin Product Link: ${productUrl}`,
         category,
         brand: brand || 'Gen-G Partner',
@@ -213,7 +219,13 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
         reviewCount: 19
       });
 
-      alert(`🎉 Real-Time Success! Product "${title}" has been published to category "${category}"!`);
+      const shareLandingUrl = generateBuyWiseShareUrl(createdSlug);
+      try {
+        await navigator.clipboard.writeText(shareLandingUrl);
+      } catch (clipErr) {
+        // Clipboard optional fallback
+      }
+      alert(`🎉 Real-Time Success!\n\nProduct "${cleanTitle}" is LIVE!\n\n🔗 Gen-G Store Landing Link Copied to Clipboard:\n${shareLandingUrl}`);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -367,6 +379,20 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', fontSize: '13px', outline: 'none' }}
               />
             </div>
+          </div>
+
+          {/* YouTube Link Input */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ fontSize: '12px', color: '#ff4d4d', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+              ▶️ YouTube Video / Review Link (Optional)
+            </label>
+            <input
+              type="url"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255, 77, 77, 0.3)', color: 'white', fontSize: '13px', outline: 'none' }}
+            />
           </div>
 
           {/* Primary Image Preview / Input */}

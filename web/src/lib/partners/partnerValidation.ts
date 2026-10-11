@@ -14,8 +14,8 @@ export function validateProductPublication(product: Partial<PartnerProduct>): Va
   }
 
   // Required Description
-  if (!product.description || product.description.trim().length < 10) {
-    errors.push('Product description must be at least 10 characters long');
+  if (!product.description || product.description.trim().length < 3) {
+    errors.push('Product description must be at least 3 characters long');
   }
 
   // Primary Image URL Validation

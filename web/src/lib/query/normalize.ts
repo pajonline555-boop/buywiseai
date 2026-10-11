@@ -1,6 +1,8 @@
 import { CanonicalProduct, CanonicalSourceType } from './types';
 import { generateCategorizedQueries } from './engine';
 import { VisionProductAnalysis } from '../vision/types';
+import { normalizeSearchQuery } from '../search/QueryNormalizer';
+import { parseSearchIntent } from '../search/ProductIntentParser';
 
 export function normalizeVisionToCanonical(
   analysis: VisionProductAnalysis,
@@ -59,29 +61,26 @@ export function normalizeTextQueryToCanonical(rawQuery: string): CanonicalProduc
   const id = `canonical-text-${Date.now()}`;
   const trimmed = rawQuery.trim();
 
-  // Basic brand & category extraction heuristics for text queries
-  const knownBrands = ['nike', 'adidas', 'apple', 'sony', 'samsung', 'puma', 'puma', 'levi', 'zara', 'macbook'];
-  const words = trimmed.toLowerCase().split(/\s+/);
-  const foundBrand = knownBrands.find((b) => words.includes(b));
-  const brand = foundBrand ? foundBrand.charAt(0).toUpperCase() + foundBrand.slice(1) : null;
+  const parsed = parseSearchIntent(trimmed);
+  const intent = parsed.intent;
 
   const queries = generateCategorizedQueries({
-    title: trimmed,
-    brand,
-    category: 'electronics', // Generic default for text
-    subcategory: trimmed,
+    title: intent.normalizedQuery,
+    brand: intent.brand || null,
+    category: intent.category,
+    subcategory: intent.subcategory,
   });
 
   return {
     id,
     sourceType: 'text',
     rawInput: trimmed,
-    title: trimmed,
-    category: null,
-    subcategory: null,
-    brand,
+    title: intent.normalizedQuery,
+    category: intent.category,
+    subcategory: intent.subcategory,
+    brand: intent.brand || null,
     model: null,
-    productName: trimmed,
+    productName: intent.productType,
     gender: null,
     colors: [],
     materials: [],
@@ -91,14 +90,14 @@ export function normalizeTextQueryToCanonical(rawQuery: string): CanonicalProduc
     inferredAttributes: {},
     visibleText: [],
     confidence: {
-      category: 0.8,
-      brand: brand ? 0.9 : null,
+      category: parsed.confidence,
+      brand: intent.brand ? 0.9 : null,
       model: null,
-      overall: 0.85,
+      overall: parsed.confidence,
     },
-    exactSearchQueries: [trimmed, ...queries.exact].filter((v, i, a) => a.indexOf(v) === i),
-    similarSearchQueries: queries.similar.length > 0 ? queries.similar : [trimmed],
-    broadSearchQueries: queries.broad.length > 0 ? queries.broad : [trimmed],
+    exactSearchQueries: [intent.normalizedQuery, trimmed, ...queries.exact].filter((v, i, a) => a.indexOf(v) === i),
+    similarSearchQueries: queries.similar.length > 0 ? queries.similar : [intent.normalizedQuery],
+    broadSearchQueries: queries.broad.length > 0 ? queries.broad : [intent.normalizedQuery],
     budgetSearchQueries: queries.budget,
     createdAt: timestamp,
   };

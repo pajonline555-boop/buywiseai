@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pajonline.buywiseai.data.i18n.tr
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
@@ -30,7 +31,7 @@ import com.pajonline.buywiseai.ui.theme.BuyWisePurple
 
 private data class JourneyStep(
     val id: String,
-    val label: String,
+    val key: String,
     val icon: String,
     val color: Color,
     val isGradient: Boolean = false
@@ -41,16 +42,16 @@ fun ShoppingJourneyBar(
     onStepClick: (String) -> Unit = {}
 ) {
     val steps = listOf(
-        JourneyStep("see", "1. See", "🔎", BuyWiseCyan),
-        JourneyStep("compare", "2. Compare", "🆚", BuyWisePurple),
-        JourneyStep("tryon", "3. Try On", "👗", BuyWiseNeonPink),
-        JourneyStep("save", "4. Save", "🎟️", BuyWiseEmerald),
-        JourneyStep("buy", "5. Buy Wisely", "🛒", BuyWiseEmerald, isGradient = true)
+        JourneyStep("see", "pillar_see", "🔎", BuyWiseCyan),
+        JourneyStep("compare", "pillar_compare", "🆚", BuyWisePurple),
+        JourneyStep("tryon", "pillar_try_on", "👗", BuyWiseNeonPink),
+        JourneyStep("save", "pillar_save", "🎟️", BuyWiseEmerald),
+        JourneyStep("buy", "pillar_buy", "🛒", BuyWiseEmerald, isGradient = true)
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "SEE ➔ COMPARE ➔ TRY ON ➔ SAVE ➔ BUY",
+            text = tr("see_compare_try_save_buy"),
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
             color = Color.LightGray,
@@ -65,6 +66,7 @@ fun ShoppingJourneyBar(
             modifier = Modifier.fillMaxWidth()
         ) {
             items(steps) { step ->
+                val labelText = tr(step.key)
                 if (step.isGradient) {
                     Box(
                         modifier = Modifier
@@ -82,7 +84,7 @@ fun ShoppingJourneyBar(
                             Text(text = step.icon, fontSize = 12.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = step.label,
+                                text = labelText,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFF070510)
@@ -109,7 +111,7 @@ fun ShoppingJourneyBar(
                             Text(text = step.icon, fontSize = 12.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = step.label,
+                                text = labelText,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = step.color

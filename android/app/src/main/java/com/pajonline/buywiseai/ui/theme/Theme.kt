@@ -16,27 +16,42 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = BuyWiseEmerald,
     background = BuyWiseDarkBackground,
     surface = BuyWiseDarkBackground,
+    onBackground = androidx.compose.ui.graphics.Color.White,
+    onSurface = androidx.compose.ui.graphics.Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = BuyWisePurple,
     secondary = BuyWiseNeonPink,
     tertiary = BuyWiseCyan,
+    background = androidx.compose.ui.graphics.Color(0xFFF8FAFC),
+    surface = androidx.compose.ui.graphics.Color.White,
+    onBackground = androidx.compose.ui.graphics.Color(0xFF0F172A),
+    onSurface = androidx.compose.ui.graphics.Color(0xFF0F172A)
+)
+
+private val HighContrastColorScheme = darkColorScheme(
+    primary = androidx.compose.ui.graphics.Color(0xFF00FFFF),
+    secondary = androidx.compose.ui.graphics.Color(0xFFFF00FF),
+    tertiary = androidx.compose.ui.graphics.Color(0xFF00FF00),
+    background = androidx.compose.ui.graphics.Color.Black,
+    surface = androidx.compose.ui.graphics.Color(0xFF121212),
+    onBackground = androidx.compose.ui.graphics.Color.White,
+    onSurface = androidx.compose.ui.graphics.Color.White
 )
 
 @Composable
 fun BuyWiseTheme(
+    appTheme: String = "Dark Mode",
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val colorScheme = when (appTheme) {
+        "Light Mode" -> LightColorScheme
+        "High Contrast" -> HighContrastColorScheme
+        "Dark Mode" -> DarkColorScheme
+        else -> if (darkTheme) DarkColorScheme else LightColorScheme
     }
 
     MaterialTheme(

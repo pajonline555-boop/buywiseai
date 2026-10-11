@@ -2,6 +2,7 @@ import { ComparisonResponse, StoreOffer, RetailerSearchResult, GroupedOffers } f
 import { retailerRegistry } from '../retailers/registry';
 import { isValidOffer } from './validation';
 import { normalizeOffer } from './normalize';
+import { validateSearchResultOffer } from '../search/SearchResultValidator';
 import { CanonicalProduct } from '../query/types';
 import { selectRetailerQuery } from './planner';
 import { classifyProductMatch } from './matcher';
@@ -56,6 +57,13 @@ export async function executeCanonicalComparison(
           if (isValidOffer(rawOffer)) {
             const normalized = normalizeOffer(rawOffer);
             
+            // Validate data quality (reject fake prices, synthetic product titles, broken images)
+            const validation = validateSearchResultOffer(normalized);
+            if (!validation.isValid) {
+              console.warn(`[SearchResultValidator] Rejected offer from ${adapterName}: ${validation.rejectionReasons.join(', ')}`);
+              return;
+            }
+
             // Product Match Classification (Exact, Variant, Similar)
             const classification = classifyProductMatch(normalized, canonical);
             normalized.matchType = classification.matchType;

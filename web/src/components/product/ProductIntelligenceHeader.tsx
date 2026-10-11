@@ -4,11 +4,35 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { BestsellerProduct } from '@/lib/categoryData';
+import { buildAffiliateUrl, generateBuyWiseShareUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 interface ProductIntelligenceHeaderProps {
   product: BestsellerProduct;
   onTryOnClick?: () => void;
   onBuyNowClick?: () => void;
+}
+
+function isWearableProduct(name: string, category: string): boolean {
+  const lower = (name + " " + category).toLowerCase().trim();
+
+  const nonWearables = [
+    "foil", "paper", "wrap", "tissue", "kitchen", "phone", "iphone", "samsung",
+    "macbook", "laptop", "headphone", "airpod", "earbud", "charger", "gadget",
+    "tv", "appliance", "fryer", "tool", "grocery", "cleaner", "soap", "shampoo",
+    "bottle", "cover", "case", "cable", "battery", "mouse", "keyboard", "hamper", "chocolates"
+  ];
+  if (nonWearables.some(nw => lower.includes(nw))) {
+    return false;
+  }
+
+  const wearables = [
+    "saree", "dress", "shirt", "t-shirt", "top", "jeans", "pant", "trousers",
+    "kurti", "lehenga", "suit", "jacket", "coat", "hoodie", "sweater", "cardigan",
+    "skirt", "outfit", "gown", "innerwear", "bra", "trunk", "pajama", "ethnic",
+    "shoe", "sneaker", "boot", "sandal", "heel", "wear", "apparel", "clothing",
+    "necklace", "jewellery", "jewelry", "ring", "earring", "bangle", "bracelet"
+  ];
+  return wearables.some(w => lower.includes(w));
 }
 
 export default function ProductIntelligenceHeader({
@@ -17,11 +41,18 @@ export default function ProductIntelligenceHeader({
   onBuyNowClick,
 }: ProductIntelligenceHeaderProps) {
   const [addedToCart, setAddedToCart] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [isSaved, setIsSaved] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(`buywise_saved_${product.id}`) === "true";
+    }
+    return false;
+  });
 
   const smartValueScore = product.smartValueScore || Math.min(99, Math.floor(product.rating * 19 + 5));
   const shoppingTrustScore = product.shoppingTrustScore || Math.min(98, Math.floor(product.rating * 18 + 8));
   const isPartner = product.productSource === 'PARTNER' || product.source === 'PARTNER';
-  const isTryOn = product.isTryOnEligible !== false && (product.category.includes('Fashion') || product.category.includes('Undergarments') || product.category.includes('Saree'));
+  const isTryOn = product.isTryOnEligible !== false && isWearableProduct(product.name, product.category);
   const savingsAmount = product.originalPrice > product.lowestPrice ? product.originalPrice - product.lowestPrice : 0;
   const savingsPercent = product.originalPrice > product.lowestPrice ? Math.round((savingsAmount / product.originalPrice) * 100) : 0;
 
@@ -29,6 +60,34 @@ export default function ProductIntelligenceHeader({
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2500);
   };
+
+  const handleCopyShareLink = () => {
+    const shareUrl = generateBuyWiseShareUrl(product.slug || product.id);
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleSaveProduct = () => {
+    const newState = !isSaved;
+    setIsSaved(newState);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`buywise_saved_${product.id}`, newState ? "true" : "false");
+      try {
+        const existing = JSON.parse(localStorage.getItem("buywise_saved_products") || "[]");
+        if (newState) {
+          localStorage.setItem("buywise_saved_products", JSON.stringify([product, ...existing]));
+        } else {
+          localStorage.setItem("buywise_saved_products", JSON.stringify(existing.filter((p: any) => p.id !== product.id)));
+        }
+      } catch (err) {
+        console.error("Save product localStorage error:", err);
+      }
+    }
+  };
+
+  const rawOutboundUrl = product.prices?.[0]?.url || product.productUrl || '/search';
+  const outboundAffiliateUrl = buildAffiliateUrl(rawOutboundUrl, product.bestStore);
 
   return (
     <section 
@@ -165,7 +224,7 @@ export default function ProductIntelligenceHeader({
               </>
             ) : (
               <a
-                href={product.prices?.[0]?.url || product.productUrl || '/search'}
+                href={outboundAffiliateUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ flex: 1, minWidth: '180px', textDecoration: 'none' }}
@@ -184,10 +243,44 @@ export default function ProductIntelligenceHeader({
                     cursor: 'pointer'
                   }}
                 >
-                  🛒 BUY ON {product.bestStore.toUpperCase()}
+                  🛒 BUY ON {product.bestStore.toUpperCase()} ➔
                 </button>
               </a>
             )}
+
+            <button
+              onClick={handleSaveProduct}
+              style={{
+                padding: '16px 20px',
+                borderRadius: '18px',
+                background: isSaved ? 'rgba(255, 0, 127, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                border: isSaved ? '1px solid #ff007f' : '1px solid rgba(255, 255, 255, 0.25)',
+                color: isSaved ? '#ff007f' : '#ffffff',
+                fontWeight: 900,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {isSaved ? '❤️ SAVED TO MY BUYWISE' : '🤍 SAVE PRODUCT TO MY BUYWISE'}
+            </button>
+
+            <button
+              onClick={handleCopyShareLink}
+              style={{
+                padding: '16px 20px',
+                borderRadius: '18px',
+                background: copiedLink ? 'rgba(0, 255, 136, 0.25)' : 'rgba(255, 255, 255, 0.1)',
+                border: copiedLink ? '1px solid #00ff88' : '1px solid rgba(255, 255, 255, 0.25)',
+                color: copiedLink ? '#00ff88' : '#ffffff',
+                fontWeight: 900,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {copiedLink ? '✓ LINK COPIED!' : '🔗 SHARE STORE LINK'}
+            </button>
 
             {isTryOn && (
               <Link href="/try-on" style={{ textDecoration: 'none' }}>

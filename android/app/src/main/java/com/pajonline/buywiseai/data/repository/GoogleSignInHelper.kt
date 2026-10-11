@@ -22,42 +22,41 @@ class GoogleSignInHelper(private val context: Context) {
     // Web Client ID from Firebase Auth Google Provider configuration (google-services.json)
     private val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
 
-    suspend fun performGoogleSignIn(onResult: (Boolean, String?, String?) -> Unit) = withContext(Dispatchers.Main) {
-        // Check for existing Google account on device
+    fun signOutGoogle() {
         try {
-            val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
-            if (lastAccount != null && !lastAccount.email.isNullOrBlank()) {
-                Log.d("BuyWiseGoogleSignIn", "Found existing Google Account on device: ${lastAccount.email}")
-                onResult(true, lastAccount.idToken, lastAccount.email)
-                return@withContext
-            }
+            val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build()
+            val client = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(context, gso)
+            client.signOut()
+            client.revokeAccess()
         } catch (e: Exception) {
-            Log.w("BuyWiseGoogleSignIn", "Failed to inspect device Google Account", e)
+            Log.w("BuyWiseGoogleSignIn", "Error clearing Google client session", e)
+        }
+    }
+
+    suspend fun performGoogleSignIn(forceAccountPicker: Boolean = true, onResult: (Boolean, String?, String?) -> Unit) = withContext(Dispatchers.Main) {
+        if (forceAccountPicker) {
+            signOutGoogle()
         }
 
         try {
-            Log.d("BuyWiseGoogleSignIn", "Starting CredentialManager request with webClientId: $webClientId")
+            Log.d("BuyWiseGoogleSignIn", "Starting Google CredentialManager request with webClientId: $webClientId")
             val rawNonce = UUID.randomUUID().toString()
             val bytes = rawNonce.toByteArray()
             val md = MessageDigest.getInstance("SHA-256")
             val digest = md.digest(bytes)
             val hashedNonce = digest.fold("") { str, it -> str + "%02x".format(it) }
 
-            val signInOption = try {
-                GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
-                    .setNonce(hashedNonce)
-                    .build()
-            } catch (e: Exception) {
-                Log.w("BuyWiseGoogleSignIn", "GetSignInWithGoogleOption failed, falling back to GetGoogleIdOption", e)
-                GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(webClientId)
-                    .setNonce(hashedNonce)
-                    .build()
-            }
+            val googleIdOption = GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(webClientId)
+                .setNonce(hashedNonce)
+                .setAutoSelectEnabled(false)
+                .build()
 
             val request = GetCredentialRequest.Builder()
-                .addCredentialOption(signInOption)
+                .addCredentialOption(googleIdOption)
                 .build()
 
             val response = credentialManager.getCredential(context = context, request = request)
@@ -71,14 +70,43 @@ class GoogleSignInHelper(private val context: Context) {
                 val email = googleIdTokenCredential.id
                 Log.d("BuyWiseGoogleSignIn", "Google ID token retrieved successfully for $email")
                 onResult(true, idToken, email)
+                return@withContext
             } else {
-                Log.e("BuyWiseGoogleSignIn", "Unexpected credential format: ${credential.type}")
-                onResult(true, null, "pajonline555@gmail.com")
+                Log.w("BuyWiseGoogleSignIn", "Unexpected credential format: ${credential.type}")
             }
+        } catch (e: GetCredentialCancellationException) {
+            Log.i("BuyWiseGoogleSignIn", "User cancelled Google sign in account picker")
+            onResult(false, null, null)
+            return@withContext
         } catch (e: Exception) {
-            Log.e("BuyWiseGoogleSignIn", "CredentialManager exception: ${e.javaClass.name} - ${e.localizedMessage}", e)
-            // Return true with email fallback for seamless login
-            onResult(true, null, "pajonline555@gmail.com")
+            Log.w("BuyWiseGoogleSignIn", "GetGoogleIdOption exception: ${e.javaClass.name} - ${e.localizedMessage}")
         }
+
+        // Secondary CredentialManager Option: GetSignInWithGoogleOption fallback
+        try {
+            val signInOption = GetSignInWithGoogleOption.Builder(webClientId).build()
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(signInOption)
+                .build()
+            val response = credentialManager.getCredential(context = context, request = request)
+            val credential = response.credential
+            if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                val idToken = googleIdTokenCredential.idToken
+                val email = googleIdTokenCredential.id
+                Log.d("BuyWiseGoogleSignIn", "GetSignInWithGoogleOption token retrieved for $email")
+                onResult(true, idToken, email)
+                return@withContext
+            }
+        } catch (e: GetCredentialCancellationException) {
+            Log.i("BuyWiseGoogleSignIn", "User cancelled Google sign in account picker")
+            onResult(false, null, null)
+            return@withContext
+        } catch (e: Exception) {
+            Log.w("BuyWiseGoogleSignIn", "GetSignInWithGoogleOption exception: ${e.localizedMessage}")
+        }
+
+        Log.w("BuyWiseGoogleSignIn", "No Google account selected or retrieved from CredentialManager")
+        onResult(false, null, null)
     }
 }

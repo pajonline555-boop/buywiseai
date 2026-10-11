@@ -22,7 +22,7 @@ class InterstitialAdManager(private val context: Context) {
         val adRequest = AdRequest.Builder().build()
         InterstitialAd.load(
             context,
-            AdsManager.TEST_INTERSTITIAL_ID,
+            AdsManager.interstitialAdUnitId,
             adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {

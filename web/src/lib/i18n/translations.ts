@@ -385,6 +385,16 @@ const MASTER_EN: Record<string, string> = {
   "BUYWISE PARTNER": "BuyWise Partner",
   "PREMIUM SHOPPER": "Premium Shopper",
   "ADMIN": "Admin",
+  "Voice Search": "Voice Search",
+  "Speech Recognized": "Speech Recognized!",
+  "Voice Search Notice": "Voice Search Notice",
+  "Try Again": "Try Again",
+  "Listening in": "Listening in",
+  "Speak your search query clearly.": "Speak your search query clearly.",
+  "Online • Shopping & Fashion Stylist": "Online • Shopping & Fashion Stylist",
+  "👗 Help try on a Saree": "👗 Help try on a Saree",
+  "📱 iPhone 17 deals": "📱 iPhone 17 deals",
+  "🏆 Competition Info": "🏆 Competition Info",
 };
 
 export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {

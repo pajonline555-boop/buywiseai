@@ -42,10 +42,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.pajonline.buywiseai.core.voice.SpeechRecognizerManager
+import com.pajonline.buywiseai.data.i18n.LanguageManager
+import com.pajonline.buywiseai.data.i18n.tr
 import com.pajonline.buywiseai.domain.model.StoreOffer
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseGold
+import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
 import com.pajonline.buywiseai.ui.viewmodel.SmartCompareUiState
 import com.pajonline.buywiseai.ui.viewmodel.SmartCompareViewModel
 
@@ -54,8 +66,81 @@ fun SearchScreen(
     viewModel: SmartCompareViewModel = remember { SmartCompareViewModel() },
     onOfferSelect: (StoreOffer) -> Unit = {}
 ) {
-    var query by remember { mutableStateOf("Saree") }
+    val context = LocalContext.current
+    val currentViewModelQuery = viewModel.currentQuery
+    var query by remember { mutableStateOf(if (currentViewModelQuery.isNotBlank()) currentViewModelQuery else "foil paper") }
+
+    androidx.compose.runtime.LaunchedEffect(viewModel.currentQuery) {
+        if (viewModel.currentQuery.isNotBlank()) {
+            query = viewModel.currentQuery
+        }
+    }
     val uiState by viewModel.uiState.collectAsState()
+
+    var voiceState by remember { mutableStateOf(com.pajonline.buywiseai.core.voice.VoiceSearchState.IDLE) }
+    var voiceError by remember { mutableStateOf<String?>(null) }
+    var livePartialText by remember { mutableStateOf("") }
+    var showVoiceDialog by remember { mutableStateOf(false) }
+
+    val micDeniedMsg = tr("mic_perm_denied")
+    val speechManager = remember { SpeechRecognizerManager(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            speechManager.destroy()
+        }
+    }
+
+    val triggerSpeechRecognition = {
+        showVoiceDialog = true
+        voiceError = null
+        livePartialText = ""
+
+        speechManager.startListening(
+            langCode = LanguageManager.currentLanguageCode,
+            onPartialResult = { partial ->
+                livePartialText = partial
+                query = partial
+            },
+            onResult = { text ->
+                query = text
+                livePartialText = text
+                viewModel.performSearch(text)
+                showVoiceDialog = false
+            },
+            onError = { err ->
+                voiceError = err
+            },
+            onStateChanged = { state ->
+                voiceState = state
+            }
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            triggerSpeechRecognition()
+        } else {
+            voiceError = micDeniedMsg
+            voiceState = com.pajonline.buywiseai.core.voice.VoiceSearchState.ERROR
+            showVoiceDialog = true
+        }
+    }
+
+    val handleMicClick = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            triggerSpeechRecognition()
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -80,27 +165,35 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Search Bar with Prominent Voice (🎙️) Search Button
+            // Search Bar with Native Voice (🎙️) Search Button
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search iPhone, Saree, Shoes...", color = Color.Gray) },
+                    placeholder = { Text(tr("search_placeholder"), color = Color.Gray) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = BuyWiseCyan) },
                     trailingIcon = {
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
-                                .background(BuyWiseCyan.copy(alpha = 0.25f), CircleShape)
-                                .border(1.dp, BuyWiseCyan, CircleShape)
-                                .clickable {
-                                    query = "red saree under 3000"
-                                    viewModel.performSearch(query)
-                                },
+                                .size(36.dp)
+                                .background(
+                                    if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) BuyWiseNeonPink.copy(alpha = 0.35f)
+                                    else BuyWiseCyan.copy(alpha = 0.25f),
+                                    CircleShape
+                                )
+                                .border(
+                                    1.5.dp,
+                                    if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) BuyWiseNeonPink else BuyWiseCyan,
+                                    CircleShape
+                                )
+                                .clickable { handleMicClick() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "🎙️", fontSize = 16.sp)
+                            Text(
+                                text = if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) "🔴" else "🎙️",
+                                fontSize = 16.sp
+                            )
                         }
                     },
                     shape = RoundedCornerShape(12.dp),
@@ -117,7 +210,7 @@ fun SearchScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(text = "Search", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(text = tr("compare_btn"), color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -127,6 +220,112 @@ fun SearchScreen(
             com.pajonline.buywiseai.core.ads.BannerAdView()
 
             Spacer(modifier = Modifier.height(10.dp))
+
+            // Voice Search Real-Time Listening & Status Dialog
+            if (showVoiceDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        speechManager.stopListening()
+                        showVoiceDialog = false
+                    },
+                    containerColor = Color(0xFF141026),
+                    title = {
+                        Text(
+                            text = when (voiceState) {
+                                com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING -> "🎙️ ${tr("Listening in")} ${LanguageManager.currentLanguageCode.uppercase()}..."
+                                com.pajonline.buywiseai.core.voice.VoiceSearchState.PROCESSING -> "🔎 ${tr("searching")}"
+                                com.pajonline.buywiseai.core.voice.VoiceSearchState.SUCCESS -> "✅ ${tr("compare_btn")}"
+                                else -> "⚠️ Voice Notice"
+                            },
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    },
+                    text = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .background(BuyWiseEmerald.copy(alpha = 0.2f), CircleShape)
+                                            .border(2.5.dp, BuyWiseEmerald, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("🎙️", fontSize = 32.sp)
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = tr("speak_listening"),
+                                        color = BuyWiseEmerald,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(14.dp))
+                                if (livePartialText.isNotBlank()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFF080612), RoundedCornerShape(12.dp))
+                                            .border(1.dp, BuyWiseCyan.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        Text(
+                                            text = "\"$livePartialText\"",
+                                            color = BuyWiseEmerald,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = tr("speak_clearly_mic"),
+                                        color = Color.LightGray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            } else if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.PROCESSING) {
+                                CircularProgressIndicator(color = BuyWiseCyan, modifier = Modifier.size(40.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "${tr("searching")} (14 stores)",
+                                    color = Color.LightGray,
+                                    fontSize = 13.sp
+                                )
+                            } else if (voiceError != null) {
+                                Text(
+                                    text = voiceError ?: tr("no_speech_detected"),
+                                    color = Color(0xFFFF6B6B),
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.ERROR || voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.NO_SPEECH) {
+                            Button(
+                                onClick = { triggerSpeechRecognition() },
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan)
+                            ) {
+                                Text(tr("try_again"), color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        Button(
+                            onClick = {
+                                speechManager.stopListening()
+                                showVoiceDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+                        ) {
+                            Text(tr("cancel"), color = Color.White)
+                        }
+                    }
+                )
+            }
 
             when (val state = uiState) {
                 is SmartCompareUiState.Loading -> {
@@ -175,15 +374,15 @@ fun SearchScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
-                                    Text("LOWEST PRICE", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                                    Text(tr("lowest_price"), fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                                     Text("₹${summary.lowestPrice.toInt()}", fontSize = 15.sp, color = BuyWiseEmerald, fontWeight = FontWeight.Bold)
                                 }
                                 Column {
-                                    Text("MAX SAVINGS", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                                    Text(tr("max_savings"), fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                                     Text("₹${summary.maximumSavings.toInt()}", fontSize = 15.sp, color = BuyWiseGold, fontWeight = FontWeight.Bold)
                                 }
                                 Column {
-                                    Text("STORES CHECKED", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                                    Text(tr("stores_checked"), fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                                     Text("${summary.totalStoresChecked} Stores", fontSize = 15.sp, color = BuyWiseCyan, fontWeight = FontWeight.Bold)
                                 }
                             }

@@ -17,7 +17,7 @@ class RewardedAdManager(private val context: Context) {
         val adRequest = AdRequest.Builder().build()
         RewardedAd.load(
             context,
-            AdsManager.TEST_REWARDED_ID,
+            AdsManager.rewardedAdUnitId,
             adRequest,
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {

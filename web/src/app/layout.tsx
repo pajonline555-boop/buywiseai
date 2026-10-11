@@ -4,6 +4,7 @@ import Chatbot from "@/components/Chatbot";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import AppHeader from "@/components/AppHeader";
 import AppFooter from "@/components/AppFooter";
+import WebSplashScreen from "@/components/WebSplashScreen";
 import { AuthProvider } from "@/lib/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
@@ -101,12 +102,12 @@ export default function RootLayout({
         <ThemeProvider>
           <I18nProvider>
             <AuthProvider>
+              <WebSplashScreen />
               <AppHeader />
               {children}
               <Chatbot />
               <MobileBottomNav />
               <AppFooter />
-
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>

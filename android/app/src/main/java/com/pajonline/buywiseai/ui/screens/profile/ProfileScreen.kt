@@ -3,7 +3,10 @@ package com.pajonline.buywiseai.ui.screens.profile
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,11 +17,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Face
@@ -43,7 +50,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +69,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pajonline.buywiseai.BuildConfig
+import com.pajonline.buywiseai.data.i18n.LanguageManager
+import com.pajonline.buywiseai.data.i18n.tr
 import com.pajonline.buywiseai.data.repository.AuthState
 import com.pajonline.buywiseai.ui.screens.auth.AuthDialog
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
@@ -71,6 +82,7 @@ import java.io.File
 @Composable
 fun ProfileScreen(
     authViewModel: AuthViewModel = remember { AuthViewModel() },
+    onNavigateToPrime: () -> Unit = {},
     onNavigateToWeb: (title: String, url: String) -> Unit = { _, _ -> }
 ) {
     val authState by authViewModel.authState.collectAsState()
@@ -80,15 +92,108 @@ fun ProfileScreen(
     var activeModalContent by remember { mutableStateOf("") }
     var activeModalWebsiteUrl by remember { mutableStateOf("") }
 
-    var selectedLanguage by remember { mutableStateOf("English") }
-    var selectedTheme by remember { mutableStateOf("Dark Mode") }
+    val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("buywise_profile_prefs", Context.MODE_PRIVATE) }
+
+    var userDisplayName by remember(authState) {
+        val authName = (authState as? AuthState.Authenticated)?.displayName
+        val saved = sharedPrefs.getString("saved_display_name", null)
+        mutableStateOf(
+            if (authState is AuthState.Authenticated) {
+                if (!authName.isNullOrEmpty()) authName else if (!saved.isNullOrEmpty()) saved else "BuyWise Shopper"
+            } else {
+                "Guest Shopper"
+            }
+        )
+    }
+    var userEmail by remember(authState) {
+        val authEmail = (authState as? AuthState.Authenticated)?.userEmail
+        val saved = sharedPrefs.getString("saved_user_email", null)
+        mutableStateOf(
+            if (authState is AuthState.Authenticated) {
+                if (!authEmail.isNullOrEmpty()) authEmail else if (!saved.isNullOrEmpty()) saved else ""
+            } else {
+                ""
+            }
+        )
+    }
+    var userPhone by remember {
+        mutableStateOf(sharedPrefs.getString("saved_user_phone", "") ?: "")
+    }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authState) {
+        val state = authState
+        if (state is AuthState.Authenticated) {
+            val name = if (state.displayName.isNotBlank()) state.displayName else "BuyWise Shopper"
+            val email = state.userEmail
+            userDisplayName = name
+            userEmail = email
+            if (email.isNotBlank()) {
+                sharedPrefs.edit()
+                    .putString("saved_display_name", name)
+                    .putString("saved_user_email", email)
+                    .apply()
+            }
+        } else if (state is AuthState.Unauthenticated) {
+            userDisplayName = "Guest Shopper"
+            userEmail = ""
+            sharedPrefs.edit().remove("saved_display_name").remove("saved_user_email").remove("saved_user_phone").apply()
+        }
+    }
+
+    var selectedLanguage by remember {
+        mutableStateOf(LanguageManager.supportedLanguages.firstOrNull { it.code == LanguageManager.currentLanguageCode }?.name ?: "English")
+    }
+    var selectedTheme by remember {
+        mutableStateOf(sharedPrefs.getString("saved_app_theme", "Dark Mode") ?: "Dark Mode")
+    }
     var showInfoDialogText by remember { mutableStateOf<String?>(null) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var showSecurityDialog by remember { mutableStateOf(false) }
+    var profilePhotoUri by remember { mutableStateOf(sharedPrefs.getString("profile_photo_uri", null)) }
+    var profileAvatarEmoji by remember { mutableStateOf(sharedPrefs.getString("profile_avatar_emoji", "🛍️") ?: "🛍️") }
+    var showPhotoPickerModal by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val destFile = File(context.filesDir, "user_profile_avatar.jpg")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                val localPath = destFile.absolutePath
+                profilePhotoUri = localPath
+                sharedPrefs.edit().putString("profile_photo_uri", localPath).apply()
+            } catch (e: Exception) {
+                profilePhotoUri = uri.toString()
+                sharedPrefs.edit().putString("profile_photo_uri", uri.toString()).apply()
+            }
+        }
+    }
+
     val privateVtoDir = File(context.filesDir, "vto_private")
     val vtoCount = (privateVtoDir.listFiles() ?: emptyArray()).size
+
+    val playStoreUrl = "https://play.google.com/store/apps/details?id=com.pajonline.buywiseai&hl=en-US&ah=siK1dcywSbhtZZS4Fvy3n9jvWVg&pli=1"
+
+    fun openPlayStorePage() {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.pajonline.buywiseai")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(playStoreUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(webIntent)
+        }
+    }
 
     fun openWebPage(title: String, urlPath: String) {
         val cleanPath = if (urlPath.startsWith("/")) urlPath else "/$urlPath"
@@ -103,6 +208,50 @@ fun ProfileScreen(
         activeModalWebsiteUrl = websiteUrl
     }
 
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showLogoutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmDialog = false },
+            containerColor = Color(0xFF141026),
+            title = {
+                Text("🚪 Confirm Sign Out?", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            },
+            text = {
+                Text(
+                    "Are you sure you want to log out of BuyWise AI? Your price alerts, virtual try-on looks, and shopping preferences will stay safely stored in your account.",
+                    color = Color.LightGray,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutConfirmDialog = false
+                        com.pajonline.buywiseai.data.repository.GoogleSignInHelper(context).signOutGoogle()
+                        authViewModel.signOut()
+                        userDisplayName = "Guest Shopper"
+                        userEmail = ""
+                        sharedPrefs.edit().remove("saved_display_name").remove("saved_user_email").remove("saved_user_phone").apply()
+                        Toast.makeText(context, "Signed out successfully!", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4444)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("YES, LOG OUT", color = Color.White, fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showLogoutConfirmDialog = false },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("NO, KEEP ME SIGNED IN", color = BuyWiseCyan, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF070510)
@@ -114,7 +263,7 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "MY BUYWISE AI",
+                text = tr("profile_title"),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Black,
                 color = Color.White
@@ -134,65 +283,120 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // Top Section: Avatar + Display Name & Email (Full Width Row)
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        // Interactive User Avatar Box with Camera Badge Overlay
                         Box(
                             modifier = Modifier
-                                .height(56.dp)
-                                .width(56.dp)
-                                .background(Color(0xFFA855F7).copy(alpha = 0.2f), CircleShape),
-                            contentAlignment = Alignment.Center
+                                .size(60.dp)
+                                .clickable { showPhotoPickerModal = true }
                         ) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.height(30.dp))
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            when (val state = authState) {
-                                is AuthState.Authenticated -> {
-                                    Text(
-                                        text = state.displayName.ifEmpty { state.userEmail.ifEmpty { "BuyWise Member" } },
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "Role: ${state.role.uppercase()} • Verified",
-                                        fontSize = 12.sp,
-                                        color = BuyWiseEmerald
-                                    )
-                                }
-                                else -> {
-                                    Text(
-                                        text = "BuyWise Shopper",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "Encrypted Account • Active",
-                                        fontSize = 12.sp,
-                                        color = BuyWiseGold
-                                    )
+                            val currentPhotoUri = profilePhotoUri
+                            val photoFile = remember(currentPhotoUri) {
+                                if (!currentPhotoUri.isNullOrEmpty()) File(currentPhotoUri) else null
+                            }
+                            val imageModel: Any? = when {
+                                photoFile?.exists() == true -> photoFile
+                                !currentPhotoUri.isNullOrEmpty() && (currentPhotoUri.startsWith("http://") || currentPhotoUri.startsWith("https://") || currentPhotoUri.startsWith("content://")) -> currentPhotoUri
+                                else -> null
+                            }
+
+                            if (imageModel != null) {
+                                AsyncImage(
+                                    model = imageModel,
+                                    contentDescription = "Profile Photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                        .border(2.dp, BuyWiseCyan, CircleShape),
+                                    onError = {
+                                        profilePhotoUri = null
+                                        sharedPrefs.edit().remove("profile_photo_uri").apply()
+                                    }
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0xFFA855F7).copy(alpha = 0.25f), CircleShape)
+                                        .border(2.dp, Color(0xFFA855F7), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(profileAvatarEmoji, fontSize = 28.sp)
                                 }
                             }
+
+                            // Camera edit badge overlay
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(BuyWiseCyan, CircleShape)
+                                    .border(1.5.dp, Color(0xFF141026), CircleShape)
+                                    .align(Alignment.BottomEnd),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("📷", fontSize = 10.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showEditProfileDialog = true }
+                        ) {
+                            Text(
+                                text = userDisplayName,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (userEmail.isNotEmpty()) userEmail else "Tap to edit profile details ✏️",
+                                fontSize = 12.sp,
+                                color = if (userEmail.isNotEmpty()) BuyWiseEmerald else BuyWiseGold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Action Buttons Row (Full Width Below Avatar)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { showEditProfileDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("✏️ EDIT", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
 
-                        if (authState is AuthState.Unauthenticated) {
+                        if (authState is AuthState.Authenticated) {
                             Button(
-                                onClick = { showAuthDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7)),
+                                onClick = { showLogoutConfirmDialog = true },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4444).copy(alpha = 0.2f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF4444)),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("🔑 SIGN IN / GOOGLE SIGN UP", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("🚪 SIGN OUT", color = Color(0xFFFF6B6B), fontSize = 11.sp, fontWeight = FontWeight.Black)
                             }
                         } else {
                             Button(
-                                onClick = { authViewModel.signOut() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF33141E)),
+                                onClick = { showAuthDialog = true },
+                                modifier = Modifier.weight(1.2f),
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("LOGOUT", color = Color(0xFFFF6B6B), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("🔑 SIGN IN / UP", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -213,6 +417,60 @@ fun ProfileScreen(
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // GOOGLE PLAY STORE CONNECTED APP & RATING CARD
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { openPlayStorePage() },
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1633)),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("▶️ Google Play", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color.White)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(BuyWiseGold.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("★ 5.0 RATING", fontSize = 9.sp, fontWeight = FontWeight.Black, color = BuyWiseGold)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "com.pajonline.buywiseai",
+                                    fontSize = 11.sp,
+                                    color = BuyWiseEmerald,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Official Android App on Google Play Store",
+                                    fontSize = 10.sp,
+                                    color = Color.LightGray
+                                )
+                            }
+
+                            Button(
+                                onClick = { openPlayStorePage() },
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("RATE ★ 5.0", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
                     }
                 }
             }
@@ -243,11 +501,11 @@ fun ProfileScreen(
             SectionHeader("✨ AI SHOPPING CENTER", Color(0xFFA855F7))
             Spacer(modifier = Modifier.height(8.dp))
             ProfileMenuItem(
-                title = "👑 BuyWise Prime Digital Membership",
+                title = "👑 BuyWise Prime Digital Membership (Google Play)",
                 actionText = "Manage ➔",
                 icon = Icons.Default.Star,
                 accentColor = BuyWiseGold,
-                onClick = { openWebPage("BuyWise Prime Membership", "/prime") }
+                onClick = { onNavigateToPrime() }
             )
             ProfileMenuItem(
                 title = "Launch AI Virtual Try-On Studio",
@@ -272,12 +530,20 @@ fun ProfileScreen(
             SectionHeader("⚙️ PREFERENCES", BuyWiseCyan)
             Spacer(modifier = Modifier.height(8.dp))
             ProfileMenuItem(
+                title = "Edit Profile Name & Details ($userDisplayName)",
+                actionText = "Edit ➔",
+                icon = Icons.Default.Person,
+                accentColor = BuyWiseEmerald,
+                onClick = { showEditProfileDialog = true }
+            )
+            ProfileMenuItem(
                 title = "Language ($selectedLanguage)",
                 actionText = "Active ➔",
                 icon = Icons.Default.Settings,
                 accentColor = BuyWiseCyan,
                 onClick = {
-                    selectedLanguage = if (selectedLanguage == "English") "Hindi (हिंदी)" else "English"
+                    val nextCode = LanguageManager.cycleNextLanguage(context)
+                    selectedLanguage = LanguageManager.supportedLanguages.firstOrNull { it.code == nextCode }?.name ?: "English"
                 }
             )
             ProfileMenuItem(
@@ -286,7 +552,13 @@ fun ProfileScreen(
                 icon = Icons.Default.Settings,
                 accentColor = Color(0xFFFF007F),
                 onClick = {
-                    selectedTheme = if (selectedTheme == "Dark Mode") "High Contrast" else "Dark Mode"
+                    val nextTheme = when (selectedTheme) {
+                        "Dark Mode" -> "Light Mode"
+                        "Light Mode" -> "High Contrast"
+                        else -> "Dark Mode"
+                    }
+                    selectedTheme = nextTheme
+                    sharedPrefs.edit().putString("saved_app_theme", nextTheme).apply()
                 }
             )
             ProfileMenuItem(
@@ -339,12 +611,12 @@ fun ProfileScreen(
                 }
             )
             ProfileMenuItem(
-                title = "Rate BuyWise AI",
-                actionText = "Rate ➔",
+                title = "Rate BuyWise AI on Google Play",
+                actionText = "★ 5.0 Rate ➔",
                 icon = Icons.Default.Star,
                 accentColor = BuyWiseGold,
                 onClick = {
-                    showInfoDialogText = "Thank you for rating BuyWise AI 5 Stars! ⭐⭐⭐⭐⭐"
+                    openPlayStorePage()
                 }
             )
 
@@ -460,8 +732,10 @@ fun ProfileScreen(
                 title = "Sign Out",
                 actionText = "Sign Out ➔",
                 icon = Icons.Default.Person,
-                accentColor = Color.LightGray,
-                onClick = { authViewModel.signOut() }
+                accentColor = Color(0xFFFF6B6B),
+                onClick = {
+                    showLogoutConfirmDialog = true
+                }
             )
             ProfileMenuItem(
                 title = "Delete Account (DPDP Data Erasure)",
@@ -793,6 +1067,193 @@ fun ProfileScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan)
                         ) {
                             Text("OK", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                )
+            }
+
+            if (showPhotoPickerModal) {
+                AlertDialog(
+                    onDismissRequest = { showPhotoPickerModal = false },
+                    containerColor = Color(0xFF141026),
+                    title = {
+                        Text("🖼️ Set Profile Picture", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Button(
+                                onClick = {
+                                    showPhotoPickerModal = false
+                                    photoPickerLauncher.launch("image/*")
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("📸 Choose Photo from Phone Gallery", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+
+                            Text("Or select a shopping avatar:", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                val avatars = listOf("🛍️", "🚀", "🤖", "👑", "👟")
+                                avatars.forEach { emoji ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .background(Color(0xFF241D3A), CircleShape)
+                                            .border(
+                                                if (profilePhotoUri == null && profileAvatarEmoji == emoji) 2.dp else 0.dp,
+                                                BuyWiseCyan,
+                                                CircleShape
+                                            )
+                                            .clickable {
+                                                profilePhotoUri = null
+                                                profileAvatarEmoji = emoji
+                                                sharedPrefs.edit().remove("profile_photo_uri").putString("profile_avatar_emoji", emoji).apply()
+                                                showPhotoPickerModal = false
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(emoji, fontSize = 24.sp)
+                                    }
+                                }
+                            }
+
+                            if (!profilePhotoUri.isNullOrEmpty()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        profilePhotoUri = null
+                                        sharedPrefs.edit().remove("profile_photo_uri").apply()
+                                        showPhotoPickerModal = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("🗑️ Remove Custom Photo", color = Color(0xFFFF6B6B))
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showPhotoPickerModal = false }) {
+                            Text("Cancel", color = Color.Gray)
+                        }
+                    }
+                )
+            }
+
+            if (showEditProfileDialog) {
+                var editNameInput by remember { mutableStateOf(userDisplayName) }
+                var editEmailInput by remember { mutableStateOf(userEmail) }
+                var editPhoneInput by remember { mutableStateOf(userPhone) }
+
+                AlertDialog(
+                    onDismissRequest = { showEditProfileDialog = false },
+                    containerColor = Color(0xFF141026),
+                    title = {
+                        Column {
+                            Text(
+                                text = "✏️ Edit Profile Details",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "Update display name, email & phone",
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = { showPhotoPickerModal = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF241D3A)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("📸 Change Profile Picture / Avatar", color = BuyWiseCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            OutlinedTextField(
+                                value = editNameInput,
+                                onValueChange = { editNameInput = it },
+                                label = { Text("Full Name *", color = Color.Gray, fontSize = 12.sp) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BuyWiseCyan,
+                                    unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = editEmailInput,
+                                onValueChange = { editEmailInput = it },
+                                label = { Text("Email Address", color = Color.Gray, fontSize = 12.sp) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BuyWiseCyan,
+                                    unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = editPhoneInput,
+                                onValueChange = { editPhoneInput = it },
+                                label = { Text("Mobile Phone Number", color = Color.Gray, fontSize = 12.sp) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BuyWiseCyan,
+                                    unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                )
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (editNameInput.isBlank()) {
+                                    Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val trimmedName = editNameInput.trim()
+                                    val trimmedEmail = editEmailInput.trim()
+                                    val trimmedPhone = editPhoneInput.trim()
+                                    userDisplayName = trimmedName
+                                    userEmail = trimmedEmail
+                                    userPhone = trimmedPhone
+                                    sharedPrefs.edit()
+                                        .putString("saved_display_name", trimmedName)
+                                        .putString("saved_user_email", trimmedEmail)
+                                        .putString("saved_user_phone", trimmedPhone)
+                                        .apply()
+                                    showEditProfileDialog = false
+                                    Toast.makeText(context, "✓ Profile updated: $trimmedName", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("SAVE PROFILE ✓", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showEditProfileDialog = false }) {
+                            Text("Cancel", color = Color.Gray)
                         }
                     }
                 )

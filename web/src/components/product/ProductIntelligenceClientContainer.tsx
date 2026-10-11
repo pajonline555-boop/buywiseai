@@ -15,6 +15,25 @@ interface ProductIntelligenceClientContainerProps {
   initialProduct?: BestsellerProduct;
 }
 
+function getYoutubeEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  try {
+    let videoId = '';
+    if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
+    } else if (url.includes('youtube.com/watch')) {
+      const u = new URL(url);
+      videoId = u.searchParams.get('v') || '';
+    } else if (url.includes('youtube.com/shorts/')) {
+      videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0] || '';
+    } else if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+  } catch (e) {}
+  return null;
+}
+
 export default function ProductIntelligenceClientContainer({
   slug,
   initialProduct
@@ -52,6 +71,7 @@ export default function ProductIntelligenceClientContainer({
 
   const allProducts = TOP_CATEGORIES.flatMap(c => c.products);
   const similarProducts = allProducts.filter(p => p.id !== product.id && p.category === product.category).slice(0, 3);
+  const embedUrl = getYoutubeEmbedUrl(product.youtubeUrl);
 
   return (
     <main style={{ paddingTop: '30px', paddingBottom: '60px' }}>
@@ -87,6 +107,35 @@ export default function ProductIntelligenceClientContainer({
 
         {/* BuyWise Store Dropshipping Checkout Card (for PARTNER items) */}
         <BuyWiseStoreCheckoutCard product={product} />
+
+        {/* YouTube Video Review Section */}
+        {product.youtubeUrl && (
+          <div className="glass" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(18, 14, 36, 0.95)', border: '1px solid rgba(255, 77, 77, 0.4)', marginBottom: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                ▶️ Official Video Demo & Product Review
+              </h3>
+              <a href={product.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '6px 14px', borderRadius: '12px', background: 'rgba(255, 0, 0, 0.2)', border: '1px solid #ff4d4d', color: '#ff4d4d', fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                Watch on YouTube ➔
+              </a>
+            </div>
+            {embedUrl ? (
+              <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <iframe
+                  src={embedUrl}
+                  title="YouTube Video Review"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                />
+              </div>
+            ) : (
+              <a href={product.youtubeUrl} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', background: '#ff0000', color: '#fff', fontWeight: 900, textDecoration: 'none' }}>
+                ▶️ Open Product Video on YouTube
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Where to Buy Multi-Store Comparison Table */}
         <WhereToBuyTable product={product} />

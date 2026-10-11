@@ -132,40 +132,50 @@ export default function PrimeMembershipPage() {
   const isPrimeActive = entitlement?.status === 'ACTIVE' && entitlement.plan !== 'FREE';
 
   return (
-    <main
-      style={{
-        width: '100%',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '100px 20px 80px 20px',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '32px',
-      }}
-    >
+    <main className="prime-page-root">
+      <style jsx>{`
+        .prime-page-root {
+          width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 40px 20px 80px 20px;
+          color: white;
+          display: flex;
+          flex-direction: column;
+          gap: 32px;
+        }
+        .prime-hero-box {
+          padding: 48px 36px;
+          border-radius: 32px;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(255, 0, 127, 0.15));
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(124, 58, 237, 0.2);
+        }
+        @media (max-width: 768px) {
+          .prime-page-root {
+            padding: 16px 16px 90px 16px;
+            gap: 20px;
+          }
+          .prime-hero-box {
+            padding: 24px 16px;
+            border-radius: 24px;
+            gap: 12px;
+          }
+        }
+      `}</style>
       {/* 1. HERO HEADER */}
-      <div
-        className="glass animate-fade-in"
-        style={{
-          padding: '48px 36px',
-          borderRadius: '32px',
-          background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(255, 0, 127, 0.15))',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(124, 58, 237, 0.2)',
-        }}
-      >
+      <div className="glass animate-fade-in prime-hero-box">
         <span
           style={{
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: 900,
-            letterSpacing: '0.12em',
-            padding: '6px 16px',
+            letterSpacing: '0.1em',
+            padding: '5px 14px',
             borderRadius: '20px',
             background: 'linear-gradient(135deg, #ffd700, #ff8c00)',
             color: '#090d16',
@@ -175,11 +185,11 @@ export default function PrimeMembershipPage() {
           👑 BuyWise Prime Membership
         </span>
 
-        <h1 style={{ fontSize: '42px', fontWeight: 900, margin: 0, letterSpacing: '-0.03em' }}>
+        <h1 style={{ fontSize: 'clamp(24px, 5vw, 42px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.2 }}>
           Elevate Your AI Shopping Experience
         </h1>
 
-        <p style={{ maxWidth: '680px', fontSize: '16px', color: 'rgba(255, 255, 255, 0.8)', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ maxWidth: '680px', fontSize: '15px', color: 'rgba(255, 255, 255, 0.8)', margin: 0, lineHeight: 1.5 }}>
           Unlock unlimited AI Virtual Try-On previews, priority GPU rendering, instant price drop notifications, and exclusive partner brand discounts.
         </p>
 

@@ -1,5 +1,6 @@
 package com.pajonline.buywiseai.ui.screens.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,6 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.pajonline.buywiseai.R
 import com.pajonline.buywiseai.data.repository.GoogleSignInHelper
 import com.pajonline.buywiseai.ui.components.BuyWiseLogo
@@ -69,8 +76,52 @@ fun MandatoryAuthScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val googleSignInHelper = remember { GoogleSignInHelper(context) }
+    val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
+
+    val gsoWithToken = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+    }
+    val googleSignInClientWithToken = remember(context) {
+        GoogleSignIn.getClient(context, gsoWithToken)
+    }
+
+    val googleSignInLauncherWithToken = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val selectedEmail = account?.email
+            val idToken = account?.idToken
+            val displayName = account?.displayName
+            if (!idToken.isNullOrBlank()) {
+                authViewModel.signInWithGoogle(idToken = idToken, email = selectedEmail, displayName = displayName) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
+            } else {
+                isLoading = false
+                errorMessage = "Google sign-in error: ID token not returned by Google Play Services."
+            }
+        } catch (e: ApiException) {
+            isLoading = false
+            android.util.Log.w("BuyWiseGoogleSignIn", "Google Sign In ApiException code: ${e.statusCode}")
+            if (e.statusCode == 12501 || e.statusCode == 16) {
+                errorMessage = "Google sign-in was cancelled."
+            } else if (e.statusCode == 10) {
+                errorMessage = "Google Sign-In error (Developer Error 10: OAuth SHA-1 fingerprint mismatch in Firebase Console). Please verify Firebase setup."
+            } else {
+                errorMessage = "Google sign-in error (code ${e.statusCode}). Please try again."
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -129,18 +180,12 @@ fun MandatoryAuthScreen(
                             onClick = {
                                 isLoading = true
                                 errorMessage = null
-                                scope.launch {
-                                    googleSignInHelper.performGoogleSignIn { _, idToken, retEmail ->
-                                        val targetEmail = if (email.isNotBlank()) email else if (!retEmail.isNullOrBlank() && retEmail.contains("@")) retEmail else "pajonline555@gmail.com"
-                                        authViewModel.signInWithGoogle(idToken = idToken, email = targetEmail) { success, msg ->
-                                            isLoading = false
-                                            if (success) {
-                                                onAuthSuccess()
-                                            } else {
-                                                errorMessage = msg
-                                            }
-                                        }
+                                try {
+                                    googleSignInClientWithToken.signOut().addOnCompleteListener {
+                                        googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
                                     }
+                                } catch (e: Exception) {
+                                    googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
                                 }
                             },
                             modifier = Modifier
@@ -320,8 +365,52 @@ fun AuthDialog(
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val googleSignInHelper = remember { GoogleSignInHelper(context) }
+    val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
+
+    val gsoWithToken = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+    }
+    val googleSignInClientWithToken = remember(context) {
+        GoogleSignIn.getClient(context, gsoWithToken)
+    }
+
+    val googleSignInLauncherWithToken = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val selectedEmail = account?.email
+            val idToken = account?.idToken
+            val displayName = account?.displayName
+            if (!idToken.isNullOrBlank()) {
+                authViewModel.signInWithGoogle(idToken = idToken, email = selectedEmail, displayName = displayName) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
+            } else {
+                isLoading = false
+                errorMessage = "Google sign-in error: ID token not returned by Google Play Services."
+            }
+        } catch (e: ApiException) {
+            isLoading = false
+            android.util.Log.w("BuyWiseGoogleSignIn", "Google Sign In ApiException code: ${e.statusCode}")
+            if (e.statusCode == 12501 || e.statusCode == 16) {
+                errorMessage = "Google sign-in was cancelled."
+            } else if (e.statusCode == 10) {
+                errorMessage = "Google Sign-In error (Developer Error 10: OAuth SHA-1 fingerprint mismatch in Firebase Console). Please verify Firebase setup."
+            } else {
+                errorMessage = "Google sign-in error (code ${e.statusCode}). Please try again."
+            }
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -347,18 +436,12 @@ fun AuthDialog(
                     onClick = {
                         isLoading = true
                         errorMessage = null
-                        scope.launch {
-                            googleSignInHelper.performGoogleSignIn { _, idToken, retEmail ->
-                                val targetEmail = if (email.isNotBlank()) email else if (!retEmail.isNullOrBlank() && retEmail.contains("@")) retEmail else "pajonline555@gmail.com"
-                                authViewModel.signInWithGoogle(idToken = idToken, email = targetEmail) { success, msg ->
-                                    isLoading = false
-                                    if (success) {
-                                        onAuthSuccess()
-                                    } else {
-                                        errorMessage = msg
-                                    }
-                                }
+                        try {
+                            googleSignInClientWithToken.signOut().addOnCompleteListener {
+                                googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
                             }
+                        } catch (e: Exception) {
+                            googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -446,6 +529,71 @@ fun AuthDialog(
                         focusedTextColor = Color.White
                     )
                 )
+
+                var showForgotPasswordModal by remember { mutableStateOf(false) }
+                var forgotEmail by remember { mutableStateOf("") }
+                var forgotStatusMsg by remember { mutableStateOf<String?>(null) }
+
+                if (!isSignUp) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                        TextButton(onClick = { showForgotPasswordModal = true; forgotEmail = email }) {
+                            Text("Forgot Password?", color = BuyWiseCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (showForgotPasswordModal) {
+                    AlertDialog(
+                        onDismissRequest = { showForgotPasswordModal = false },
+                        containerColor = Color(0xFF141026),
+                        title = {
+                            Text("🔑 Reset Password", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        },
+                        text = {
+                            Column {
+                                Text("Enter your registered email address to receive password reset instructions:", color = Color.LightGray, fontSize = 13.sp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedTextField(
+                                    value = forgotEmail,
+                                    onValueChange = { forgotEmail = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text("Email Address", color = Color.Gray) },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = BuyWiseCyan,
+                                        unfocusedBorderColor = Color.DarkGray,
+                                        focusedTextColor = Color.White
+                                    )
+                                )
+                                forgotStatusMsg?.let { msg ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(msg, color = BuyWiseEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    if (forgotEmail.isBlank()) {
+                                        forgotStatusMsg = "Please enter your email address."
+                                        return@Button
+                                    }
+                                    authViewModel.sendPasswordResetEmail(forgotEmail) { success, msg ->
+                                        forgotStatusMsg = msg
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("SEND RESET LINK", color = Color.Black, fontWeight = FontWeight.Black)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showForgotPasswordModal = false }) {
+                                Text("Close", color = Color.Gray)
+                            }
+                        }
+                    )
+                }
 
                 errorMessage?.let { msg ->
                     Spacer(modifier = Modifier.height(8.dp))

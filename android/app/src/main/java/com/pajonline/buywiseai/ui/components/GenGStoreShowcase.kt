@@ -173,14 +173,14 @@ fun GenGStoreShowcase(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = col.name,
+                            text = com.pajonline.buywiseai.data.i18n.tr(col.name),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = col.badge,
+                            text = com.pajonline.buywiseai.data.i18n.tr(col.badge),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             color = BuyWiseGold

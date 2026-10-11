@@ -22,6 +22,7 @@ export default function ThemeSelectorModal({ isOpen, onClose }: ThemeSelectorMod
     { mode: 'system', title: 'System Default', desc: 'Sync automatically with OS theme preference', icon: '💻' },
     { mode: 'dark', title: 'Dark Mode', desc: 'Deep violet glass surfaces with glowing accents', icon: '🌙' },
     { mode: 'light', title: 'Light Mode', desc: 'Clean slate light surfaces for daytime shopping', icon: '☀️' },
+    { mode: 'high-contrast', title: 'High Contrast OLED', desc: 'Maximum contrast black background for high visibility', icon: '⚡' },
   ];
 
   return (

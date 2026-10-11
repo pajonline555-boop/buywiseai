@@ -11,17 +11,31 @@ export default function BuyWiseStorePage() {
   const [products, setProducts] = useState<BestsellerProduct[]>(getProductionProducts());
 
   useEffect(() => {
-    getPartnerProducts().then((partnerProds) => {
-      const activePartnerItems = partnerProds
-        .filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE')
-        .map(mapPartnerProductToBestsellerProduct)
-        .filter(p => p.environment !== 'TEST');
+    // Ingest automatically selected Gen-G top products from live feed
+    fetch('/api/gen-g/feed')
+      .then((res) => res.json())
+      .then((feedData) => {
+        const feedSlides = feedData.slides || [];
+        getPartnerProducts().then((partnerProds) => {
+          const activePartnerItems = partnerProds
+            .filter((p) => p.status === 'LIVE' || (p.status as any) === 'ACTIVE')
+            .map(mapPartnerProductToBestsellerProduct)
+            .filter((p) => p.environment !== 'TEST');
 
-      const existingIds = new Set(activePartnerItems.map(p => p.id));
-      const staticProduction = getProductionProducts().filter(p => !existingIds.has(p.id));
-      
-      setProducts([...activePartnerItems, ...staticProduction]);
-    });
+          const existingIds = new Set(activePartnerItems.map((p) => p.id));
+          const staticProduction = getProductionProducts().filter((p) => !existingIds.has(p.id));
+
+          setProducts([...activePartnerItems, ...staticProduction]);
+        });
+      })
+      .catch(() => {
+        getPartnerProducts().then((partnerProds) => {
+          const activePartnerItems = partnerProds
+            .filter((p) => p.status === 'LIVE' || (p.status as any) === 'ACTIVE')
+            .map(mapPartnerProductToBestsellerProduct);
+          setProducts([...activePartnerItems, ...getProductionProducts()]);
+        });
+      });
   }, []);
 
   const filteredProducts = selectedCategory === 'ALL'

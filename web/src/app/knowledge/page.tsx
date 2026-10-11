@@ -1,23 +1,30 @@
-"use client"
-import React, { useState } from 'react';
+"use client";
+
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   getKnowledgeArticles,
+  getArticleBySlug,
   KNOWLEDGE_CATEGORIES,
   KnowledgeArticle,
   KnowledgeCategory,
   generateDailyAIKnowledgeArticle,
 } from '@/lib/knowledge/store';
 import { useTranslation } from '@/lib/i18n/i18nContext';
+import { ArticleMarkdownRenderer } from '@/components/knowledge/ArticleMarkdownRenderer';
 
-export default function KnowledgeHubPage() {
+function KnowledgeHubContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [extraArticles, setExtraArticles] = useState<KnowledgeArticle[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
   const [generating, setGenerating] = useState(false);
+  
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const baseArticles = getKnowledgeArticles(selectedCategory, searchQuery);
   
@@ -30,96 +37,41 @@ export default function KnowledgeHubPage() {
     ? allArticles 
     : allArticles.filter(a => a.category.toLowerCase() === selectedCategory.toLowerCase());
 
+  // Deep-link check on initial page load / URL search params change
+  useEffect(() => {
+    const slugParam = searchParams.get('slug') || searchParams.get('article');
+    if (slugParam) {
+      const found = getArticleBySlug(slugParam) || allArticles.find(a => a.id === slugParam || a.slug === slugParam);
+      if (found) {
+        setSelectedArticle(found);
+      }
+    }
+  }, [searchParams]);
+
+  const openArticle = (art: KnowledgeArticle) => {
+    setSelectedArticle(art);
+    if (typeof window !== 'undefined') {
+      const newUrl = `${window.location.pathname}?slug=${encodeURIComponent(art.slug)}`;
+      window.history.pushState({ path: newUrl }, '', newUrl);
+    }
+  };
+
+  const closeArticle = () => {
+    setSelectedArticle(null);
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ path: window.location.pathname }, '', window.location.pathname);
+    }
+  };
+
   const handleGenerateDailyArticle = () => {
     setGenerating(true);
     setTimeout(() => {
       const catToUse: KnowledgeCategory = selectedCategory !== 'ALL' ? (selectedCategory as KnowledgeCategory) : 'Smart Shopping';
       const newDailyArticle = generateDailyAIKnowledgeArticle(catToUse);
       setExtraArticles(prev => [newDailyArticle, ...prev]);
-      setSelectedArticle(newDailyArticle);
+      openArticle(newDailyArticle);
       setGenerating(false);
     }, 600);
-  };
-
-  const renderContentLines = (rawContent: string) => {
-    const lines = rawContent.split('\n');
-    return lines.map((line, idx) => {
-      const trimmed = line.trim();
-      if (!trimmed) return <div key={idx} style={{ height: '10px' }} />;
-      
-      // Parse markdown links [Label](/url) into clickable App CTA Buttons
-      const linkMatch = trimmed.match(/^\[(.*?)\]\((.*?)\)$/);
-      if (linkMatch) {
-        return (
-          <div key={idx} style={{ margin: '18px 0' }}>
-            <Link href={linkMatch[2]} style={{ textDecoration: 'none' }}>
-              <button
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: '16px',
-                  background: 'linear-gradient(135deg, var(--primary), #00ff88)',
-                  color: '#000000',
-                  fontWeight: 900,
-                  fontSize: '14px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(0, 255, 136, 0.3)',
-                  transition: 'all 0.2s ease',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                {t(linkMatch[1])}
-              </button>
-            </Link>
-          </div>
-        );
-      }
-
-      if (trimmed.startsWith('# ')) {
-        return (
-          <h2 key={idx} style={{ fontSize: '24px', fontWeight: 900, color: 'white', marginTop: '20px', marginBottom: '12px', lineHeight: 1.3 }}>
-            {t(trimmed.replace('# ', ''))}
-          </h2>
-        );
-      }
-      if (trimmed.startsWith('## ')) {
-        return (
-          <h3 key={idx} style={{ fontSize: '18px', fontWeight: 800, color: '#00d4ff', marginTop: '18px', marginBottom: '10px', lineHeight: 1.3 }}>
-            {t(trimmed.replace('## ', ''))}
-          </h3>
-        );
-      }
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        return (
-          <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start', fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.6 }}>
-            <span style={{ color: '#00ff88', fontWeight: 900 }}>•</span>
-            <span>{t(trimmed.substring(2))}</span>
-          </div>
-        );
-      }
-      if (trimmed.startsWith('---')) {
-        return <hr key={idx} style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '20px 0' }} />;
-      }
-
-      // Check if text line contains markdown bolding **text**
-      const inlineParts = trimmed.split(/(\*\*.*?\*\*)/g);
-      return (
-        <p key={idx} style={{ fontSize: '14px', lineHeight: 1.7, color: 'rgba(255, 255, 255, 0.85)', marginBottom: '10px' }}>
-          {inlineParts.map((part, pIdx) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return (
-                <strong key={pIdx} style={{ color: '#00ff88', fontWeight: 800 }}>
-                  {t(part.slice(2, -2))}
-                </strong>
-              );
-            }
-            return t(part);
-          })}
-        </p>
-      );
-    });
   };
 
   return (
@@ -241,7 +193,7 @@ export default function KnowledgeHubPage() {
           {articles.map((art) => (
             <article
               key={art.id}
-              onClick={() => setSelectedArticle(art)}
+              onClick={() => openArticle(art)}
               style={{
                 background: 'linear-gradient(135deg, rgba(20, 15, 38, 0.85), rgba(12, 10, 20, 0.95))',
                 border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -251,7 +203,7 @@ export default function KnowledgeHubPage() {
                 flexDirection: 'column',
                 boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
                 cursor: 'pointer',
-                transition: 'transform 0.25 ease, border-color 0.25s ease',
+                transition: 'transform 0.25s ease, border-color 0.25s ease',
               }}
             >
               {/* Featured Cover Image */}
@@ -314,9 +266,32 @@ export default function KnowledgeHubPage() {
                   </div>
                 )}
 
-                <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                <div style={{ marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)' }}>
                   <span>{t('Author:')} {t(art.author)}</span>
-                  <span style={{ color: '#00ff88', fontWeight: 800 }}>Read Full Guide ➔</span>
+                  
+                  {/* Interactive Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openArticle(art);
+                    }}
+                    style={{
+                      background: 'rgba(0, 255, 136, 0.12)',
+                      border: '1px solid rgba(0, 255, 136, 0.4)',
+                      color: '#00ff88',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    {t('Read Full Guide')} ➔
+                  </button>
                 </div>
               </div>
             </article>
@@ -341,7 +316,7 @@ export default function KnowledgeHubPage() {
             justifyContent: 'center',
             padding: '20px',
           }}
-          onClick={() => setSelectedArticle(null)}
+          onClick={closeArticle}
         >
           <div
             style={{
@@ -370,7 +345,7 @@ export default function KnowledgeHubPage() {
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 30%, #0c0a14 100%)' }} />
               
               <button
-                onClick={() => setSelectedArticle(null)}
+                onClick={closeArticle}
                 style={{
                   position: 'absolute',
                   top: '20px',
@@ -392,13 +367,18 @@ export default function KnowledgeHubPage() {
 
             {/* Modal Article Content */}
             <div style={{ padding: '0 36px 36px 36px', marginTop: '-30px', position: 'relative', zIndex: 2 }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <span style={{ padding: '4px 14px', borderRadius: '12px', background: 'rgba(0, 212, 255, 0.2)', color: '#00d4ff', fontSize: '12px', fontWeight: 800, border: '1px solid rgba(0, 212, 255, 0.4)' }}>
                   {t(selectedArticle.category)}
                 </span>
                 <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
                   {t(selectedArticle.readTime)} • {t('Author:')} {t(selectedArticle.author)}
                 </span>
+                <Link href={`/knowledge/${selectedArticle.slug}`} style={{ textDecoration: 'none', marginLeft: 'auto' }}>
+                  <span style={{ fontSize: '12px', color: '#00ff88', textDecoration: 'underline' }}>
+                    🔗 Direct Link
+                  </span>
+                </Link>
               </div>
 
               <h1 style={{ fontSize: '30px', fontWeight: 900, marginBottom: '16px', lineHeight: 1.3 }}>
@@ -410,7 +390,7 @@ export default function KnowledgeHubPage() {
               </p>
 
               <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '20px' }}>
-                {renderContentLines(selectedArticle.content)}
+                <ArticleMarkdownRenderer content={selectedArticle.content} />
               </div>
 
               {selectedArticle.disclaimer && (
@@ -431,13 +411,13 @@ export default function KnowledgeHubPage() {
 
               <div style={{ marginTop: '36px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                 <Link href="/search" style={{ textDecoration: 'none' }}>
-                  <button style={{ padding: '12px 28px', borderRadius: '20px', background: 'linear-gradient(135deg, var(--primary), #00ff88)', color: '#000000', fontWeight: 900, fontSize: '14px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0, 255, 136, 0.3)' }}>
+                  <button style={{ padding: '12px 28px', borderRadius: '20px', background: 'linear-gradient(135deg, var(--primary, #00d4ff), #00ff88)', color: '#000000', fontWeight: 900, fontSize: '14px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0, 255, 136, 0.3)' }}>
                     {t('Compare Live Deal Prices Now ↗')}
                   </button>
                 </Link>
 
                 <button
-                  onClick={() => setSelectedArticle(null)}
+                  onClick={closeArticle}
                   style={{
                     padding: '12px 26px',
                     borderRadius: '20px',
@@ -449,7 +429,7 @@ export default function KnowledgeHubPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Close Article
+                  {t('Close Article')}
                 </button>
               </div>
             </div>
@@ -457,5 +437,17 @@ export default function KnowledgeHubPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function KnowledgeHubPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ textAlign: 'center', padding: '100px 20px', color: 'white' }}>
+        Loading Knowledge Hub...
+      </div>
+    }>
+      <KnowledgeHubContent />
+    </Suspense>
   );
 }

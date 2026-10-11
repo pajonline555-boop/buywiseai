@@ -10,10 +10,56 @@ import { useTheme } from '@/lib/theme/themeProvider';
 export default function AppFooter() {
   const { t } = useTranslation();
   const { accentColor } = useTheme();
+  const [isNativeApp, setIsNativeApp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isNativeAgent = navigator.userAgent.includes("BuyWiseNativeApp") || navigator.userAgent.includes("BuyWiseApp") || navigator.userAgent.includes("AndroidWebView");
+      const isParamNative = new URLSearchParams(window.location.search).get("native") === "true" || new URLSearchParams(window.location.search).get("in_app") === "1";
+      if (isNativeAgent || isParamNative) {
+        setIsNativeApp(true);
+      }
+    }
+  }, []);
 
   return (
-    <footer style={{ width: '100%', background: 'rgba(8, 6, 15, 0.98)', borderTop: `1px solid ${accentColor}33`, padding: '50px 20px 90px 20px', marginTop: '60px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '36px', color: '#ffffff' }}>
+    <footer className="app-footer-root">
+      <style jsx>{`
+        .app-footer-root {
+          width: 100%;
+          background: rgba(8, 6, 15, 0.98);
+          border-top: 1px solid ${accentColor}33;
+          padding: 50px 20px 90px 20px;
+          margin-top: 60px;
+        }
+        .footer-grid {
+          max-width: 1200px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 36px;
+          color: #ffffff;
+        }
+        .social-container {
+          grid-column: 2 / 4;
+          margin-top: 8px;
+        }
+        @media (max-width: 768px) {
+          .app-footer-root {
+            padding: 30px 16px 110px 16px;
+            margin-top: 30px;
+          }
+          .footer-grid {
+            grid-template-columns: 1fr;
+            gap: 28px;
+          }
+          .social-container {
+            grid-column: 1 / -1;
+            margin-top: 0;
+          }
+        }
+      `}</style>
+      <div className="footer-grid">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
             <div style={{ width: '36px', height: '36px' }}>
@@ -24,15 +70,17 @@ export default function AppFooter() {
           <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.6, marginBottom: '16px' }}>
             {t('app_tagline')}
           </div>
-          <div style={{ background: `linear-gradient(135deg, ${accentColor}15, rgba(0, 255, 136, 0.1))`, border: `1px solid ${accentColor}44`, borderRadius: '16px', padding: '14px 18px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 900, color: accentColor, marginBottom: '4px', letterSpacing: '0.05em' }}>📱 {t('download_native_app_btn')}</div>
-            <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '10px', lineHeight: 1.4 }}>{t('download_native_app_sub')}</div>
-            <Link href="/download-app" style={{ textDecoration: 'none' }}>
-              <button style={{ width: '100%', padding: '8px 14px', borderRadius: '10px', background: `linear-gradient(135deg, ${accentColor}, #00b8ff)`, color: '#ffffff', fontWeight: 900, fontSize: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                ⚡ {t('nav_app_download')}
-              </button>
-            </Link>
-          </div>
+          {!isNativeApp && (
+            <div style={{ background: `linear-gradient(135deg, ${accentColor}15, rgba(0, 255, 136, 0.1))`, border: `1px solid ${accentColor}44`, borderRadius: '16px', padding: '14px 18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 900, color: accentColor, marginBottom: '4px', letterSpacing: '0.05em' }}>📱 {t('download_native_app_btn')}</div>
+              <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '10px', lineHeight: 1.4 }}>{t('download_native_app_sub')}</div>
+              <Link href="/download-app" style={{ textDecoration: 'none' }}>
+                <button style={{ width: '100%', padding: '8px 14px', borderRadius: '10px', background: `linear-gradient(135deg, ${accentColor}, #00b8ff)`, color: '#ffffff', fontWeight: 900, fontSize: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  ⚡ {t('nav_app_download')}
+                </button>
+              </Link>
+            </div>
+          )}
         </div>
 
         <div>
@@ -72,7 +120,7 @@ export default function AppFooter() {
         </div>
 
         {/* SOCIAL MEDIA ICONS PLACED DIRECTLY BELOW SHOPPING HUB & SUPPORT */}
-        <div style={{ gridColumn: '2 / 4', marginTop: '8px' }}>
+        <div className="social-container">
           <SocialMediaIcons 
             variant="footer"
             title={t('footer_official_channels')}

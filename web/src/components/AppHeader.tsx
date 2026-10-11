@@ -1,17 +1,20 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { useTheme } from '@/lib/theme/themeProvider';
 import { useAuth } from '@/lib/AuthContext';
+import VoiceSearchModal from '@/components/VoiceSearchModal';
 
 export default function AppHeader() {
   const { t } = useTranslation();
   const { accentColor } = useTheme();
-  const { user, userProfile, isAdmin } = useAuth();
+  const { user, userProfile, isAdmin, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   const isUserAdmin = isAdmin || userProfile?.role === 'admin' || (!!user?.email && ['pajonline555@gmail.com', 'akshayman224@gmail.com'].includes(user.email.toLowerCase().trim()));
   const isPartnerUser = userProfile?.role === 'partner' || userProfile?.role === 'partner_admin' || isUserAdmin;
@@ -32,32 +35,56 @@ export default function AppHeader() {
   }
 
   return (
-    <header style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '16px 20px 0 20px', position: 'relative', zIndex: 100 }}>
-      <nav 
-        className="glass" 
-        style={{ 
-          width: '100%', 
-          maxWidth: '1240px', 
-          padding: '10px 24px', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          background: 'rgba(10, 7, 20, 0.94)', 
-          backdropFilter: 'blur(24px)', 
-          WebkitBackdropFilter: 'blur(24px)', 
-          border: '1px solid rgba(255, 255, 255, 0.12)', 
-          borderRadius: '24px',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(124, 58, 237, 0.15)'
-        }}
-      >
+    <header className="app-header-root">
+      <style jsx>{`
+        .app-header-root {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          padding: 16px 20px 0 20px;
+          position: relative;
+          z-index: 100;
+        }
+        .app-header-nav {
+          width: 100%;
+          max-width: 1240px;
+          padding: 10px 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: rgba(10, 7, 20, 0.94);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 24px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(124, 58, 237, 0.15);
+        }
+        @media (max-width: 768px) {
+          .app-header-root {
+            padding: calc(6px + env(safe-area-inset-top, 0px)) 10px 0 10px;
+          }
+          .app-header-nav {
+            padding: 8px 12px;
+            border-radius: 18px;
+          }
+          .app-header-logo-text {
+            font-size: 18px !important;
+          }
+          .app-header-logo-badge {
+            font-size: 9px !important;
+            padding: 2px 6px !important;
+          }
+        }
+      `}</style>
+      <nav className="glass app-header-nav">
         {/* Logo Brand */}
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', flexShrink: 0, filter: `drop-shadow(0 4px 14px ${accentColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '34px', height: '34px', flexShrink: 0, filter: `drop-shadow(0 4px 14px ${accentColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src="/logo-icon.png" alt="BuyWise AI Official Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} fetchPriority="high" decoding="async" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em' }}>BuyWise</span>
-            <span style={{ fontSize: '10px', fontWeight: 900, padding: '3px 8px', borderRadius: '8px', background: `linear-gradient(135deg, ${accentColor}, #ff007f)`, color: '#ffffff', letterSpacing: '0.05em', boxShadow: `0 2px 10px ${accentColor}66` }}>AI</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span className="app-header-logo-text" style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em' }}>BuyWise</span>
+            <span className="app-header-logo-badge" style={{ fontSize: '10px', fontWeight: 900, padding: '3px 7px', borderRadius: '8px', background: `linear-gradient(135deg, ${accentColor}, #ff007f)`, color: '#ffffff', letterSpacing: '0.05em', boxShadow: `0 2px 10px ${accentColor}66` }}>AI</span>
           </div>
         </Link>
 
@@ -108,99 +135,139 @@ export default function AppHeader() {
         </div>
 
         {/* Action Buttons (Single Unified Auth Button, User Badge & Try-On Room) */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           {!user ? (
             <Link href="/login" style={{ textDecoration: 'none' }}>
               <button 
                 style={{ 
-                  padding: '8px 18px', 
-                  fontSize: '13px', 
+                  padding: '6px 14px', 
+                  fontSize: '12px', 
                   fontWeight: 800, 
                   background: `linear-gradient(135deg, ${accentColor}33, rgba(255, 255, 255, 0.08))`, 
                   border: `1px solid ${accentColor}66`, 
                   color: '#ffffff', 
-                  borderRadius: '14px',
+                  borderRadius: '12px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '5px',
                   cursor: 'pointer',
                   boxShadow: `0 4px 15px ${accentColor}22`,
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 🔑 {t('sign_in_sync')}
               </button>
             </Link>
           ) : (
-            <Link href="/profile" style={{ textDecoration: 'none' }}>
-              <div 
-                style={{ 
-                  padding: '6px 14px', 
-                  borderRadius: '14px', 
-                  background: isUserAdmin 
-                    ? 'rgba(0, 255, 136, 0.15)' 
-                    : 'rgba(255, 255, 255, 0.08)', 
-                  border: isUserAdmin 
-                    ? '1px solid rgba(0, 255, 136, 0.4)' 
-                    : '1px solid rgba(255, 255, 255, 0.18)', 
-                  color: isUserAdmin ? '#00ff88' : '#ffffff', 
-                  fontSize: '12px', 
-                  fontWeight: 800, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px' 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Link href="/profile" style={{ textDecoration: 'none' }}>
+                <div 
+                  style={{ 
+                    padding: '5px 12px', 
+                    borderRadius: '12px', 
+                    background: isUserAdmin 
+                      ? 'rgba(0, 255, 136, 0.15)' 
+                      : 'rgba(255, 255, 255, 0.08)', 
+                    border: isUserAdmin 
+                      ? '1px solid rgba(0, 255, 136, 0.4)' 
+                      : '1px solid rgba(255, 255, 255, 0.18)', 
+                    color: isUserAdmin ? '#00ff88' : '#ffffff', 
+                    fontSize: '12px', 
+                    fontWeight: 800, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <span>{isUserAdmin ? '👑' : '✓'}</span>
+                  <span>{user.displayName ? user.displayName.split(' ')[0] : (user.email ? user.email.split('@')[0] : 'User')}</span>
+                </div>
+              </Link>
+
+              <button
+                onClick={async () => {
+                  await logout();
+                  router.push('/login');
+                }}
+                title="Sign Out of BuyWise AI"
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  background: 'rgba(255, 68, 68, 0.15)',
+                  border: '1px solid rgba(255, 68, 68, 0.4)',
+                  color: '#ff6b6b',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                <span>{isUserAdmin ? '👑' : '✓'}</span>
-                <span>{user.displayName || (user.email ? user.email.split('@')[0] : 'Logged In')}</span>
-              </div>
-            </Link>
+                🚪 Sign Out
+              </button>
+            </div>
           )}
 
-          <Link href="/search" style={{ textDecoration: 'none' }}>
-            <button
-              title="Voice Search (English, Hindi, Hinglish)"
-              style={{
-                padding: '8px 12px',
-                fontSize: '14px',
-                fontWeight: 800,
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#ffffff',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              🎙️
-            </button>
-          </Link>
+          <button
+            onClick={() => setIsVoiceModalOpen(true)}
+            title="Voice Search (English, Hindi, Hinglish)"
+            style={{
+              padding: '6px 10px',
+              fontSize: '13px',
+              fontWeight: 800,
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            🎙️
+          </button>
 
-          <Link href="/try-on" style={{ textDecoration: 'none' }}>
-            <button 
-              style={{ 
-                padding: '8px 16px', 
-                fontSize: '13px', 
-                fontWeight: 800, 
-                background: `linear-gradient(135deg, ${accentColor}, #ff007f)`, 
-                color: '#ffffff', 
-                border: 'none',
-                borderRadius: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: `0 4px 20px ${accentColor}55`,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              ✨ {t('nav_try_on_room')}
-            </button>
-          </Link>
+          <div className="desktop-only">
+            <Link href="/try-on" style={{ textDecoration: 'none' }}>
+              <button 
+                style={{ 
+                  padding: '8px 16px', 
+                  fontSize: '13px', 
+                  fontWeight: 800, 
+                  background: `linear-gradient(135deg, ${accentColor}, #ff007f)`, 
+                  color: '#ffffff', 
+                  border: 'none',
+                  borderRadius: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: `0 4px 20px ${accentColor}55`,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ✨ {t('nav_try_on_room')}
+              </button>
+            </Link>
+          </div>
         </div>
       </nav>
+
+      <VoiceSearchModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onTranscript={(text) => {
+          if (text && text.trim()) {
+            router.push(`/search?q=${encodeURIComponent(text.trim())}`);
+          }
+        }}
+      />
     </header>
   );
 }

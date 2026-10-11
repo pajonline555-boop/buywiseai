@@ -5,16 +5,20 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -37,48 +41,69 @@ import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseGold
 import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
+import com.pajonline.buywiseai.ui.theme.BuyWisePurple
 import kotlinx.coroutines.delay
 
-data class BannerItem(
+data class PosterBannerItem(
     val title: String,
-    val subtitle: String,
+    val headline: String,
+    val priceText: String,
+    val dropTag: String,
     val badgeText: String,
+    val storeLogo: String,
+    val actionText: String,
     val gradientColors: List<Color>,
     val accentColor: Color
 )
 
 @Composable
 fun BannerCarousel(
-    onBannerClick: (Int) -> Unit = {}
+    onBannerClick: (String) -> Unit = {}
 ) {
     val banners = remember {
         listOf(
-            BannerItem(
-                title = "AI SmartCompare Matrix",
-                subtitle = "Compare real prices across 14 major Indian retailers with automated coupon deduction",
-                badgeText = "14 STORES LIVE",
-                gradientColors = listOf(Color(0xFF0D253F), Color(0xFF1E1B2E)),
+            PosterBannerItem(
+                title = "AMAZON INDIA VERIFIED",
+                headline = "iPhone 17 (256 GB)",
+                priceText = "₹82,900",
+                dropTag = "▲ -8.5% Price Drop",
+                badgeText = "BEST PRICE TODAY",
+                storeLogo = "🛒",
+                actionText = "View Price Chart ➔",
+                gradientColors = listOf(Color(0xFF1F1235), Color(0xFF0C192E)),
                 accentColor = BuyWiseCyan
             ),
-            BannerItem(
-                title = "HuggingFace AI Try-On",
-                subtitle = "Virtual Try-On powered by IDM-VTON & SSIM Quality Gate. Local private photo privacy.",
-                badgeText = "IDM-VTON AI",
-                gradientColors = listOf(Color(0xFF3B122D), Color(0xFF1E1B2E)),
+            PosterBannerItem(
+                title = "GEN-G STORE DIRECT",
+                headline = "Royal Kanjivaram Silk Saree",
+                priceText = "₹4,999",
+                dropTag = "🔥 0% Commission Deal",
+                badgeText = "DIRECT FACTORY",
+                storeLogo = "👗",
+                actionText = "Try In 3D Room ➔",
+                gradientColors = listOf(Color(0xFF380C26), Color(0xFF140B22)),
                 accentColor = BuyWiseNeonPink
             ),
-            BannerItem(
-                title = "Coupon Truth Engine",
-                subtitle = "Only 100% verified coupons guaranteed active today. Zero fake promotional codes.",
-                badgeText = "VERIFIED TODAY",
-                gradientColors = listOf(Color(0xFF0F382C), Color(0xFF1E1B2E)),
+            PosterBannerItem(
+                title = "FLIPKART SUPERDEAL",
+                headline = "Samsung Galaxy S24 Ultra",
+                priceText = "₹1,19,999",
+                dropTag = "💳 ₹1,500 Bank Cashback",
+                badgeText = "SUPERCOIN DEAL",
+                storeLogo = "⚡",
+                actionText = "Compare 14 Stores ➔",
+                gradientColors = listOf(Color(0xFF0F3223), Color(0xFF0C1428)),
                 accentColor = BuyWiseEmerald
             ),
-            BannerItem(
-                title = "BuyWise Direct Partners",
-                subtitle = "Shop verified direct partner inventory with fast shipping & exclusive pricing",
-                badgeText = "PARTNER STORE",
-                gradientColors = listOf(Color(0xFF382F0F), Color(0xFF1E1B2E)),
+            PosterBannerItem(
+                title = "AI VIRTUAL TRIAL ROOM",
+                headline = "Instant Outfit Try-On Engine",
+                priceText = "100% Free",
+                dropTag = "✨ SSIM Quality Gate Verified",
+                badgeText = "IDM-VTON AI",
+                storeLogo = "📸",
+                actionText = "Upload Photo ➔",
+                gradientColors = listOf(Color(0xFF382F0F), Color(0xFF1C0D2B)),
                 accentColor = BuyWiseGold
             )
         )
@@ -86,10 +111,10 @@ fun BannerCarousel(
 
     var currentIndex by remember { mutableIntStateOf(0) }
 
-    // Auto-advance banner carousel every 4 seconds
+    // Auto-advance banner slides every 3.5 seconds
     LaunchedEffect(Unit) {
         while (true) {
-            delay(4000)
+            delay(3500)
             currentIndex = (currentIndex + 1) % banners.size
         }
     }
@@ -98,25 +123,29 @@ fun BannerCarousel(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp)
-                .clickable { onBannerClick(currentIndex) },
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                .height(154.dp)
+                .clickable { onBannerClick(banners[currentIndex].headline) },
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, banners[currentIndex].accentColor.copy(alpha = 0.5f))
         ) {
             AnimatedContent(
                 targetState = currentIndex,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "BannerTransition"
+                label = "3DPosterTransition"
             ) { index ->
                 val banner = banners[index]
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
+                        .fillMaxSize()
                         .background(Brush.horizontalGradient(banner.gradientColors))
                         .padding(16.dp)
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Top Header Pill & Store Emblem
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -124,35 +153,96 @@ fun BannerCarousel(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .background(banner.accentColor.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                    .background(banner.accentColor.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                                    .border(1.dp, banner.accentColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
+                                    text = "${banner.storeLogo} ${banner.title}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = banner.accentColor,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .background(BuyWiseGold.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
                                     text = banner.badgeText,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = banner.accentColor
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = BuyWiseGold
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        // Middle Content Title & Price Tag
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = banner.headline,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = banner.dropTag,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BuyWiseEmerald
+                                )
+                            }
 
-                        Text(
-                            text = banner.title,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = banner.priceText,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "LIVE PRICE",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        // Bottom Action CTA Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🔥 3D Poster Banner • Real-Time Deal Tracker",
+                                fontSize = 10.sp,
+                                color = Color.LightGray
+                            )
 
-                        Text(
-                            text = banner.subtitle,
-                            fontSize = 12.sp,
-                            color = Color.LightGray,
-                            maxLines = 2
-                        )
+                            Box(
+                                modifier = Modifier
+                                    .background(banner.accentColor, RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = banner.actionText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.Black
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -170,9 +260,9 @@ fun BannerCarousel(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 4.dp)
-                        .size(if (isSelected) 20.dp else 8.dp, 8.dp)
+                        .size(if (isSelected) 22.dp else 8.dp, 6.dp)
                         .background(
-                            color = if (isSelected) BuyWiseCyan else Color.DarkGray,
+                            color = if (isSelected) BuyWiseCyan else Color.Gray.copy(alpha = 0.4f),
                             shape = CircleShape
                         )
                         .clickable { currentIndex = index }

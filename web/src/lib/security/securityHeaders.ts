@@ -5,7 +5,7 @@ export const RECOMMENDED_PRODUCTION_SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), payment=()"
+  "Permissions-Policy": "camera=(self), microphone=(self), geolocation=(), payment=()"
 };
 
 export function applySecurityHeadersToResponse<T extends { headers: { set(key: string, value: string): void } }>(

@@ -12,10 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
@@ -27,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pajonline.buywiseai.data.i18n.tr
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
@@ -71,7 +69,7 @@ fun CoreExperienceCards(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "COMPARE IT",
+                            text = tr("compare_it"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             color = BuyWiseCyan,
@@ -83,7 +81,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Multi-Store Price Engine",
+                    text = tr("multi_store_engine"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White
@@ -92,7 +90,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Search & compare live prices across Amazon, Flipkart, Meesho, Myntra, Nykaa, AJIO, Tata CLiQ, Etsy, eBay, and 2,500+ stores.",
+                    text = tr("multi_store_desc"),
                     fontSize = 13.sp,
                     color = Color.LightGray,
                     lineHeight = 18.sp
@@ -110,7 +108,7 @@ fun CoreExperienceCards(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Compare Stores Now ➔",
+                        text = tr("compare_stores_now"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = BuyWiseCyan
@@ -148,7 +146,7 @@ fun CoreExperienceCards(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "TRY IT ON",
+                            text = tr("try_it_on"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             color = BuyWiseNeonPink,
@@ -160,7 +158,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "AI Virtual Trial Room",
+                    text = tr("ai_virtual_trial_room"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White
@@ -169,7 +167,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Upload your photo or paste product links from Myntra, Amazon, Nykaa or Etsy to see yourself wearing sarees, dresses, or innerwear before buying.",
+                    text = tr("virtual_trial_desc"),
                     fontSize = 13.sp,
                     color = Color.LightGray,
                     lineHeight = 18.sp
@@ -192,7 +190,7 @@ fun CoreExperienceCards(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Open AI Trial Room ➔",
+                        text = tr("open_ai_trial_room"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = BuyWiseNeonPink
@@ -230,7 +228,7 @@ fun CoreExperienceCards(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "SAVE & BUY",
+                            text = tr("save_and_buy"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             color = BuyWiseEmerald,
@@ -242,7 +240,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Real Effective Price & Coupons",
+                    text = tr("real_effective_price"),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White
@@ -251,7 +249,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Get 100% verified working coupons, stackable promo codes, and real effective price calculation (`Listed Price - Coupon = Net Savings`) before checkout.",
+                    text = tr("real_effective_desc"),
                     fontSize = 13.sp,
                     color = Color.LightGray,
                     lineHeight = 18.sp
@@ -273,7 +271,7 @@ fun CoreExperienceCards(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Find Verified Coupons ➔",
+                        text = tr("find_verified_coupons"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         color = Color(0xFF070510)

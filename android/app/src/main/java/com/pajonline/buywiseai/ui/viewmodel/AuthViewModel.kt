@@ -6,7 +6,7 @@ import com.pajonline.buywiseai.data.repository.AuthState
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthViewModel(
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository = AuthRepository.getInstance()
 ) : ViewModel() {
 
     val authState: StateFlow<AuthState> = authRepository.authState
