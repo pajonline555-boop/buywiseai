@@ -131,11 +131,18 @@ fun ProductDetailsScreen(
                 }
                 Text(text = "Product Details", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 IconButton(onClick = {
+                    val shareUrl = if (!offer.slug.isNullOrEmpty()) {
+                        "https://buywiseai.pajonline.co.in/product/${offer.slug}"
+                    } else if (offer.url.startsWith("http")) {
+                        offer.url
+                    } else {
+                        "https://buywiseai.pajonline.co.in/product/${offer.id}"
+                    }
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Check out ${offer.title} on ${offer.store} via BuyWise AI: ${offer.url}")
+                        putExtra(Intent.EXTRA_TEXT, "Check out ${offer.title} on BuyWise AI! Compare prices & try on: $shareUrl")
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Product"))
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Product via"))
                 }) {
                     Icon(Icons.Default.Share, contentDescription = "Share", tint = BuyWiseCyan)
                 }
@@ -247,52 +254,43 @@ fun ProductDetailsScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Action Buttons
-            if (isPartner) {
-                Button(
-                    onClick = onNavigateToCheckout,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "PROCEED TO BUYWISE CHECKOUT 🔒", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            } else {
-                Button(
-                    onClick = {
-                        try {
-                            var targetUrl = offer.url.trim()
-                            if (offer.store.contains("Amazon", ignoreCase = true) && !targetUrl.contains("tag=")) {
-                                targetUrl = if (targetUrl.contains("?")) "$targetUrl&tag=pajonline-21" else "$targetUrl?tag=pajonline-21"
-                            }
-                            val validUri = Uri.parse(targetUrl)
-                            val browserIntent = Intent(Intent.ACTION_VIEW, validUri).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(browserIntent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            val safeQuery = try { java.net.URLEncoder.encode(offer.title, "UTF-8") } catch (ex: Exception) { "product" }
-                            val fallbackAmazonUrl = "https://www.amazon.in/s?k=$safeQuery&tag=pajonline-21"
-                            try {
-                                val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse(fallbackAmazonUrl)).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(fallbackIntent)
-                            } catch (ex: Exception) {
-                                android.widget.Toast.makeText(context, "Could not open store link. Please try again.", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+            val onBuyClick = {
+                try {
+                    var targetUrl = offer.url.trim()
+                    if (offer.store.contains("Amazon", ignoreCase = true) || isPartner) {
+                        if (!targetUrl.contains("tag=")) {
+                            targetUrl = if (targetUrl.contains("?")) "$targetUrl&tag=pajonline-21&ascsubtag=bw_gen_g_store" else "$targetUrl?tag=pajonline-21&ascsubtag=bw_gen_g_store"
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "BUY NOW ON ${offer.store.uppercase()}", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                    val validUri = Uri.parse(targetUrl)
+                    val browserIntent = Intent(Intent.ACTION_VIEW, validUri).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(browserIntent)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    val safeQuery = try { java.net.URLEncoder.encode(offer.title, "UTF-8") } catch (ex: Exception) { "product" }
+                    val fallbackAmazonUrl = "https://www.amazon.in/s?k=$safeQuery&tag=pajonline-21&ascsubtag=bw_gen_g_store"
+                    try {
+                        val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse(fallbackAmazonUrl)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(fallbackIntent)
+                    } catch (ex: Exception) {
+                        android.widget.Toast.makeText(context, "Could not open store link. Please try again.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
+            }
+
+            Button(
+                onClick = onBuyClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = if (isPartner) BuyWiseEmerald else BuyWiseCyan),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.Black)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "BUY NOW ON ${offer.store.uppercase()}", color = Color.Black, fontWeight = FontWeight.Bold)
             }
 
             // Only show Try-On option for wearable items (clothing, sarees, dresses, jewellery, shoes)

@@ -29,7 +29,8 @@ data class StoreOffer(
     val productSource: String? = "AFFILIATE",
     val fulfillmentType: String? = "EXTERNAL_RETAILER",
     val shippingEstimate: String? = "4–7 Business Days",
-    val returnPolicy: String? = "7-Day Return Policy"
+    val returnPolicy: String? = "7-Day Return Policy",
+    val slug: String? = null
 )
 
 data class ComparisonSummary(

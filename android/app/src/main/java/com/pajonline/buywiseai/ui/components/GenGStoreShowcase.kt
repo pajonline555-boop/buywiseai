@@ -1,5 +1,7 @@
 package com.pajonline.buywiseai.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -56,18 +59,35 @@ data class PartnerProductSlide(
     val sellingPrice: String,
     val mrp: String,
     val discountPercent: String,
-    val imageUrl: String
+    val imageUrl: String,
+    val productUrl: String = "",
+    val slug: String = ""
 )
 
 @Composable
 fun GenGStoreShowcase(
     onViewAllClick: () -> Unit = {},
     onTryOnClick: (PartnerProductSlide) -> Unit = {},
-    onBuyNowClick: (PartnerProductSlide) -> Unit = {}
+    onBuyNowClick: (PartnerProductSlide) -> Unit = {},
+    onShareClick: (PartnerProductSlide) -> Unit = {}
 ) {
     // Exact Product Data Array from web/src/lib/partners/partnerService.ts
     val items = remember {
         listOf(
+            PartnerProductSlide(
+                id = "prod_partner_kamarbandh_1",
+                title = "Etietnic Gujarati Traditional Embroidered Kamarbandh",
+                description = "Verified Amazon India product: Etietnic Gujarati Traditional Embroidered Kamarbandh. Authentic quality and fast delivery guaranteed across India.",
+                retailer = "BUYWISE VERIFIED PARTNER NETWORK",
+                rating = "4.9",
+                reviewCount = "24",
+                sellingPrice = "₹499",
+                mrp = "₹999",
+                discountPercent = "50% OFF SPECIAL DEAL",
+                imageUrl = "https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg",
+                productUrl = "https://www.amazon.in/s?k=Etietnic+Gujarati+Traditional+Embroidered+Kamarbandh",
+                slug = "etietnic-gujarati-traditional-embroidered-kamarbandh"
+            ),
             PartnerProductSlide(
                 id = "prod_partner_louiscraft_panties_1",
                 title = "Louis Craft Women's Cotton Printed Panties (Pack of 5)",
@@ -78,7 +98,9 @@ fun GenGStoreShowcase(
                 sellingPrice = "₹289",
                 mrp = "₹499",
                 discountPercent = "42% OFF SPECIAL DEAL",
-                imageUrl = "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg"
+                imageUrl = "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg",
+                productUrl = "https://www.amazon.in/Louis-Craft-Printed-Panties-Multicolour/dp/B0FNWFT4FB",
+                slug = "louis-craft-panties-pack"
             ),
             PartnerProductSlide(
                 id = "prod_partner_zivame_bra_1",
@@ -90,7 +112,9 @@ fun GenGStoreShowcase(
                 sellingPrice = "₹999",
                 mrp = "₹1,999",
                 discountPercent = "50% OFF SPECIAL DEAL",
-                imageUrl = "https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg"
+                imageUrl = "https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg",
+                productUrl = "https://www.amazon.in/Zivame-Padded-Wirefree-Seamless-T-Shirt/dp/B09XYZBRA1",
+                slug = "zivame-tshirt-bra"
             ),
             PartnerProductSlide(
                 id = "prod_partner_jockey_trunk_1",
@@ -102,7 +126,9 @@ fun GenGStoreShowcase(
                 sellingPrice = "₹899",
                 mrp = "₹1,199",
                 discountPercent = "25% OFF SPECIAL DEAL",
-                imageUrl = "https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg"
+                imageUrl = "https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg",
+                productUrl = "https://www.amazon.in/s?k=Jockey+Men+Cotton+Trunk",
+                slug = "jockey-men-trunk-pack"
             ),
             PartnerProductSlide(
                 id = "prod_partner_iphone17_1",
@@ -114,7 +140,9 @@ fun GenGStoreShowcase(
                 sellingPrice = "₹82,900",
                 mrp = "₹89,900",
                 discountPercent = "8% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80"
+                imageUrl = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80",
+                productUrl = "https://www.amazon.in/s?k=Apple+iPhone+17",
+                slug = "iphone-17"
             ),
             PartnerProductSlide(
                 id = "prod_partner_levis_jeans_1",
@@ -126,7 +154,9 @@ fun GenGStoreShowcase(
                 sellingPrice = "₹1,899",
                 mrp = "₹3,599",
                 discountPercent = "47% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=800&q=80"
+                imageUrl = "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=800&q=80",
+                productUrl = "https://www.amazon.in/s?k=Levis+511+Slim+Jeans",
+                slug = "levis-slim-jeans"
             ),
             PartnerProductSlide(
                 id = "prod_partner_sony_xm5_1",
@@ -138,7 +168,9 @@ fun GenGStoreShowcase(
                 sellingPrice = "₹24,990",
                 mrp = "₹34,990",
                 discountPercent = "28% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80"
+                imageUrl = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+                productUrl = "https://www.amazon.in/s?k=Sony+WH-1000XM5",
+                slug = "sony-xm5"
             )
         )
     }
@@ -154,6 +186,56 @@ fun GenGStoreShowcase(
     }
 
     val currentProd = items[currentIndex]
+    val context = LocalContext.current
+
+    val openProductPage = {
+        val pageUrl = "https://buywiseai.pajonline.co.in/product/${currentProd.slug.ifEmpty { currentProd.id }}"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pageUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val rawUrl = currentProd.productUrl.ifEmpty { "https://www.amazon.in/s?k=${Uri.encode(currentProd.title)}" }
+            val affiliateUrl = if (rawUrl.contains("tag=")) rawUrl
+                else if (rawUrl.contains("?")) "$rawUrl&tag=pajonline-21&ascsubtag=bw_gen_g_store"
+                else "$rawUrl?tag=pajonline-21&ascsubtag=bw_gen_g_store"
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(affiliateUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (ex: Exception) {
+                onBuyNowClick(currentProd)
+            }
+        }
+    }
+
+    val handleBuyNow: () -> Unit = {
+        val rawUrl = currentProd.productUrl.ifEmpty { "https://www.amazon.in/s?k=${Uri.encode(currentProd.title)}" }
+        val affiliateUrl = if (rawUrl.contains("tag=")) rawUrl
+            else if (rawUrl.contains("?")) "$rawUrl&tag=pajonline-21&ascsubtag=bw_gen_g_store"
+            else "$rawUrl?tag=pajonline-21&ascsubtag=bw_gen_g_store"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(affiliateUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            onBuyNowClick(currentProd)
+        }
+    }
+
+    val handleShare: () -> Unit = {
+        val shareUrl = "https://buywiseai.pajonline.co.in/product/${currentProd.slug.ifEmpty { currentProd.id }}"
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            putExtra(Intent.EXTRA_TEXT, "Check out ${currentProd.title} on BuyWise AI! Compare prices & try on: $shareUrl")
+            type = "text/plain"
+        }
+        context.startActivity(Intent.createChooser(sendIntent, "Share Product via"))
+        onShareClick(currentProd)
+    }
+
     val collectionsList = remember { com.pajonline.buywiseai.data.repository.PaymentRepository.getMerchandisingCollections() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -279,6 +361,7 @@ fun GenGStoreShowcase(
                         .fillMaxWidth()
                         .height(210.dp)
                         .background(Color(0xFF080612))
+                        .clickable { openProductPage() }
                 ) {
                     AsyncImage(
                         model = currentProd.imageUrl,
@@ -365,7 +448,8 @@ fun GenGStoreShowcase(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White,
-                        maxLines = 2
+                        maxLines = 2,
+                        modifier = Modifier.clickable { openProductPage() }
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -433,10 +517,11 @@ fun GenGStoreShowcase(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Action Buttons: AI Try On + Buy Now
+                    // Action Buttons: AI Try On + Buy Now + Share
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
@@ -454,7 +539,7 @@ fun GenGStoreShowcase(
                         ) {
                             Text(
                                 text = "✨ AI Try On",
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -462,14 +547,14 @@ fun GenGStoreShowcase(
 
                         Box(
                             modifier = Modifier
-                                .weight(1f)
+                                .weight(1.2f)
                                 .background(
                                     brush = Brush.horizontalGradient(
                                         colors = listOf(BuyWiseEmerald, BuyWiseCyan)
                                     ),
                                     shape = RoundedCornerShape(12.dp)
                                 )
-                                .clickable { onBuyNowClick(currentProd) }
+                                .clickable { handleBuyNow() }
                                 .padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -479,6 +564,57 @@ fun GenGStoreShowcase(
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFF070510)
                             )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(Color(0xFF1E1B2E), RoundedCornerShape(12.dp))
+                                .border(1.dp, BuyWiseCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                .clickable { handleShare() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "🔗",
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Quick Social Media Share Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Share to Social Media:",
+                            fontSize = 10.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0x2625D366), RoundedCornerShape(8.dp))
+                                .border(1.dp, Color(0x6625D366), RoundedCornerShape(8.dp))
+                                .clickable {
+                                    val shareUrl = "https://buywiseai.pajonline.co.in/product/${currentProd.slug.ifEmpty { currentProd.id }}"
+                                    val whatsappIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, "Check out ${currentProd.title} on BuyWise AI! Compare prices & try on: $shareUrl")
+                                        setPackage("com.whatsapp")
+                                    }
+                                    try {
+                                        context.startActivity(whatsappIntent)
+                                    } catch (e: Exception) {
+                                        handleShare()
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("💬 WhatsApp", fontSize = 10.sp, color = Color(0xFF25D366), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

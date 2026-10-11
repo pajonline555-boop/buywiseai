@@ -151,12 +151,12 @@ class SmartCompareRepository {
                     myntraPrice = 60900.0, myntraMrp = 69900.0
                 )
             }
-            lower.contains("saree") || lower.contains("kanjivaram") || lower.contains("banarasi") || lower.contains("ethnic") -> {
+            lower.contains("saree") || lower.contains("kanjivaram") || lower.contains("banarasi") || lower.contains("ethnic") || lower.contains("kamarbandh") -> {
                 PriceSpec(
-                    amazonPrice = 1499.0, amazonMrp = 2999.0,
-                    flipkartPrice = 1599.0, flipkartMrp = 2999.0,
-                    meeshoPrice = 1299.0, meeshoMrp = 2499.0,
-                    myntraPrice = 1799.0, myntraMrp = 3499.0
+                    amazonPrice = 499.0, amazonMrp = 999.0,
+                    flipkartPrice = 549.0, flipkartMrp = 999.0,
+                    meeshoPrice = 479.0, meeshoMrp = 899.0,
+                    myntraPrice = 599.0, myntraMrp = 1099.0
                 )
             }
             lower.contains("headphone") || lower.contains("airpod") || lower.contains("earbud") -> {

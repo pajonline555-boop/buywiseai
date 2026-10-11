@@ -80,7 +80,9 @@ import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
 import com.pajonline.buywiseai.ui.theme.BuyWisePurple
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -663,7 +665,28 @@ fun HomeScreen(
                 GenGStoreShowcase(
                     onViewAllClick = { onNavigateToSearch("Gen-G Store") },
                     onTryOnClick = { prod -> onNavigateToVto() },
-                    onBuyNowClick = { prod -> onNavigateToSearch(prod.title) }
+                    onBuyNowClick = { prod ->
+                        val rawUrl = prod.productUrl.ifEmpty { "https://www.amazon.in/s?k=${Uri.encode(prod.title)}" }
+                        val affiliateUrl = if (rawUrl.contains("tag=")) rawUrl
+                            else if (rawUrl.contains("?")) "$rawUrl&tag=pajonline-21&ascsubtag=bw_gen_g_store"
+                            else "$rawUrl?tag=pajonline-21&ascsubtag=bw_gen_g_store"
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(affiliateUrl)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            onNavigateToSearch(prod.title)
+                        }
+                    },
+                    onShareClick = { prod ->
+                        val shareUrl = "https://buywiseai.pajonline.co.in/product/${prod.slug.ifEmpty { prod.id }}"
+                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                            putExtra(Intent.EXTRA_TEXT, "Check out ${prod.title} on BuyWise AI! Compare prices & try on: $shareUrl")
+                            type = "text/plain"
+                        }
+                        context.startActivity(Intent.createChooser(sendIntent, "Share Product via"))
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(28.dp))
