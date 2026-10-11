@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { savePartnerProduct } from '@/lib/partners/partnerService';
 import { generateBuyWiseShareUrl } from '@/lib/affiliate/affiliateLinkBuilder';
@@ -43,6 +43,111 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
   const [brand, setBrand] = useState('Featured Brand');
   const [stock, setStock] = useState<number>(50);
   const [tryOnEnabled, setTryOnEnabled] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const processImageFile = (file: File | Blob) => {
+    if (!file.type || !file.type.startsWith('image/')) {
+      alert('Please select or paste a valid image file (PNG, JPG, WEBP, GIF).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawUrl = e.target?.result as string;
+      if (!rawUrl) return;
+      const img = new window.Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', 0.88);
+          setImageUrl(compressed);
+        } else {
+          setImageUrl(rawUrl);
+        }
+      };
+      img.src = rawUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageInputChange = (rawVal: string) => {
+    let val = rawVal.trim().replace(/^["']|["']$/g, '');
+    const amzMatch = val.match(/([A-Za-z0-9_\-\+]{10,12})\._[A-Za-z0-9_\-]+_\.(jpg|jpeg|png|webp)/i);
+    if (amzMatch && amzMatch[1]) {
+      val = `https://m.media-amazon.com/images/I/${amzMatch[1]}._SL800_.jpg`;
+    } else {
+      const directAmz = val.match(/([A-Za-z0-9_\-\+]{10,12})\.(jpg|jpeg|png|webp)/i);
+      if (directAmz && directAmz[1] && directAmz[1].length >= 10 && !val.startsWith('http')) {
+        val = `https://m.media-amazon.com/images/I/${directAmz[1]}._SL800_.jpg`;
+      }
+    }
+    setImageUrl(val);
+  };
+
+  const handlePasteEvent = (e: React.ClipboardEvent) => {
+    if (e.clipboardData?.items) {
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        const item = e.clipboardData.items[i];
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            processImageFile(file);
+            return;
+          }
+        }
+      }
+    }
+    const text = e.clipboardData?.getData('text');
+    if (text && (text.includes('\\') || text.includes('.jpg') || text.includes('.png') || text.includes('.webp'))) {
+      const cleaned = text.trim().replace(/^["']|["']$/g, '');
+      const amzMatch = cleaned.match(/([A-Za-z0-9_\-\+]{10,12})\._[A-Za-z0-9_\-]+_\.(jpg|jpeg|png|webp)/i);
+      if (amzMatch && amzMatch[1]) {
+        e.preventDefault();
+        setImageUrl(`https://m.media-amazon.com/images/I/${amzMatch[1]}._SL800_.jpg`);
+      }
+    }
+  };
+
+  const handlePasteFromClipboardClick = async () => {
+    try {
+      if (navigator.clipboard?.read) {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(t => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            processImageFile(blob);
+            return;
+          }
+        }
+      }
+      if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          handleImageInputChange(text);
+        }
+      }
+    } catch (err) {
+      alert('Please click inside the image box and press Ctrl+V to paste your image.');
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [scraping, setScraping] = useState(false);
 
@@ -491,26 +596,158 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
             />
           </div>
 
-          {/* Primary Image Preview / Input */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Product Image URL</label>
-              {imageUrl && (imageUrl.includes('amazon') || imageUrl.includes('media-amazon') || imageUrl.includes('flipkart') || imageUrl.includes('meesho') || imageUrl.includes('myntra')) && (
-                <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '8px', background: 'rgba(0,255,136,0.15)', color: '#00ff88', border: '1px solid rgba(0,255,136,0.3)' }}>
-                  🟢 REAL LINK IMAGE ACTIVE
-                </span>
-              )}
+          {/* Primary Image Preview / Copy-Paste / Input */}
+          <div onPaste={handlePasteEvent} style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 800 }}>Product Image (Copy-Paste Image, Upload or URL)</label>
+              <span style={{ fontSize: '11px', color: '#00ff88', fontWeight: 700 }}>
+                📋 Ctrl+V to Paste Image
+              </span>
             </div>
+
+            {/* Drag & Drop / Paste Dropzone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (e.dataTransfer.files?.[0]) processImageFile(e.dataTransfer.files[0]);
+              }}
+              style={{
+                border: isDragging ? '2px dashed #00ff88' : '1px dashed rgba(255, 255, 255, 0.25)',
+                borderRadius: '16px',
+                padding: '12px',
+                background: isDragging ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                marginBottom: '10px',
+                transition: 'all 0.2s ease',
+                textAlign: 'center'
+              }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files?.[0]) processImageFile(e.target.files[0]);
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '6px' }}>
+                <button
+                  type="button"
+                  onClick={handlePasteFromClipboardClick}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 212, 255, 0.2))',
+                    border: '1px solid #00ff88',
+                    color: '#00ff88',
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📋 Paste Image from Clipboard (Ctrl+V)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📁 Browse / Drop File
+                </button>
+              </div>
+
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                Drag and drop image here, or copy an image (or file) and press <strong style={{ color: '#ffffff' }}>Ctrl+V</strong>
+              </div>
+            </div>
+
             <input
-              type="url"
+              type="text"
               value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/... or https://m.media-amazon.com/..."
+              onChange={(e) => handleImageInputChange(e.target.value)}
+              placeholder="Paste image URL, web link, or press Ctrl+V to paste image"
               style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', fontSize: '13px', outline: 'none', marginBottom: '8px' }}
             />
+
             {imageUrl && (
-              <div style={{ position: 'relative', width: '100%', height: '160px', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(0, 255, 136, 0.3)', background: '#05030a' }}>
-                <Image src={imageUrl} alt="Product Image Preview" fill style={{ objectFit: 'contain' }} unoptimized />
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                borderRadius: '14px',
+                padding: '10px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(0, 255, 136, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  position: 'relative',
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  background: '#080612',
+                  flexShrink: 0,
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl}
+                    alt="Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/kamarbandh.png';
+                    }}
+                  />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#00ff88', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🟢</span>
+                    {imageUrl.startsWith('data:image/') ? 'Pasted Image Ready' : 'Image URL Connected'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {imageUrl.startsWith('data:image/') ? 'Direct Local Image Data' : imageUrl}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setImageUrl('')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 0, 127, 0.2)',
+                    border: '1px solid rgba(255, 0, 127, 0.5)',
+                    color: '#ff007f',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗑️ Remove
+                </button>
               </div>
             )}
           </div>

@@ -98,6 +98,11 @@ export function resolveCorrectProductImage(product: Partial<PartnerProduct>): st
   const lowerTitle = title.toLowerCase();
   const lowerUrl = url.toLowerCase();
 
+  // If user pasted/uploaded a custom image data URL, always preserve it directly
+  if (rawImage.startsWith('data:image/')) {
+    return rawImage;
+  }
+
   // Detect broken Amazon /images/P/ link (which returns 43-byte transparent 1x1 GIF for non-books)
   const isBrokenAmazonPImage = rawImage.includes('/images/P/') || rawImage.includes('ssl-images-amazon.com/images/P');
 
@@ -107,6 +112,9 @@ export function resolveCorrectProductImage(product: Partial<PartnerProduct>): st
 
   // Specific high-precision product matchers
   if (lowerTitle.includes('kamarbandh') || lowerTitle.includes('gujarati') || lowerTitle.includes('etietnic') || lowerUrl.includes('kamarbandh') || lowerUrl.includes('etietnic')) {
+    if (rawImage && rawImage.includes('71gxwje9wqL')) {
+      return 'https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg';
+    }
     if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage && !rawImage.includes('41-pc98WkyL')) {
       return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
     }

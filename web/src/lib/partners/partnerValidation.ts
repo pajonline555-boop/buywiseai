@@ -18,9 +18,10 @@ export function validateProductPublication(product: Partial<PartnerProduct>): Va
     errors.push('Product description must be at least 3 characters long');
   }
 
-  // Primary Image URL Validation
-  if (!product.primaryImage || !product.primaryImage.trim().startsWith('http')) {
-    errors.push('Product primary image must be a valid HTTP/HTTPS image URL');
+  // Primary Image URL Validation (allows HTTP/HTTPS, relative paths, or pasted data URLs)
+  const img = (product.primaryImage || '').trim();
+  if (!img || (!img.startsWith('http://') && !img.startsWith('https://') && !img.startsWith('/') && !img.startsWith('data:image/'))) {
+    errors.push('Product primary image must be a valid HTTP/HTTPS URL, relative image path, or pasted image');
   }
 
   // Category
