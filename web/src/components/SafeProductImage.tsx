@@ -17,8 +17,8 @@ interface SafeProductImageProps {
 
 function getSmartImageByAlt(altText: string): string {
   const lower = (altText || "").toLowerCase();
-  if (lower.includes("kamarbandh") || lower.includes("gujarati") || lower.includes("etietnic") || lower.includes("waistband")) {
-    return "https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg";
+  if (lower.includes("kamarbandh") || lower.includes("gujarati") || lower.includes("etietnic") || lower.includes("waistband") || lower.includes("tagdi")) {
+    return "/kamarbandh.png";
   }
   if (lower.includes("panty") || lower.includes("panties") || lower.includes("louis")) {
     return "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg";
@@ -56,10 +56,16 @@ export default function SafeProductImage({
   const [isLoading, setIsLoading] = useState(true);
   const [attemptedFallback, setAttemptedFallback] = useState(false);
 
-  const rawCleanSrc = src && typeof src === "string" ? src.trim() : "";
+  let rawCleanSrc = src && typeof src === "string" ? src.trim() : "";
   const isBrokenAmazonPImage = rawCleanSrc.includes("/images/P/") || rawCleanSrc.includes("ssl-images-amazon.com/images/P");
   
-  // If raw source is the broken Amazon P link, immediately use smart fallback
+  // Guard against stale earrings image on Kamarbandh / Gujarati belt
+  const lowerAlt = (alt || "").toLowerCase();
+  if (rawCleanSrc.includes("41-pc98WkyL") && (lowerAlt.includes("kamarbandh") || lowerAlt.includes("gujarati") || lowerAlt.includes("etietnic") || lowerAlt.includes("waistband"))) {
+    rawCleanSrc = "/kamarbandh.png";
+  }
+
+  // If raw source is broken Amazon P link or empty, immediately use smart fallback
   const smartFallback = fallbackSrc || getSmartImageByAlt(alt);
   const effectiveSrc = (isBrokenAmazonPImage || !rawCleanSrc) ? (smartFallback || rawCleanSrc) : rawCleanSrc;
   const proxiedUrl = effectiveSrc ? getProxiedImageUrl(effectiveSrc) : "";

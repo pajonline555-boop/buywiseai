@@ -60,7 +60,7 @@ export function getCategoryFallbackImage(category: string, title: string = ''): 
   const lower = title.toLowerCase();
   
   if (lower.includes('kamarbandh') || lower.includes('gujarati') || lower.includes('etietnic') || lower.includes('waistband') || lower.includes('tagdi')) {
-    return 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg';
+    return '/kamarbandh.png';
   }
   if (lower.includes('louis') || lower.includes('panty') || lower.includes('panties')) {
     return 'https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg';
@@ -107,10 +107,10 @@ export function resolveCorrectProductImage(product: Partial<PartnerProduct>): st
 
   // Specific high-precision product matchers
   if (lowerTitle.includes('kamarbandh') || lowerTitle.includes('gujarati') || lowerTitle.includes('etietnic') || lowerUrl.includes('kamarbandh') || lowerUrl.includes('etietnic')) {
-    if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage) {
+    if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage && !rawImage.includes('41-pc98WkyL')) {
       return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
     }
-    return 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg';
+    return '/kamarbandh.png';
   }
 
   if (lowerTitle.includes('louis') || lowerTitle.includes('panty') || lowerTitle.includes('panties')) {
@@ -169,14 +169,26 @@ export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[
     if (overrides[p.id]) {
       merged = { ...merged, ...overrides[p.id] };
     }
-    const resolvedImg = resolveCorrectProductImage(merged);
-    if (merged.primaryImage !== resolvedImg) {
+    // Clean up stale earrings image or broken Amazon P images in overrides
+    if (merged.primaryImage && (merged.primaryImage.includes('41-pc98WkyL') || merged.primaryImage.includes('/images/P/'))) {
+      const resolvedImg = resolveCorrectProductImage(merged);
       merged.primaryImage = resolvedImg;
       merged.images = [resolvedImg];
       if (overrides[p.id]) {
         overrides[p.id].primaryImage = resolvedImg;
         overrides[p.id].images = [resolvedImg];
         overridesMutated = true;
+      }
+    } else {
+      const resolvedImg = resolveCorrectProductImage(merged);
+      if (merged.primaryImage !== resolvedImg) {
+        merged.primaryImage = resolvedImg;
+        merged.images = [resolvedImg];
+        if (overrides[p.id]) {
+          overrides[p.id].primaryImage = resolvedImg;
+          overrides[p.id].images = [resolvedImg];
+          overridesMutated = true;
+        }
       }
     }
 
@@ -244,8 +256,8 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     mrp: 1999,
     sellingPrice: 499,
     stock: 50,
-    images: ['https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg'],
-    primaryImage: 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg',
+    images: ['/kamarbandh.png'],
+    primaryImage: '/kamarbandh.png',
     fulfillment: 'PARTNER_FULFILLED',
     source: 'PARTNER',
     tryOnEnabled: true,

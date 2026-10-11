@@ -52,77 +52,126 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     if (!targetUrl || !targetUrl.startsWith('http')) return;
     setScraping(true);
     try {
-      const proxyRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
-      if (proxyRes.ok) {
-        const json = await proxyRes.json();
-        if (json.contents) {
-          const html = json.contents;
-          let scrapedImg = '';
-          let scrapedTitle = '';
-          let scrapedPrice = 0;
+      let html = '';
+      
+      // Strategy 1: Try AllOrigins proxy
+      try {
+        const proxyRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+        if (proxyRes.ok) {
+          const json = await proxyRes.json();
+          if (json.contents) html = json.contents;
+        }
+      } catch (e1) {
+        // Fallback to next proxy
+      }
 
-          // 1. Amazon dynamic image JSON map: data-a-dynamic-image='{"https://...jpg":[...]}'
-          const dynamicMatch = html.match(/data-a-dynamic-image=["'](\{[^"']+\})["']/i);
-          if (dynamicMatch && dynamicMatch[1]) {
-            try {
-              const parsed = JSON.parse(dynamicMatch[1].replace(/&quot;/g, '"'));
-              const urls = Object.keys(parsed);
-              if (urls.length > 0) scrapedImg = urls[0];
-            } catch (e) {}
+      // Strategy 2: Try Codetabs proxy if html is empty
+      if (!html) {
+        try {
+          const ctRes = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
+          if (ctRes.ok) {
+            html = await ctRes.text();
           }
+        } catch (e2) {
+          // Fallback to next proxy
+        }
+      }
 
-          // 2. High-res images: data-old-hires or landingImage or hiRes
-          if (!scrapedImg) {
-            const hiresMatch = html.match(/data-old-hires=["']([^"']+)["']/i) ||
-                               html.match(/id=["']landingImage["'][^>]*src=["']([^"']+)["']/i) ||
-                               html.match(/["']hiRes["']:\s*["']([^"']+)["']/i);
-            if (hiresMatch && hiresMatch[1] && !hiresMatch[1].includes('amazon_logo')) {
-              scrapedImg = hiresMatch[1];
-            }
+      // Strategy 3: Try Corsproxy.io
+      if (!html) {
+        try {
+          const cpRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`);
+          if (cpRes.ok) {
+            html = await cpRes.text();
           }
+        } catch (e3) {
+          // All proxies failed
+        }
+      }
 
-          // 3. Any direct Amazon CDN product image: https://m.media-amazon.com/images/I/...
-          if (!scrapedImg) {
-            const cdnMatch = html.match(/https:\/\/m\.media-amazon\.com\/images\/I\/([A-Za-z0-9_\-\+]+)\.(?:jpg|png|webp)/i);
-            if (cdnMatch && cdnMatch[1]) {
-              scrapedImg = `https://m.media-amazon.com/images/I/${cdnMatch[1]}._SL800_.jpg`;
-            }
-          }
+      if (html) {
+        let scrapedImg = '';
+        let scrapedTitle = '';
+        let scrapedPrice = 0;
 
-          // 4. og:image or twitter:image
-          if (!scrapedImg) {
-            const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
-                            html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
-            if (ogMatch && ogMatch[1] && !ogMatch[1].includes('amazon_logo')) {
-              scrapedImg = ogMatch[1];
-            }
-          }
+        // 1. Amazon dynamic image JSON map: data-a-dynamic-image='{"https://...jpg":[...]}'
+        const dynamicMatch = html.match(/data-a-dynamic-image=["'](\{[^"']+\})["']/i);
+        if (dynamicMatch && dynamicMatch[1]) {
+          try {
+            const parsed = JSON.parse(dynamicMatch[1].replace(/&quot;/g, '"'));
+            const urls = Object.keys(parsed);
+            if (urls.length > 0) scrapedImg = urls[0];
+          } catch (e) {}
+        }
 
-          // 5. Title
-          const titleMatch = html.match(/<span[^>]*id=["']productTitle["'][^>]*>([^<]+)<\/span>/i) ||
-                             html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
-                             html.match(/<title[^>]*>([^<]+)<\/title>/i);
-          if (titleMatch && titleMatch[1]) {
-            scrapedTitle = titleMatch[1].replace(/\|.*/, '').replace(/ - Amazon.*/i, '').replace(/:\s*Buy.*/i, '').trim();
+        // 2. High-res images: data-old-hires or landingImage or hiRes
+        if (!scrapedImg) {
+          const hiresMatch = html.match(/data-old-hires=["']([^"']+)["']/i) ||
+                             html.match(/id=["']landingImage["'][^>]*src=["']([^"']+)["']/i) ||
+                             html.match(/["']hiRes["']:\s*["']([^"']+)["']/i);
+          if (hiresMatch && hiresMatch[1] && !hiresMatch[1].includes('amazon_logo')) {
+            scrapedImg = hiresMatch[1];
           }
+        }
 
-          // 6. Price
-          const priceMatch = html.match(/class=["']a-price-whole["'][^>]*>([\d,]+)/i) ||
-                             html.match(/class=["']a-offscreen["'][^>]*>₹?\s*([\d,]+)/i);
-          if (priceMatch && priceMatch[1]) {
-            scrapedPrice = parseInt(priceMatch[1].replace(/[,₹\s]/g, ''), 10);
+        // 3. Any direct Amazon CDN product image: https://m.media-amazon.com/images/I/...
+        if (!scrapedImg) {
+          const cdnMatch = html.match(/https:\/\/m\.media-amazon\.com\/images\/I\/([A-Za-z0-9_\-\+]+)\.(?:jpg|png|webp)/i);
+          if (cdnMatch && cdnMatch[1]) {
+            scrapedImg = `https://m.media-amazon.com/images/I/${cdnMatch[1]}._SL800_.jpg`;
           }
+        }
 
-          if (scrapedImg) {
-            setImageUrl(scrapedImg.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1'));
+        // 4. Flipkart images (rukminim)
+        if (!scrapedImg) {
+          const flipMatch = html.match(/https:\/\/rukminim[12]\.flixcart\.com\/image\/[^\s"'>]+/i);
+          if (flipMatch && flipMatch[0]) {
+            scrapedImg = flipMatch[0];
           }
-          if (scrapedTitle && (!title || title.length < 5)) {
-            setTitle(scrapedTitle);
+        }
+
+        // 5. Meesho / Myntra images
+        if (!scrapedImg) {
+          const otherMatch = html.match(/https:\/\/images\.meesho\.com\/images\/products\/[^\s"'>]+/i) ||
+                             html.match(/https:\/\/assets\.myntassets\.com\/[^\s"'>]+\.(?:jpg|jpeg|png|webp)/i);
+          if (otherMatch && otherMatch[0]) {
+            scrapedImg = otherMatch[0];
           }
-          if (scrapedPrice > 0) {
-            setPrice(scrapedPrice);
-            setMrp(Math.round(scrapedPrice * 1.4));
+        }
+
+        // 6. og:image or twitter:image
+        if (!scrapedImg) {
+          const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+                          html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+          if (ogMatch && ogMatch[1] && !ogMatch[1].includes('amazon_logo') && !ogMatch[1].includes('logo')) {
+            scrapedImg = ogMatch[1];
           }
+        }
+
+        // 7. Title
+        const titleMatch = html.match(/<span[^>]*id=["']productTitle["'][^>]*>([^<]+)<\/span>/i) ||
+                           html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+                           html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch && titleMatch[1]) {
+          scrapedTitle = titleMatch[1].replace(/\|.*/, '').replace(/ - Amazon.*/i, '').replace(/:\s*Buy.*/i, '').trim();
+        }
+
+        // 8. Price
+        const priceMatch = html.match(/class=["']a-price-whole["'][^>]*>([\d,]+)/i) ||
+                           html.match(/class=["']a-offscreen["'][^>]*>₹?\s*([\d,]+)/i);
+        if (priceMatch && priceMatch[1]) {
+          scrapedPrice = parseInt(priceMatch[1].replace(/[,₹\s]/g, ''), 10);
+        }
+
+        if (scrapedImg) {
+          setImageUrl(scrapedImg.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1'));
+        }
+        if (scrapedTitle && (!title || title.length < 5)) {
+          setTitle(scrapedTitle);
+        }
+        if (scrapedPrice > 0) {
+          setPrice(scrapedPrice);
+          setMrp(Math.round(scrapedPrice * 1.4));
         }
       }
     } catch (e) {
@@ -177,8 +226,8 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     // Initial instant high-resolution image assignment
     if (url.match(/\.(jpeg|jpg|png|webp|gif)/i)) {
       setImageUrl(url);
-    } else if (checkText.includes('kamarbandh') || checkText.includes('gujarati') || checkText.includes('etietnic')) {
-      setImageUrl("https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg");
+    } else if (checkText.includes('kamarbandh') || checkText.includes('gujarati') || checkText.includes('etietnic') || checkText.includes('waistband')) {
+      setImageUrl("/kamarbandh.png");
     } else if (checkText.includes('panty') || checkText.includes('panties') || checkText.includes('louis')) {
       setImageUrl("https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg");
     } else if (checkText.includes('bra') || checkText.includes('zivame')) {

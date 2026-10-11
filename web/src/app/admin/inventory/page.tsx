@@ -174,8 +174,8 @@ export default function InventoryPage() {
 
       // Precision domain-asset resolution for verified partners
       if (!extractedImage) {
-        if (combinedLower.includes('kamarbandh') || combinedLower.includes('gujarati') || combinedLower.includes('etietnic')) {
-          extractedImage = 'https://m.media-amazon.com/images/I/41-pc98WkyL._SL800_.jpg';
+        if (combinedLower.includes('kamarbandh') || combinedLower.includes('gujarati') || combinedLower.includes('etietnic') || combinedLower.includes('waistband')) {
+          extractedImage = '/kamarbandh.png';
         } else if (combinedLower.includes('panty') || combinedLower.includes('panties') || combinedLower.includes('louis')) {
           extractedImage = 'https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg';
         } else if (combinedLower.includes('bra') || combinedLower.includes('zivame')) {
