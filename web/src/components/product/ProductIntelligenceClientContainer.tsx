@@ -86,6 +86,43 @@ export default function ProductIntelligenceClientContainer({
       />
 
       <div className="container">
+        {/* Mobile App Open Banner */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 18px',
+          background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(121, 40, 202, 0.15))',
+          border: '1px solid rgba(0, 212, 255, 0.4)',
+          borderRadius: '16px',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px' }}>📲</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff' }}>Have the BuyWise AI App?</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>Open for instant price comparisons, 3D try-on & price drop alerts</div>
+            </div>
+          </div>
+          <a
+            href={`intent://product/${slug}#Intent;scheme=buywise;package=com.pajonline.buywiseai;S.browser_fallback_url=${encodeURIComponent(`https://buywiseai.pajonline.co.in/product/${slug}`)};end`}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #00d4ff, #0055ff)',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 800,
+              textDecoration: 'none',
+              boxShadow: '0 4px 15px rgba(0, 212, 255, 0.3)'
+            }}
+          >
+            Open in App ➔
+          </a>
+        </div>
+
         {/* Breadcrumb Navigation */}
         <nav style={{ marginBottom: '20px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
           <Link href="/" style={{ color: 'rgba(255, 255, 255, 0.6)', textDecoration: 'none' }}>Home</Link>

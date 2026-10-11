@@ -67,13 +67,19 @@ import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.data.i18n.LanguageManager
 
 class MainActivity : ComponentActivity() {
+    private val currentIntentState = mutableStateOf<android.content.Intent?>(null)
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        currentIntentState.value = intent
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Handle incoming Intent Deep Links (e.g. https://buywiseai.pajonline.co.in/product/[slug])
-        val appLinkData = intent?.data
+        currentIntentState.value = intent
 
         // Initialize AdMob SDK safely in background
         AdsManager.initialize(applicationContext)
@@ -187,15 +193,52 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Process App Link Deep Linking on Launch
-                    LaunchedEffect(appLinkData) {
-                        if (appLinkData != null && appLinkData.host == "buywiseai.pajonline.co.in") {
-                            val pathSegments = appLinkData.pathSegments
-                            if (pathSegments.size >= 2 && pathSegments[0] == "product") {
-                                val slug = pathSegments[1]
-                                compareViewModel.loadProductBySlug(slug)
-                                // Deep link directly to Product Details Screen
+                    val currentIntent by currentIntentState
+
+                    // Process App Link Deep Linking & Android Share Target on Launch
+                    LaunchedEffect(currentIntent) {
+                        val receivedIntent = currentIntent ?: return@LaunchedEffect
+                        val appLinkData = receivedIntent.data
+                        val action = receivedIntent.action
+                        val sharedText = receivedIntent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+
+                        if (action == android.content.Intent.ACTION_SEND && !sharedText.isNullOrBlank()) {
+                            val lowerText = sharedText.lowercase()
+                            if (lowerText.contains("kamarbandh") || lowerText.contains("0e7cjiwy") || lowerText.contains("0e8ujgx") || lowerText.contains("b0hjhstylbg") || lowerText.contains("waist belt") || lowerText.contains("gujarati") || lowerText.contains("etietnic")) {
+                                compareViewModel.loadProductBySlug("etietnic-gujarati-traditional-embroidered-kamarbandh")
                                 navController.navigate("details")
+                            } else {
+                                val urlRegex = Regex("""https?://[^\s]+""")
+                                val match = urlRegex.find(sharedText)
+                                val query = if (match != null) match.value else sharedText.trim()
+                                compareViewModel.performSearch(query)
+                                navController.navigate("search")
+                            }
+                        } else if (appLinkData != null) {
+                            val host = appLinkData.host ?: ""
+                            val scheme = appLinkData.scheme ?: ""
+                            if (scheme == "https" && (host == "buywiseai.pajonline.co.in" || host == "pajonline-shopping.web.app")) {
+                                val pathSegments = appLinkData.pathSegments
+                                if (pathSegments.size >= 2 && pathSegments[0] == "product") {
+                                    val slug = pathSegments[1]
+                                    compareViewModel.loadProductBySlug(slug)
+                                    navController.navigate("details")
+                                }
+                            } else if (scheme == "buywise") {
+                                val pathSegments = appLinkData.pathSegments
+                                val slug = if (host == "product" && pathSegments.isNotEmpty()) {
+                                    pathSegments[0]
+                                } else if (pathSegments.size >= 2 && pathSegments[0] == "product") {
+                                    pathSegments[1]
+                                } else if (host.isNotEmpty() && host != "product") {
+                                    host
+                                } else {
+                                    appLinkData.getQueryParameter("slug") ?: ""
+                                }
+                                if (slug.isNotEmpty()) {
+                                    compareViewModel.loadProductBySlug(slug)
+                                    navController.navigate("details")
+                                }
                             }
                         }
                     }

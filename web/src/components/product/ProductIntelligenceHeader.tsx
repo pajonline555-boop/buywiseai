@@ -61,9 +61,21 @@ export default function ProductIntelligenceHeader({
     setTimeout(() => setAddedToCart(false), 2500);
   };
 
-  const handleCopyShareLink = () => {
+  const handleCopyShareLink = async () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in';
     const shareUrl = generateBuyWiseShareUrl(product.slug || product.id, origin);
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: `Check out ${product.name} on BuyWise AI! Compare prices & try on:`,
+          url: shareUrl,
+        });
+        return;
+      } catch (e) {
+        // Fallback to clipboard if share was dismissed or unsupported
+      }
+    }
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl);
       setCopiedLink(true);
@@ -314,6 +326,31 @@ export default function ProductIntelligenceHeader({
                 }}
               >
                 <span>💬</span> WHATSAPP
+              </button>
+            </a>
+
+            {/* Open in Mobile App via Android Intent */}
+            <a
+              href={`intent://product/${product.slug || product.id}#Intent;scheme=buywise;package=com.pajonline.buywiseai;S.browser_fallback_url=${encodeURIComponent(`https://buywiseai.pajonline.co.in/product/${product.slug || product.id}`)};end`}
+              style={{ textDecoration: 'none' }}
+              title="Open product directly in the BuyWise Android App"
+            >
+              <button
+                style={{
+                  padding: '16px 20px',
+                  borderRadius: '18px',
+                  background: 'rgba(0, 212, 255, 0.12)',
+                  border: '1px solid rgba(0, 212, 255, 0.5)',
+                  color: '#00d4ff',
+                  fontWeight: 900,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>📲</span> OPEN IN APP
               </button>
             </a>
 

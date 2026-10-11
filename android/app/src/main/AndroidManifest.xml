@@ -43,12 +43,21 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
 
-            <!-- Deep Linking -->
+            <!-- Deep Linking (App Links) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="buywiseai.pajonline.co.in" />
+                <data android:scheme="https" android:host="pajonline-shopping.web.app" />
+            </intent-filter>
+
+            <!-- Custom URI Scheme Deep Linking (buywise://product/...) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="buywise" />
             </intent-filter>
         </activity>
 
