@@ -359,7 +359,7 @@ fun GenGStoreShowcase(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(210.dp)
+                        .height(260.dp)
                         .background(Color(0xFF080612))
                         .clickable { openProductPage() }
                 ) {
@@ -369,7 +369,7 @@ fun GenGStoreShowcase(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(210.dp)
+                            .height(260.dp)
                             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     )
 

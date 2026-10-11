@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, cleanProductTitle, getCategoryFallbackImage } from "@/lib/partners/partnerService";
 import { PartnerProduct, PartnerProductStatus, ProductSource, FulfillmentType } from "@/lib/partners/types";
+import { compressImageForStorage, formatFileSize, CompressionResult } from "@/lib/imageOptimizer";
 
 export default function InventoryPage() {
   const { isAdmin, user, loading } = useAuth();
@@ -18,6 +19,7 @@ export default function InventoryPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [optimizationInfo, setOptimizationInfo] = useState<CompressionResult | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -44,49 +46,36 @@ export default function InventoryPage() {
   const [scraping, setScraping] = useState(false);
   const [productUrl, setProductUrl] = useState('');
 
-  const processImageFile = (file: File | Blob) => {
+  const processImageFile = async (file: File | Blob) => {
     if (!file.type || !file.type.startsWith('image/')) {
       alert('Please select or paste a valid image file (PNG, JPG, WEBP, GIF).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const rawUrl = e.target?.result as string;
-      if (!rawUrl) return;
-      const img = new window.Image();
-      img.onload = () => {
-        const maxDim = 1200;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          const compressed = canvas.toDataURL('image/jpeg', 0.88);
-          setFormData(prev => ({ ...prev, primaryImage: compressed }));
-        } else {
-          setFormData(prev => ({ ...prev, primaryImage: rawUrl }));
-        }
-      };
-      img.src = rawUrl;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const res = await compressImageForStorage(file, { maxDimension: 1080, initialQuality: 0.84 });
+      setFormData(prev => ({ ...prev, primaryImage: res.dataUrl }));
+      setOptimizationInfo(res);
+    } catch (err) {
+      console.warn('Image compression fallback:', err);
+    }
   };
 
-  const handleImageInputChange = (rawVal: string) => {
+  const handleImageInputChange = async (rawVal: string) => {
     let val = rawVal.trim().replace(/^["']|["']$/g, '');
 
+    // If user pastes a raw base64 data URL, immediately compress it to reduce space
+    if (val.startsWith('data:image/')) {
+      try {
+        const res = await compressImageForStorage(val, { maxDimension: 1080, initialQuality: 0.84 });
+        setFormData(prev => ({ ...prev, primaryImage: res.dataUrl }));
+        setOptimizationInfo(res);
+        return;
+      } catch (err) {
+        console.warn('Data URL compression notice:', err);
+      }
+    }
+
+    setOptimizationInfo(null);
     // Translate Windows download file path with Amazon ID
     const amzMatch = val.match(/([A-Za-z0-9_\-\+]{10,12})\._[A-Za-z0-9_\-]+_\.(jpg|jpeg|png|webp)/i);
     if (amzMatch && amzMatch[1]) {
@@ -974,7 +963,7 @@ export default function InventoryPage() {
                         <img
                           src={formData.primaryImage}
                           alt="Preview"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                           onError={(e) => {
                             (e.currentTarget as HTMLImageElement).src = '/kamarbandh.png';
                           }}
@@ -984,11 +973,19 @@ export default function InventoryPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '12px', fontWeight: 800, color: '#00ff88', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>🟢</span>
-                          {formData.primaryImage.startsWith('data:image/') ? 'Pasted Image Ready (Direct)' : 'Image Connected'}
+                          {formData.primaryImage.startsWith('data:image/') ? 'Image Optimized & Connected' : 'Image Connected'}
                         </div>
                         <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {formData.primaryImage.startsWith('data:image/') ? 'Compressed Data URL (Local Image)' : formData.primaryImage}
+                          {formData.primaryImage.startsWith('data:image/') ? 'Compressed High-Efficiency WebP/JPEG' : formData.primaryImage}
                         </div>
+                        {optimizationInfo && (
+                          <div style={{ fontSize: '11px', color: '#00ff88', marginTop: '3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>⚡</span>
+                            <span>
+                              Optimized: {formatFileSize(optimizationInfo.originalSize)} ➔ {formatFileSize(optimizationInfo.compressedSize)} ({optimizationInfo.savedPercentage}% saved • HD Quality)
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <button

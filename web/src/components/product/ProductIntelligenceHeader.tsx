@@ -121,14 +121,33 @@ export default function ProductIntelligenceHeader({
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'center' }}>
         
-        {/* Left Column: High-Res Image with Score Badges */}
-        <div style={{ position: 'relative', width: '100%', height: '380px', borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+        {/* Left Column: High-Res Image with Score Badges (Never Cropped) */}
+        <div style={{ position: 'relative', width: '100%', minHeight: '400px', height: '420px', borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.12)', background: '#0a0818', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Ambient Blurred Colored Glow in the background */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={product.image}
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: '-20px',
+              left: '-20px',
+              width: 'calc(100% + 40px)',
+              height: 'calc(100% + 40px)',
+              objectFit: 'cover',
+              filter: 'blur(35px) brightness(0.28)',
+              transform: 'scale(1.15)',
+              pointerEvents: 'none',
+            }}
+          />
+
           <Image
             src={product.image}
             alt={product.name}
             fill
             unoptimized
-            style={{ objectFit: 'cover' }}
+            style={{ objectFit: 'contain', padding: '16px', zIndex: 1 }}
           />
 
           {/* Source Badge */}

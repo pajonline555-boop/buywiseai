@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { savePartnerProduct } from '@/lib/partners/partnerService';
 import { generateBuyWiseShareUrl } from '@/lib/affiliate/affiliateLinkBuilder';
+import { compressImageForStorage, formatFileSize, CompressionResult } from '@/lib/imageOptimizer';
 
 interface AddProductByLinkModalProps {
   isOpen: boolean;
@@ -45,49 +46,38 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
   const [tryOnEnabled, setTryOnEnabled] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [optimizationInfo, setOptimizationInfo] = useState<CompressionResult | null>(null);
 
-  const processImageFile = (file: File | Blob) => {
+  const processImageFile = async (file: File | Blob) => {
     if (!file.type || !file.type.startsWith('image/')) {
       alert('Please select or paste a valid image file (PNG, JPG, WEBP, GIF).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const rawUrl = e.target?.result as string;
-      if (!rawUrl) return;
-      const img = new window.Image();
-      img.onload = () => {
-        const maxDim = 1200;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          const compressed = canvas.toDataURL('image/jpeg', 0.88);
-          setImageUrl(compressed);
-        } else {
-          setImageUrl(rawUrl);
-        }
-      };
-      img.src = rawUrl;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const res = await compressImageForStorage(file, { maxDimension: 1080, initialQuality: 0.84 });
+      setImageUrl(res.dataUrl);
+      setOptimizationInfo(res);
+    } catch (err) {
+      console.warn('Image compression fallback:', err);
+    }
   };
 
-  const handleImageInputChange = (rawVal: string) => {
+  const handleImageInputChange = async (rawVal: string) => {
     let val = rawVal.trim().replace(/^["']|["']$/g, '');
+
+    // If user pastes a raw base64 data URL, immediately compress it without loss of quality
+    if (val.startsWith('data:image/')) {
+      try {
+        const res = await compressImageForStorage(val, { maxDimension: 1080, initialQuality: 0.84 });
+        setImageUrl(res.dataUrl);
+        setOptimizationInfo(res);
+        return;
+      } catch (err) {
+        console.warn('Data URL compression notice:', err);
+      }
+    }
+
+    setOptimizationInfo(null);
     const amzMatch = val.match(/([A-Za-z0-9_\-\+]{10,12})\._[A-Za-z0-9_\-]+_\.(jpg|jpeg|png|webp)/i);
     if (amzMatch && amzMatch[1]) {
       val = `https://m.media-amazon.com/images/I/${amzMatch[1]}._SL800_.jpg`;
@@ -715,7 +705,7 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                   <img
                     src={imageUrl}
                     alt="Preview"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/kamarbandh.png';
                     }}
@@ -725,11 +715,19 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '12px', fontWeight: 800, color: '#00ff88', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>🟢</span>
-                    {imageUrl.startsWith('data:image/') ? 'Pasted Image Ready' : 'Image URL Connected'}
+                    {imageUrl.startsWith('data:image/') ? 'Image Optimized & Connected' : 'Image URL Connected'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {imageUrl.startsWith('data:image/') ? 'Direct Local Image Data' : imageUrl}
+                    {imageUrl.startsWith('data:image/') ? 'Compressed High-Efficiency WebP/JPEG' : imageUrl}
                   </div>
+                  {optimizationInfo && (
+                    <div style={{ fontSize: '11px', color: '#00ff88', marginTop: '3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>⚡</span>
+                      <span>
+                        Optimized: {formatFileSize(optimizationInfo.originalSize)} ➔ {formatFileSize(optimizationInfo.compressedSize)} ({optimizationInfo.savedPercentage}% saved • HD Quality)
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <button

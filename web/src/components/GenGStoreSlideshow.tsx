@@ -193,19 +193,53 @@ export default function GenGStoreSlideshow() {
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', minHeight: '440px' }}>
           
-          {/* Slide Image Side */}
+          {/* Slide Image Side - Full Product Presentation with Ambient Glow */}
           <Link 
             href={`/product/${currentProduct.slug || currentProduct.id}`}
-            style={{ position: 'relative', width: '100%', minHeight: '380px', background: '#05030a', display: 'block', textDecoration: 'none' }}
+            style={{ 
+              position: 'relative', 
+              width: '100%', 
+              minHeight: '420px', 
+              background: '#070512', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              overflow: 'hidden', 
+              textDecoration: 'none' 
+            }}
           >
-            <SafeProductImage
-              key={currentProduct.id}
+            {/* Ambient Blurred Glow Backdrop */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={currentProduct.primaryImage}
-              alt={currentProduct.title}
-              fallbackSrc={getCategoryFallbackImage(currentProduct.category, currentProduct.title)}
-              style={{ width: '100%', height: '100%', minHeight: '380px' }}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: '-20px',
+                left: '-20px',
+                width: 'calc(100% + 40px)',
+                height: 'calc(100% + 40px)',
+                objectFit: 'cover',
+                filter: 'blur(35px) brightness(0.28)',
+                transform: 'scale(1.15)',
+                pointerEvents: 'none',
+              }}
             />
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to right, transparent 60%, rgba(15, 12, 30, 0.95))', pointerEvents: 'none' }}></div>
+
+            {/* Pristine Full Product Image - Never Cropped */}
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', minHeight: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+              <SafeProductImage
+                key={currentProduct.id}
+                src={currentProduct.primaryImage}
+                alt={currentProduct.title}
+                fallbackSrc={getCategoryFallbackImage(currentProduct.category, currentProduct.title)}
+                objectFit="contain"
+                style={{ width: '100%', height: '100%', maxHeight: '420px' }}
+              />
+            </div>
+
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to right, transparent 65%, rgba(15, 12, 30, 0.95))', pointerEvents: 'none', zIndex: 2 }}></div>
 
             {/* Gen-G Partner Badge */}
             <span style={{
@@ -216,13 +250,14 @@ export default function GenGStoreSlideshow() {
               fontWeight: 800,
               padding: '6px 14px',
               borderRadius: '16px',
-              background: 'rgba(5, 3, 12, 0.85)',
+              background: 'rgba(5, 3, 12, 0.88)',
               color: '#00ff88',
               border: '1px solid rgba(0, 255, 136, 0.4)',
               backdropFilter: 'blur(10px)',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              zIndex: 3
             }}>
               <span>⚡</span> {t('geng_partner')}
             </span>
@@ -236,10 +271,11 @@ export default function GenGStoreSlideshow() {
               fontWeight: 900,
               padding: '6px 14px',
               borderRadius: '12px',
-              background: 'rgba(255, 0, 128, 0.25)',
+              background: 'rgba(255, 0, 128, 0.3)',
               color: '#ff007f',
-              border: '1px solid rgba(255, 0, 128, 0.5)',
-              backdropFilter: 'blur(10px)'
+              border: '1px solid rgba(255, 0, 128, 0.6)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 3
             }}>
               {discountPercent}% {t('off_special_deal')}
             </span>
