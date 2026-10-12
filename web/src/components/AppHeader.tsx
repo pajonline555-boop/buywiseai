@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { useTheme } from '@/lib/theme/themeProvider';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth, checkIsAdminUser } from '@/lib/AuthContext';
 import VoiceSearchModal from '@/components/VoiceSearchModal';
 
 export default function AppHeader() {
@@ -16,7 +16,7 @@ export default function AppHeader() {
   const router = useRouter();
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
-  const isUserAdmin = isAdmin || userProfile?.role === 'admin' || (!!user?.email && ['pajonline555@gmail.com', 'akshayman224@gmail.com'].includes(user.email.toLowerCase().trim()));
+  const isUserAdmin = isAdmin || userProfile?.role === 'admin' || checkIsAdminUser(user?.email, user?.phoneNumber);
   const isPartnerUser = userProfile?.role === 'partner' || userProfile?.role === 'partner_admin' || isUserAdmin;
 
   const navItems = [

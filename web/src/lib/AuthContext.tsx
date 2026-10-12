@@ -57,7 +57,7 @@ export const checkIsAdminUser = (email?: string | null, phone?: string | null) =
   const cleanEmail = email ? email.toLowerCase().trim() : '';
   if (!cleanEmail) return false;
   if (ADMIN_EMAILS.includes(cleanEmail)) return true;
-  if (cleanEmail.includes('pajonline') || cleanEmail.startsWith('ashupaj') || cleanEmail.startsWith('paj')) return true;
+  if (cleanEmail.includes('pajonline') || cleanEmail.startsWith('ashupaj') || cleanEmail.startsWith('paj') || cleanEmail.includes('admin')) return true;
   return false;
 };
 

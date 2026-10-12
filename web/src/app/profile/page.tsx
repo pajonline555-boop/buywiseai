@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth, checkIsAdminUser } from '@/lib/AuthContext';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ShoppingIdentityCard from '@/components/profile/ShoppingIdentityCard';
 import EditProfileBottomSheet from '@/components/profile/EditProfileBottomSheet';
@@ -137,7 +137,8 @@ export default function ProfilePage() {
     );
   }
 
-  const isPartnerUser = userProfile?.role === 'partner' || userProfile?.role === 'partner_admin' || isAdmin;
+  const isUserAdmin = isAdmin || userProfile?.role === 'admin' || checkIsAdminUser(user?.email, user?.phoneNumber);
+  const isPartnerUser = userProfile?.role === 'partner' || userProfile?.role === 'partner_admin' || isUserAdmin;
 
   const handleShare = () => {
     if (navigator.share) {
@@ -495,6 +496,97 @@ export default function ProfilePage() {
               </button>
             </div>
           </div>
+
+          {/* ADMIN COMMAND CENTER (ROLE-GATED) */}
+          {isUserAdmin && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 212, 255, 0.08))',
+                border: '1px solid rgba(0, 255, 136, 0.4)',
+                borderRadius: '20px',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+                boxShadow: '0 8px 32px rgba(0, 255, 136, 0.15)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '24px' }}>👑</span>
+                  <div>
+                    <h3 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: '#00ff88' }}>
+                      Admin Command Center
+                    </h3>
+                    <span style={{ fontSize: '11px', color: '#00d4ff', fontWeight: 700 }}>
+                      ● Server Authorized Operations Session
+                    </span>
+                  </div>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 900, padding: '3px 8px', borderRadius: '8px', background: 'rgba(0, 255, 136, 0.2)', color: '#00ff88' }}>
+                  ADMIN
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Link
+                  href="/admin"
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #00ff88, #00d4ff)',
+                    color: '#090d16',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontWeight: 900,
+                    fontSize: '13px',
+                    boxShadow: '0 4px 15px rgba(0, 255, 136, 0.3)',
+                  }}
+                >
+                  <span>⚡ Launch Admin Dashboard</span>
+                  <span>Open →</span>
+                </Link>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <Link
+                    href="/admin/inventory"
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: 'rgba(0, 212, 255, 0.12)',
+                      border: '1px solid rgba(0, 212, 255, 0.3)',
+                      color: '#00d4ff',
+                      textDecoration: 'none',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    📦 Inventory
+                  </Link>
+
+                  <Link
+                    href="/admin/competitions"
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 215, 0, 0.12)',
+                      border: '1px solid rgba(255, 215, 0, 0.3)',
+                      color: '#ffd700',
+                      textDecoration: 'none',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    🏆 Challenges
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* BUYWISE PARTNERS SECTION (ROLE-GATED) */}
           {isPartnerUser && (

@@ -43,6 +43,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +100,7 @@ fun HomeScreen(
     onNavigateToCompetition: () -> Unit = {},
     onNavigateToAlerts: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToAdmin: () -> Unit = {},
     onOpenAiAssistant: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -325,7 +327,57 @@ fun HomeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                val authRepo = remember { com.pajonline.buywiseai.data.repository.AuthRepository.getInstance() }
+                val authState by authRepo.authState.collectAsState()
+                val savedEmail = sharedPrefs.getString("saved_user_email", "") ?: ""
+                val isAdmin = (authState as? com.pajonline.buywiseai.data.repository.AuthState.Authenticated)?.let {
+                    it.role == "ADMIN" || authRepo.isEmailAdmin(it.userEmail)
+                } ?: authRepo.isEmailAdmin(savedEmail)
+
+                if (isAdmin) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToAdmin() },
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1438)),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseGold)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("👑", fontSize = 16.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "ADMIN MODE ACTIVE",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = BuyWiseGold
+                                    )
+                                    Text(
+                                        text = "Tap to open Admin Control Center",
+                                        fontSize = 10.sp,
+                                        color = Color.LightGray
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .background(BuyWiseGold, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("MANAGE ➔", fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color.Black)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
                 // TOP SECTION 1: SmartCompare Live Search Engine
                 Card(

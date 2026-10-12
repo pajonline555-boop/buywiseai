@@ -17,8 +17,17 @@ sealed class Screen(val route: String, val titleKey: String, val icon: ImageVect
     object Prime : Screen("prime", "Prime", Icons.Default.Star)
     object Alerts : Screen("alerts", "Alerts", Icons.Default.Notifications)
     object Profile : Screen("profile", "nav_profile", Icons.Default.Person)
+    object Admin : Screen("admin_dashboard", "Admin", Icons.Default.Star)
 
     companion object {
         val bottomNavItems = listOf(Home, Search, Competition, Vto, Profile)
+
+        fun getNavItems(isAdmin: Boolean): List<Screen> {
+            return if (isAdmin) {
+                listOf(Home, Search, Competition, Admin, Profile)
+            } else {
+                bottomNavItems
+            }
+        }
     }
 }

@@ -3,11 +3,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n/i18nContext";
+import { useAuth, checkIsAdminUser } from "@/lib/AuthContext";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const [isNativeApp, setIsNativeApp] = useState(false);
   const { t } = useTranslation();
+  const { user, userProfile, isAdmin } = useAuth();
+
+  const isUserAdmin = isAdmin || userProfile?.role === "admin" || checkIsAdminUser(user?.email, user?.phoneNumber);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -26,6 +30,7 @@ export default function MobileBottomNav() {
     { label: t("nav_try_on"), href: "/try-on", icon: "✨", highlight: true },
     { label: t("price_alerts"), href: "/alerts", icon: "🔔" },
     { label: t("buywise_partners_portal"), href: "/partners", icon: "⚡" },
+    ...(isUserAdmin ? [{ label: "Admin", href: "/admin", icon: "👑" }] : []),
     { label: t("nav_profile"), href: "/profile", icon: "👤" },
   ];
 

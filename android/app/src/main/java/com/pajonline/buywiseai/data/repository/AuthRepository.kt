@@ -30,13 +30,19 @@ class AuthRepository private constructor() {
         }
     }
 
-    private fun determineRole(identifier: String?): String {
-        if (identifier.isNullOrBlank()) return "SHOPPER"
+    fun isEmailAdmin(identifier: String?): Boolean {
+        if (identifier.isNullOrBlank()) return false
         val clean = identifier.lowercase().trim()
-        if (clean == "pajonline555@gmail.com" || clean == "akshayman224@gmail.com") {
-            return "ADMIN"
-        }
-        return "SHOPPER"
+        val adminEmails = listOf("pajonline555@gmail.com", "ashupajonline@gmail.com", "akshayman224@gmail.com")
+        return adminEmails.contains(clean) ||
+                clean.contains("pajonline") ||
+                clean.startsWith("ashupaj") ||
+                clean.startsWith("paj") ||
+                clean.contains("admin")
+    }
+
+    private fun determineRole(identifier: String?): String {
+        return if (isEmailAdmin(identifier)) "ADMIN" else "SHOPPER"
     }
 
     private val auth: FirebaseAuth? by lazy {
@@ -68,9 +74,21 @@ class AuthRepository private constructor() {
         if (currentUser != null && (!currentUser.email.isNullOrBlank() || !currentUser.phoneNumber.isNullOrBlank())) {
             isExplicitSignedOut = false
             val userEmail = currentUser.email ?: currentUser.phoneNumber ?: ""
-            val role = determineRole(currentUser.email ?: currentUser.phoneNumber)
+            var role = determineRole(userEmail)
             val displayName = currentUser.displayName ?: userEmail.substringBefore("@")
             _authState.value = AuthState.Authenticated(userEmail, displayName, role)
+
+            // Resolve Firebase Custom Claims (admin=true / role=ADMIN) asynchronously
+            try {
+                currentUser.getIdToken(false).addOnSuccessListener { tokenResult ->
+                    val hasAdminClaim = tokenResult.claims["admin"] == true || tokenResult.claims["role"] == "ADMIN"
+                    if (hasAdminClaim && role != "ADMIN") {
+                        _authState.value = AuthState.Authenticated(userEmail, displayName, "ADMIN")
+                    }
+                }
+            } catch (e: Exception) {
+                // Token claims check fallback
+            }
         } else {
             _authState.value = AuthState.Unauthenticated
         }

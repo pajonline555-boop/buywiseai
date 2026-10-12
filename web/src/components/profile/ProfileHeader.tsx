@@ -1,7 +1,7 @@
 "use client"
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth, checkIsAdminUser } from '@/lib/AuthContext';
 import SafeProductImage from '@/components/SafeProductImage';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 
@@ -15,7 +15,7 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
   const router = useRouter();
 
   const isGuest = !user;
-  const isUserAdmin = isAdmin || userProfile?.role === 'admin' || (!!user?.email && ['pajonline555@gmail.com', 'akshayman224@gmail.com'].includes(user.email.toLowerCase().trim()));
+  const isUserAdmin = isAdmin || userProfile?.role === 'admin' || checkIsAdminUser(user?.email, user?.phoneNumber);
 
   const role = isUserAdmin
     ? 'ADMIN'

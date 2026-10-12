@@ -12,6 +12,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,7 +36,14 @@ fun BuyWiseBottomBar(navController: NavController) {
     val profilePhotoUri = sharedPrefs.getString("profile_photo_uri", null)
     val profileAvatarEmoji = sharedPrefs.getString("profile_avatar_emoji", "🛍️")
 
-    val items = Screen.bottomNavItems
+    val authRepo = remember { com.pajonline.buywiseai.data.repository.AuthRepository.getInstance() }
+    val authState by authRepo.authState.collectAsState()
+    val savedEmail = sharedPrefs.getString("saved_user_email", "") ?: ""
+    val isAdmin = (authState as? com.pajonline.buywiseai.data.repository.AuthState.Authenticated)?.let {
+        it.role == "ADMIN" || authRepo.isEmailAdmin(it.userEmail)
+    } ?: authRepo.isEmailAdmin(savedEmail)
+
+    val items = Screen.getNavItems(isAdmin)
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry.value?.destination?.route
 
@@ -48,10 +57,15 @@ fun BuyWiseBottomBar(navController: NavController) {
     ) {
         items.forEach { screen ->
             val isSelected = currentRoute == screen.route
-            val labelText = tr(screen.titleKey)
+            val labelText = if (screen == Screen.Admin) "Admin" else tr(screen.titleKey)
             NavigationBarItem(
                 icon = {
-                    if (screen == Screen.Profile) {
+                    if (screen == Screen.Admin) {
+                        Text(
+                            text = "👑",
+                            fontSize = 17.sp
+                        )
+                    } else if (screen == Screen.Profile) {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)

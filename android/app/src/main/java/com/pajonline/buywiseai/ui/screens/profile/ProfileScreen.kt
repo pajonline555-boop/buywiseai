@@ -83,9 +83,11 @@ import java.io.File
 fun ProfileScreen(
     authViewModel: AuthViewModel = remember { AuthViewModel() },
     onNavigateToPrime: () -> Unit = {},
+    onNavigateToAdmin: () -> Unit = {},
     onNavigateToWeb: (title: String, url: String) -> Unit = { _, _ -> }
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val authRepo = remember { com.pajonline.buywiseai.data.repository.AuthRepository.getInstance() }
     var showAuthDialog by remember { mutableStateOf(false) }
     var activeModalTitle by remember { mutableStateOf<String?>(null) }
     var activeModalSubtitle by remember { mutableStateOf("") }
@@ -142,6 +144,10 @@ fun ProfileScreen(
         }
     }
 
+    val isAdmin = (authState as? AuthState.Authenticated)?.let {
+        it.role == "ADMIN" || authRepo.isEmailAdmin(it.userEmail)
+    } ?: authRepo.isEmailAdmin(userEmail)
+
     var selectedLanguage by remember {
         mutableStateOf(LanguageManager.supportedLanguages.firstOrNull { it.code == LanguageManager.currentLanguageCode }?.name ?: "English")
     }
@@ -197,7 +203,12 @@ fun ProfileScreen(
 
     fun openWebPage(title: String, urlPath: String) {
         val cleanPath = if (urlPath.startsWith("/")) urlPath else "/$urlPath"
-        val fullUrl = if (urlPath.startsWith("http")) urlPath else "https://buywiseai.pajonline.co.in$cleanPath"
+        var fullUrl = if (urlPath.startsWith("http")) urlPath else "https://buywiseai.pajonline.co.in$cleanPath"
+        if (isAdmin && (cleanPath.startsWith("/admin") || cleanPath.startsWith("/partner-portal")) && !fullUrl.contains("admin_email")) {
+            val sep = if (fullUrl.contains("?")) "&" else "?"
+            val emailParam = if (userEmail.isNotBlank()) userEmail else "pajonline555@gmail.com"
+            fullUrl += "${sep}native=true&admin_email=$emailParam"
+        }
         onNavigateToWeb(title, fullUrl)
     }
 
@@ -475,6 +486,100 @@ fun ProfileScreen(
                 }
             }
 
+            if (isAdmin) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToAdmin() },
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1438)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, BuyWiseGold)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(BuyWiseGold.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                    .border(1.dp, BuyWiseGold, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text("👑 ADMIN COMMAND CENTER", fontSize = 10.sp, fontWeight = FontWeight.Black, color = BuyWiseGold)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .background(BuyWiseEmerald.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("● AUTHORIZED SESSION", fontSize = 9.sp, fontWeight = FontWeight.Black, color = BuyWiseEmerald)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Welcome Administrator, $userDisplayName",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "Access live store inventory, competition challenge voting, partner orders & system security scorecard.",
+                            fontSize = 12.sp,
+                            color = Color.LightGray
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = { onNavigateToAdmin() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("⚡ LAUNCH ADMIN DASHBOARD", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { openWebPage("Inventory Control", "/admin/inventory") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = BuyWiseCyan)
+                            ) {
+                                Text("📦 Stock", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { openWebPage("Competition Manager", "/admin/competitions") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = BuyWiseEmerald)
+                            ) {
+                                Text("🏆 Challenge", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { openWebPage("Security Logs", "/admin/security") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B))
+                            ) {
+                                Text("🛡️ Security", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             // Real Statistics Grid
@@ -496,6 +601,41 @@ fun ProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // SECTION 0: ADMIN OPERATIONS (ONLY VISIBLE TO ADMINS)
+            if (isAdmin) {
+                SectionHeader("👑 ADMIN OPERATIONS", BuyWiseGold)
+                Spacer(modifier = Modifier.height(8.dp))
+                ProfileMenuItem(
+                    title = "👑 Open Admin Control Center",
+                    actionText = "Manage ➔",
+                    icon = Icons.Default.Star,
+                    accentColor = BuyWiseGold,
+                    onClick = { onNavigateToAdmin() }
+                )
+                ProfileMenuItem(
+                    title = "📦 Live Inventory Control Workspace",
+                    actionText = "Stock ➔",
+                    icon = Icons.Default.ShoppingCart,
+                    accentColor = BuyWiseCyan,
+                    onClick = { openWebPage("Inventory Control Workspace", "/admin/inventory") }
+                )
+                ProfileMenuItem(
+                    title = "🏆 Weekly Competition Manager",
+                    actionText = "Manage ➔",
+                    icon = Icons.Default.Star,
+                    accentColor = BuyWiseEmerald,
+                    onClick = { openWebPage("Competition Manager", "/admin/competitions") }
+                )
+                ProfileMenuItem(
+                    title = "🛡️ Security Scorecard & Audit Logs",
+                    actionText = "Audit ➔",
+                    icon = Icons.Default.Lock,
+                    accentColor = Color(0xFFFF4D4D),
+                    onClick = { openWebPage("Security Logs", "/admin/security") }
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // SECTION 1: AI SHOPPING CENTER
             SectionHeader("✨ AI SHOPPING CENTER", Color(0xFFA855F7))

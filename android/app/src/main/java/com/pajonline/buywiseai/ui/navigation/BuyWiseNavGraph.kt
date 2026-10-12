@@ -42,6 +42,7 @@ fun BuyWiseNavGraph(
                 onNavigateToCompetition = { navController.navigate(Screen.Competition.route) },
                 onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
+                onNavigateToAdmin = { navController.navigate(Screen.Admin.route) },
                 onOpenAiAssistant = onOpenAiAssistant
             )
         }
@@ -84,10 +85,25 @@ fun BuyWiseNavGraph(
         composable(Screen.Alerts.route) {
             AlertsScreen()
         }
+        composable(Screen.Admin.route) {
+            com.pajonline.buywiseai.ui.screens.admin.AdminDashboardScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToWeb = { title, url ->
+                    try {
+                        val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                        val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
+                        navController.navigate("web_viewer/$encodedTitle/$encodedUrl")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            )
+        }
         composable(Screen.Profile.route) {
             ProfileScreen(
                 authViewModel = authViewModel,
                 onNavigateToPrime = { navController.navigate(Screen.Prime.route) },
+                onNavigateToAdmin = { navController.navigate(Screen.Admin.route) },
                 onNavigateToWeb = { title, url ->
                     try {
                         val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
