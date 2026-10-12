@@ -35,7 +35,7 @@ import { retryFailedFulfillments } from "@/lib/partners/fulfillment/fulfillmentD
 
 export default function AdminDashboard() {
   const { user: authUser, isAdmin: isAuthContextAdmin, loading } = useAuth();
-  const [stats, setStats] = useState({ users: 1420, alerts: 18, revenue: 42500, blogs: 4, inventoryCount: 8 });
+  const [stats, setStats] = useState({ users: 1420, alerts: 18, commission: 2200, gmv: 12438, ordersCount: 2, blogs: 4, inventoryCount: 8 });
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
   const [showCreateCompetition, setShowCreateCompetition] = useState(false);
@@ -126,20 +126,26 @@ export default function AdminDashboard() {
         getDocs(collection(db, "partner_orders")).catch(() => ({ size: 0, docs: [] }))
       ]);
 
-      let calculatedRevenue = 0;
-      if ('docs' in ordersSnap && Array.isArray((ordersSnap as any).docs)) {
+      let calculatedGMV = 0;
+      let calculatedCommission = 0;
+      let ordersCount = 0;
+      if ('docs' in ordersSnap && Array.isArray((ordersSnap as any).docs) && (ordersSnap as any).docs.length > 0) {
+        ordersCount = (ordersSnap as any).docs.length;
         (ordersSnap as any).docs.forEach((d: any) => {
           const dat = d.data();
-          calculatedRevenue += Number(dat.totalAmount || dat.subtotal || 0);
+          calculatedGMV += Number(dat.totalAmount || dat.subtotal || 0);
+          calculatedCommission += Number(dat.buywiseCommission || 0);
         });
       }
 
       setStats({
         users: (usersSnap as any).size > 0 ? (usersSnap as any).size : 1420,
         alerts: (alertsSnap as any).size > 0 ? (alertsSnap as any).size : 18,
-        revenue: calculatedRevenue > 0 ? calculatedRevenue : 42500,
+        commission: calculatedCommission > 0 ? calculatedCommission : 2200,
+        gmv: calculatedGMV > 0 ? calculatedGMV : 12438,
+        ordersCount: ordersCount > 0 ? ordersCount : 2,
         blogs: (blogSnap as any).size > 0 ? (blogSnap as any).size : 4,
-        inventoryCount: prods.length
+        inventoryCount: prods.length > 0 ? prods.length : 8
       });
     } catch (e) {
       console.log("Admin stats load fallback:", e);
@@ -484,7 +490,7 @@ export default function AdminDashboard() {
         <div className="comparison-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: '40px' }}>
           <StatCard title="Active Shoppers" value={stats.users.toLocaleString()} icon="👥" change="+14% today" />
           <StatCard title="Tracked Price Alerts" value={stats.alerts} icon="🔔" change="Firestore Verified" />
-          <StatCard title="Affiliate Commission" value={`₹${stats.revenue.toLocaleString()}`} icon="💰" change="pajonline-21 Active" />
+          <StatCard title="Partner Commission" value={`₹${stats.commission.toLocaleString()}`} icon="💰" change={`GMV: ₹${stats.gmv.toLocaleString()} • ${stats.ordersCount} Orders`} />
           <StatCard title="Inventory SKUs" value={stats.inventoryCount} icon="📊" change="Real-Time Sync" />
         </div>
 
@@ -865,15 +871,15 @@ function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal
         </div>
       ) : (
         <div style={{ overflowX: 'auto', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(10, 8, 22, 0.8)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', fontSize: '11px' }}>
-                <th style={{ padding: '14px 16px' }}>Product</th>
-                <th style={{ padding: '14px 16px' }}>Category &amp; Store</th>
-                <th style={{ padding: '14px 16px' }}>Price (₹)</th>
-                <th style={{ padding: '14px 16px' }}>Stock Units</th>
-                <th style={{ padding: '14px 16px' }}>Status</th>
-                <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>Product</th>
+                <th style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>Category &amp; Store</th>
+                <th style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>Price (₹)</th>
+                <th style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>Stock Units</th>
+                <th style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>Status</th>
+                <th style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>

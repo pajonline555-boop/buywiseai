@@ -693,32 +693,71 @@ export default function InventoryPage() {
   }
 
   return (
-    <main style={{ paddingTop: '100px', paddingBottom: '100px' }}>
-      <div className="container">
+    <main className="inventory-main" style={{ paddingBottom: '100px' }}>
+      <style jsx>{`
+        .inventory-main {
+          padding-top: 80px;
+        }
+        .inventory-heading {
+          font-size: 32px;
+          font-weight: 900;
+          color: #ffffff;
+          margin-top: 6px;
+          letter-spacing: -0.02em;
+        }
+        .desktop-inventory-table {
+          display: block;
+        }
+        .mobile-inventory-cards {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .inventory-main {
+            padding-top: 36px;
+          }
+          .inventory-heading {
+            font-size: 22px;
+          }
+          .desktop-inventory-table {
+            display: none !important;
+          }
+          .mobile-inventory-cards {
+            display: block !important;
+          }
+        }
+      `}</style>
+
+      <div className="container" style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 16px' }}>
         
         {/* Header Navigation */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <Link href="/admin" style={{ color: 'var(--primary)', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
               ← Back to Admin Dashboard
             </Link>
-            <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#ffffff', marginTop: '6px' }}>
-              Partner Product Onboarding & Inventory
+            <h1 className="inventory-heading">
+              Partner Product Onboarding &amp; Inventory
             </h1>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', marginTop: '4px' }}>
+              Manage {products.length} live catalog SKUs, onboard verified e-commerce links, and toggle publication gates.
+            </p>
           </div>
 
           <button 
             onClick={handleOpenNewModal}
             style={{
-              padding: '14px 28px',
+              padding: '12px 24px',
               borderRadius: '16px',
               background: 'linear-gradient(135deg, #a855f7, #ff007f)',
               color: '#ffffff',
               fontWeight: 900,
-              fontSize: '14px',
+              fontSize: '13.5px',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 8px 25px rgba(255, 0, 127, 0.4)'
+              boxShadow: '0 8px 25px rgba(255, 0, 127, 0.4)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
             ➕ Onboard New Partner Product
@@ -732,25 +771,121 @@ export default function InventoryPage() {
           </div>
         )}
 
-        {/* Inventory Data Table */}
-        <div className="glass" style={{ overflow: 'hidden', borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.15)', background: 'rgba(18, 14, 36, 0.95)' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        {/* 1. MOBILE RESPONSIVE CARD VIEW (Displays on mobile viewports so letters never squish vertically) */}
+        <div className="mobile-inventory-cards">
+          {products.length === 0 ? (
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: '#cbd5e1', background: 'rgba(18, 14, 36, 0.95)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+              No partner products registered yet. Click &quot;Onboard New Partner Product&quot; above.
+            </div>
+          ) : (
+            products.map(p => {
+              const isLive = p.status === 'LIVE' || (p.status as any) === 'ACTIVE';
+              const displayTitle = cleanProductTitle(p.title);
+              const slug = p.slug && !p.slug.includes("http") ? p.slug : displayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+              const thumbImg = p.primaryImage || (p.images && p.images[0]) || getCategoryFallbackImage(p.category, p.title);
+
+              return (
+                <div key={p.id} className="glass" style={{ padding: '16px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.12)', background: 'rgba(18, 14, 36, 0.96)', marginBottom: '14px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    {/* Thumbnail Image */}
+                    <div style={{ width: '64px', height: '64px', borderRadius: '14px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.18)', background: '#0a0814' }}>
+                      <img src={thumbImg} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+
+                    {/* Title, Category & Store */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Link href={`/product/${slug}`} target="_blank" style={{ color: '#ffffff', fontWeight: 800, fontSize: '14px', textDecoration: 'none', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.35 }}>
+                        {displayTitle} ↗
+                      </Link>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, background: 'rgba(124,58,237,0.15)', padding: '2px 8px', borderRadius: '8px' }}>
+                          {p.category}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+                          Store: {p.brand || p.partnerName}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price, Channel & Status Badges */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                        <span style={{ fontSize: '18px', fontWeight: 900, color: '#00ff88' }}>₹{p.sellingPrice.toLocaleString()}</span>
+                        {p.mrp && p.mrp > p.sellingPrice && (
+                          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString()}</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: '#00d4ff', fontWeight: 800 }}>⚡ Affiliate Channel</div>
+                    </div>
+
+                    <span style={{ fontSize: '11px', fontWeight: 900, padding: '5px 12px', borderRadius: '12px', background: isLive ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 215, 0, 0.15)', color: isLive ? '#00ff88' : '#ffd700', border: isLive ? '1px solid rgba(0, 255, 136, 0.4)' : '1px solid rgba(255, 215, 0, 0.4)' }}>
+                      {isLive ? '● LIVE' : '⏸ PAUSED'}
+                    </span>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      onClick={() => handleEditProduct(p)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        background: 'rgba(0, 212, 255, 0.15)',
+                        border: '1px solid #00d4ff',
+                        color: '#00d4ff',
+                        fontWeight: 800,
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ Edit Details
+                    </button>
+                    <button
+                      onClick={() => handleStatusToggle(p.id, p.status)}
+                      disabled={busy === p.id}
+                      style={{
+                        flex: 1,
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        background: isLive ? 'rgba(255, 77, 77, 0.15)' : 'rgba(0, 255, 136, 0.15)',
+                        border: isLive ? '1px solid #ff4d4d' : '1px solid #00ff88',
+                        color: isLive ? '#ff4d4d' : '#00ff88',
+                        fontWeight: 800,
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isLive ? '⏸ Pause' : '▶ Publish'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 2. DESKTOP / TABLET DATA TABLE (Displays with min-width and horizontal scroll on larger screens) */}
+        <div className="desktop-inventory-table glass" style={{ overflow: 'hidden', borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.15)', background: 'rgba(18, 14, 36, 0.95)' }}>
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{ width: '100%', minWidth: '820px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: 'rgba(255, 255, 255, 0.05)', borderBottom: '1px solid rgba(255, 255, 255, 0.15)', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '16px 20px' }}>Product & Store</th>
-                  <th style={{ padding: '16px 20px' }}>Category</th>
-                  <th style={{ padding: '16px 20px' }}>Selling Price</th>
-                  <th style={{ padding: '16px 20px' }}>Fulfillment / Source</th>
-                  <th style={{ padding: '16px 20px' }}>Status</th>
-                  <th style={{ padding: '16px 20px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Product &amp; Store</th>
+                  <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Category</th>
+                  <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Selling Price</th>
+                  <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Fulfillment / Source</th>
+                  <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Status</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '60px', textAlign: 'center', color: '#cbd5e1' }}>
-                      No partner products registered yet. Click "Onboard New Partner Product" above.
+                      No partner products registered yet. Click &quot;Onboard New Partner Product&quot; above.
                     </td>
                   </tr>
                 ) : (
@@ -758,63 +893,73 @@ export default function InventoryPage() {
                     const isLive = p.status === 'LIVE' || (p.status as any) === 'ACTIVE';
                     const displayTitle = cleanProductTitle(p.title);
                     const slug = p.slug && !p.slug.includes("http") ? p.slug : displayTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                    const thumbImg = p.primaryImage || (p.images && p.images[0]) || getCategoryFallbackImage(p.category, p.title);
 
                     return (
                       <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                         <td style={{ padding: '16px 20px', maxWidth: '360px' }}>
-                          <Link href={`/product/${slug}`} target="_blank" style={{ textDecoration: 'none', color: '#ffffff', fontWeight: 800, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {displayTitle} ↗
-                          </Link>
-                          <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px' }}>
-                            Store: {p.brand || p.partnerName} {p.youtubeUrl ? '• ▶️ Video attached' : ''}
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)' }}>
+                              <img src={thumbImg} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <Link href={`/product/${slug}`} target="_blank" style={{ textDecoration: 'none', color: '#ffffff', fontWeight: 800, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
+                                {displayTitle} ↗
+                              </Link>
+                              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px' }}>
+                                Store: {p.brand || p.partnerName} {p.youtubeUrl ? '• ▶️ Video attached' : ''}
+                              </div>
+                            </div>
                           </div>
                         </td>
-                        <td style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--primary)', fontWeight: 700 }}>
+                        <td style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--primary)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {p.category}
                         </td>
-                        <td style={{ padding: '16px 20px', fontSize: '15px', fontWeight: 900, color: '#ffffff' }}>
+                        <td style={{ padding: '16px 20px', fontSize: '15px', fontWeight: 900, color: '#ffffff', whiteSpace: 'nowrap' }}>
                           ₹{p.sellingPrice.toLocaleString()}
                         </td>
-                        <td style={{ padding: '16px 20px', fontSize: '13px', fontWeight: 800, color: '#00d4ff' }}>
+                        <td style={{ padding: '16px 20px', fontSize: '13px', fontWeight: 800, color: '#00d4ff', whiteSpace: 'nowrap' }}>
                           ⚡ Affiliate Link
                         </td>
-                        <td style={{ padding: '16px 20px' }}>
+                        <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
                           <span style={{ fontSize: '11px', fontWeight: 900, padding: '4px 10px', borderRadius: '10px', background: isLive ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 215, 0, 0.15)', color: isLive ? '#00ff88' : '#ffd700', border: isLive ? '1px solid rgba(0, 255, 136, 0.4)' : '1px solid rgba(255, 215, 0, 0.4)' }}>
                             {p.status}
                           </span>
                         </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <button
-                            onClick={() => handleEditProduct(p)}
-                            style={{
-                              padding: '6px 14px',
-                              borderRadius: '10px',
-                              background: 'rgba(0, 212, 255, 0.2)',
-                              border: '1px solid #00d4ff',
-                              color: '#00d4ff',
-                              fontWeight: 800,
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            onClick={() => handleStatusToggle(p.id, p.status)}
-                            disabled={busy === p.id}
-                            style={{
-                              padding: '6px 14px',
-                              borderRadius: '10px',
-                              background: isLive ? 'rgba(255, 77, 77, 0.2)' : 'rgba(0, 255, 136, 0.2)',
-                              border: isLive ? '1px solid #ff4d4d' : '1px solid #00ff88',
-                              color: isLive ? '#ff4d4d' : '#00ff88',
-                              fontWeight: 800,
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {isLive ? 'Pause' : 'Activate (Publish)'}
-                          </button>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => handleEditProduct(p)}
+                              style={{
+                                padding: '6px 14px',
+                                borderRadius: '10px',
+                                background: 'rgba(0, 212, 255, 0.2)',
+                                border: '1px solid #00d4ff',
+                                color: '#00d4ff',
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => handleStatusToggle(p.id, p.status)}
+                              disabled={busy === p.id}
+                              style={{
+                                padding: '6px 14px',
+                                borderRadius: '10px',
+                                background: isLive ? 'rgba(255, 77, 77, 0.2)' : 'rgba(0, 255, 136, 0.2)',
+                                border: isLive ? '1px solid #ff4d4d' : '1px solid #00ff88',
+                                color: isLive ? '#ff4d4d' : '#00ff88',
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {isLive ? 'Pause' : 'Activate (Publish)'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

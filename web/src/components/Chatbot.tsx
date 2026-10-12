@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useTranslation } from "@/lib/i18n/i18nContext";
 import VoiceSearchModal from "@/components/VoiceSearchModal";
 
 export default function Chatbot() {
   const { t } = useTranslation();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isNativeApp, setIsNativeApp] = useState(false);
@@ -18,8 +20,21 @@ export default function Chatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Ensure web client detects Maya assistant availability
+    if (typeof window !== "undefined") {
+      const isNative = 
+        window.navigator?.userAgent?.includes("BuyWiseNativeApp") ||
+        window.location.search.includes("native=true");
+      if (isNative) {
+        setIsNativeApp(true);
+      }
+    }
   }, []);
+
+  // Prevent double AI assistant: native Android app renders its own native assistant,
+  // and admin control rooms should remain unobstructed.
+  if (isNativeApp || pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   const handleSend = async (customPrompt?: string) => {
     const textToSend = customPrompt || input;

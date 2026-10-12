@@ -268,7 +268,12 @@ class MainActivity : ComponentActivity() {
                                 label = "maya_offset_y"
                             )
 
-                            if (!showAiSheet) {
+                            val navBackStackEntry by navController.currentBackStackEntryAsState()
+                            val currentRoute = navBackStackEntry?.destination?.route
+                            val isWebViewer = currentRoute?.startsWith("web_viewer") == true
+                            val isAdminDashboard = currentRoute?.startsWith("admin_dashboard") == true
+
+                            if (!showAiSheet && !isWebViewer && !isAdminDashboard) {
                                 androidx.compose.foundation.layout.Column(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
