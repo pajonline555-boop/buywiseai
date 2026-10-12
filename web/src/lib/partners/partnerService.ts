@@ -645,6 +645,20 @@ export async function getPartnerProducts(category?: string, includeAllStatuses: 
     console.warn('Firestore partner_products fetch notice:', err);
   }
 
+  // Auto-sync recovery: if localStorage has onboarded partner products not yet in Firestore, sync them to Firestore!
+  if (typeof window !== 'undefined') {
+    try {
+      const overrides = getLocalProductOverrides();
+      for (const [id, prod] of Object.entries(overrides)) {
+        if (prod && (prod as any).title && !firestoreProds.some(p => p.id === id)) {
+          firestoreProds.unshift(prod as PartnerProduct);
+          // Persist to Cloud Firestore so it's permanently in the database!
+          setDoc(doc(db, 'partner_products', id), prod, { merge: true }).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  }
+
   // For admin inventory control and stats (includeAllStatuses === true), return 100% pure real Firestore products
   if (includeAllStatuses) {
     let allList = applyLocalOverrides(firestoreProds);

@@ -10,6 +10,8 @@ import {
   getCompetitions,
   getActiveCompetition,
   getSubmissions,
+  fetchCompetitionsFromDb,
+  fetchSubmissionsFromDb,
   adminCreateCompetition,
   adminDeclareWinner,
   adminModerateSubmission,
@@ -991,10 +993,17 @@ function AdminCompetitionManager({
   const [newRetailer, setNewRetailer] = useState("Amazon India");
   const [newPrize, setNewPrize] = useState("₹5,000 Amazon Voucher + BuyWise Home Spotlight");
 
-  const refreshData = () => {
+  const refreshData = async () => {
     const comps = getCompetitions();
     setCompetitions(comps);
     setActiveComp(getActiveCompetition());
+    try {
+      const remoteComps = await fetchCompetitionsFromDb();
+      if (remoteComps && remoteComps.length > 0) {
+        setCompetitions(remoteComps);
+        setActiveComp(remoteComps.find(c => c.status === 'LIVE') || remoteComps[0]);
+      }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -1175,8 +1184,14 @@ function AdminCompetitionManager({
 function AdminSubmissionModerator() {
   const [submissions, setSubmissions] = useState<CompetitionSubmission[]>([]);
 
-  const refreshSubmissions = () => {
+  const refreshSubmissions = async () => {
     setSubmissions(getSubmissions());
+    try {
+      const liveSubs = await fetchSubmissionsFromDb();
+      if (liveSubs && liveSubs.length > 0) {
+        setSubmissions(liveSubs);
+      }
+    } catch (e) {}
   };
 
   useEffect(() => {

@@ -282,6 +282,15 @@ export function saveSubmissions(list: CompetitionSubmission[]) {
       console.error('Failed to save submissions:', e);
     }
   }
+  if (db) {
+    try {
+      list.forEach(s => {
+        if (!isTestRecord(s)) {
+          setDoc(doc(db, 'competition_submissions', s.id), s, { merge: true }).catch(() => {});
+        }
+      });
+    } catch (e) {}
+  }
 }
 
 export function saveCompetitions(list: Competition[]) {
@@ -291,6 +300,15 @@ export function saveCompetitions(list: Competition[]) {
     } catch (e) {
       console.error('Failed to save competitions:', e);
     }
+  }
+  if (db) {
+    try {
+      list.forEach(c => {
+        if (!isTestRecord(c)) {
+          setDoc(doc(db, 'competitions', c.id), c, { merge: true }).catch(() => {});
+        }
+      });
+    } catch (e) {}
   }
 }
 
@@ -416,6 +434,11 @@ export function adminCreateCompetition(data: Partial<Competition>): Competition 
 
   competitions.unshift(newComp);
   saveCompetitions(competitions);
+  if (db) {
+    setDoc(doc(db, 'competitions', newComp.id), newComp, { merge: true }).catch(err => {
+      console.warn('Failed to persist competition to Firestore:', err);
+    });
+  }
   return newComp;
 }
 
@@ -446,6 +469,11 @@ export function adminDeclareWinner(competitionId: string): { success: boolean; w
   saveSubmissions(submissions);
   saveCompetitions(competitions);
 
+  if (db) {
+    setDoc(doc(db, 'competitions', comp.id), comp, { merge: true }).catch(() => {});
+    setDoc(doc(db, 'competition_submissions', topSubmission.id), topSubmission, { merge: true }).catch(() => {});
+  }
+
   return { success: true, winner: topSubmission };
 }
 
@@ -456,6 +484,11 @@ export function adminModerateSubmission(submissionId: string, status: Submission
     target.status = status;
     if (rejectionReason) target.rejectionReason = rejectionReason;
     saveSubmissions(submissions);
+    if (db) {
+      const updateData: any = { status };
+      if (rejectionReason) updateData.rejectionReason = rejectionReason;
+      setDoc(doc(db, 'competition_submissions', submissionId), updateData, { merge: true }).catch(() => {});
+    }
   }
 }
 
@@ -466,11 +499,46 @@ export function adminModerateSubmission(submissionId: string, status: Submission
 export async function fetchCompetitionsFromDb(): Promise<Competition[]> {
   try {
     const snap = await getDocs(collection(db, 'competitions'));
-    if (snap.empty) return getCompetitions();
-    return snap.docs.map(d => d.data() as Competition).filter(c => !isTestRecord(c));
+    if (!snap.empty) {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition)).filter(c => !isTestRecord(c));
+      if (list.length > 0) {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(STORAGE_COMPETITIONS_KEY, JSON.stringify(list));
+          } catch (e) {}
+        }
+        return list;
+      }
+    }
+    return getCompetitions();
   } catch (err) {
     console.warn('Firestore fetchCompetitions notice:', err);
     return getCompetitions();
+  }
+}
+
+export async function fetchSubmissionsFromDb(competitionId?: string): Promise<CompetitionSubmission[]> {
+  try {
+    const colRef = collection(db, 'competition_submissions');
+    const q = competitionId
+      ? query(colRef, where('competitionId', '==', competitionId))
+      : query(colRef);
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as CompetitionSubmission)).filter(s => !isTestRecord(s));
+      if (items.length > 0) {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(STORAGE_SUBMISSIONS_KEY, JSON.stringify(items));
+          } catch (e) {}
+        }
+        return items;
+      }
+    }
+    return getSubmissions(competitionId);
+  } catch (err) {
+    console.warn('Firestore fetchSubmissions error:', err);
+    return getSubmissions(competitionId);
   }
 }
 
@@ -479,7 +547,7 @@ export async function fetchActiveCompetitionFromDb(): Promise<Competition | unde
     const q = query(collection(db, 'competitions'), where('status', '==', 'LIVE'), limit(10));
     const snap = await getDocs(q);
     if (!snap.empty) {
-      const activeList = snap.docs.map(d => d.data() as Competition).filter(c => !isTestRecord(c));
+      const activeList = snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition)).filter(c => !isTestRecord(c));
       if (activeList.length > 0) return activeList[0];
     }
     return getActiveCompetition();
@@ -490,7 +558,7 @@ export async function fetchActiveCompetitionFromDb(): Promise<Competition | unde
 
 export async function saveCompetitionToDb(comp: Competition): Promise<boolean> {
   try {
-    await setDoc(doc(db, 'competitions', comp.id), comp);
+    await setDoc(doc(db, 'competitions', comp.id), comp, { merge: true });
     return true;
   } catch (err) {
     console.warn('Firestore saveCompetition error:', err);
