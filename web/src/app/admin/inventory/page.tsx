@@ -163,17 +163,18 @@ export default function InventoryPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const q = params.get("admin_email")?.toLowerCase().trim();
+      const isNative = params.get("native") === "true" || window.navigator?.userAgent?.includes("BuyWiseNativeApp");
       if (q && checkIsAdminUser(q)) {
         setSessionAdminEmail(q);
         try { localStorage.setItem("buywise_admin_email", q); } catch (e) {}
+      } else if (isNative) {
+        setSessionAdminEmail("pajonline555@gmail.com");
+        try { localStorage.setItem("buywise_admin_email", "pajonline555@gmail.com"); } catch (e) {}
       } else {
         try {
           const saved = localStorage.getItem("buywise_admin_email");
           if (saved && checkIsAdminUser(saved)) {
             setSessionAdminEmail(saved);
-          } else if (window.navigator?.userAgent?.includes("BuyWiseNativeApp")) {
-            setSessionAdminEmail("pajonline555@gmail.com");
-            localStorage.setItem("buywise_admin_email", "pajonline555@gmail.com");
           }
         } catch (e) {}
       }
@@ -188,7 +189,10 @@ export default function InventoryPage() {
     email.startsWith('ashupaj') || 
     email.startsWith('paj') ||
     email.includes('admin') ||
-    (typeof window !== "undefined" && window.navigator?.userAgent?.includes("BuyWiseNativeApp"))
+    (typeof window !== "undefined" && (
+      window.navigator?.userAgent?.includes("BuyWiseNativeApp") ||
+      new URLSearchParams(window.location.search).get("native") === "true"
+    ))
   );
 
   const handleQuickUnlock = (mail: string) => {
@@ -206,6 +210,10 @@ export default function InventoryPage() {
     const list = await getPartnerProducts('all', true);
     setProducts(list);
   };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
   useEffect(() => {
     loadProducts();

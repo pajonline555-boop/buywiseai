@@ -645,39 +645,46 @@ export async function getPartnerProducts(category?: string, includeAllStatuses: 
     console.warn('Firestore partner_products fetch notice:', err);
   }
 
+  // Safety fallback: if Firestore is empty or returned 0, load baseline partner products and sync to Firestore
+  if (firestoreProds.length === 0) {
+    firestoreProds = [...MOCK_PARTNER_PRODUCTS];
+    if (db) {
+      try {
+        MOCK_PARTNER_PRODUCTS.forEach(p => {
+          setDoc(doc(db, 'partner_products', p.id), p, { merge: true }).catch(() => {});
+        });
+      } catch (e) {}
+    }
+  }
+
+  // Combine baseline catalog and Firestore products so no items are missing
+  const combinedMap = new Map<string, PartnerProduct>();
+  MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
+  firestoreProds.forEach(p => combinedMap.set(p.id, p));
+
   // Auto-sync recovery: if localStorage has onboarded partner products not yet in Firestore, sync them to Firestore!
   if (typeof window !== 'undefined') {
     try {
       const overrides = getLocalProductOverrides();
       for (const [id, prod] of Object.entries(overrides)) {
-        if (prod && (prod as any).title && !firestoreProds.some(p => p.id === id)) {
-          firestoreProds.unshift(prod as PartnerProduct);
-          // Persist to Cloud Firestore so it's permanently in the database!
-          setDoc(doc(db, 'partner_products', id), prod, { merge: true }).catch(() => {});
+        if (prod && (prod as any).title) {
+          const merged = { ...(combinedMap.get(id) || {}), ...prod } as PartnerProduct;
+          combinedMap.set(id, merged);
+          setDoc(doc(db, 'partner_products', id), merged, { merge: true }).catch(() => {});
         }
       }
     } catch (e) {}
   }
 
-  // For admin inventory control and stats (includeAllStatuses === true), return 100% pure real Firestore products
+  let allList = applyLocalOverrides(Array.from(combinedMap.values()));
+
+  // For admin inventory control and stats (includeAllStatuses === true), return all products (LIVE, PAUSED, DRAFT)
   if (includeAllStatuses) {
-    let allList = applyLocalOverrides(firestoreProds);
     if (!category || category.toLowerCase() === 'all') {
       return allList;
     }
     return allList.filter(p => p.category.toLowerCase() === category.toLowerCase());
   }
-
-  // Combine memory products and Firestore products for public storefront fallback
-  const combinedMap = new Map<string, PartnerProduct>();
-  if (firestoreProds.length === 0) {
-    MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
-  } else {
-    firestoreProds.forEach(p => combinedMap.set(p.id, p));
-  }
-
-  // Apply persistent overrides so PAUSED or updated statuses survive refreshes!
-  let allList = applyLocalOverrides(Array.from(combinedMap.values()));
 
   allList = allList.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
 
