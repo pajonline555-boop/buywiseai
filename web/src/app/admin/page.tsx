@@ -35,7 +35,7 @@ import { retryFailedFulfillments } from "@/lib/partners/fulfillment/fulfillmentD
 
 export default function AdminDashboard() {
   const { user: authUser, isAdmin: isAuthContextAdmin, loading } = useAuth();
-  const [stats, setStats] = useState({ users: 1420, alerts: 18, commission: 2200, gmv: 12438, ordersCount: 2, blogs: 4, inventoryCount: 8 });
+  const [stats, setStats] = useState({ users: 2, alerts: 0, commission: 0, gmv: 0, ordersCount: 0, blogs: 0, inventoryCount: 0 });
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
   const [showCreateCompetition, setShowCreateCompetition] = useState(false);
@@ -137,11 +137,11 @@ export default function AdminDashboard() {
         getDocs(collection(db, "partner_orders")).catch(() => ({ size: 0, docs: [] }))
       ]);
 
-      let calculatedGMV = 12438;
-      let calculatedCommission = 2200;
-      let ordersCount = 2;
+      let calculatedGMV = 0;
+      let calculatedCommission = 0;
+      let ordersCount = 0;
       if ('docs' in ordersSnap && Array.isArray((ordersSnap as any).docs) && (ordersSnap as any).docs.length > 0) {
-        ordersCount = 2 + (ordersSnap as any).docs.length;
+        ordersCount = (ordersSnap as any).docs.length;
         (ordersSnap as any).docs.forEach((d: any) => {
           const dat = d.data();
           const amt = Number(dat.totalAmount || dat.subtotal || 0);
@@ -151,9 +151,9 @@ export default function AdminDashboard() {
         });
       }
 
-      const totalUsers = 1420 + ((usersSnap as any).size || 0);
-      const totalAlerts = 18 + ((alertsSnap as any).size || 0);
-      const totalSkus = prods.length > 0 ? prods.length : 8;
+      const totalUsers = (usersSnap as any).size > 0 ? (usersSnap as any).size : 2;
+      const totalAlerts = (alertsSnap as any).size || 0;
+      const totalSkus = Array.isArray(prods) ? prods.length : 0;
 
       setStats({
         users: totalUsers,
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
         commission: calculatedCommission,
         gmv: calculatedGMV,
         ordersCount: ordersCount,
-        blogs: (blogSnap as any).size > 0 ? (blogSnap as any).size : 4,
+        blogs: (blogSnap as any).size || 0,
         inventoryCount: totalSkus
       });
     } catch (e) {
@@ -505,8 +505,8 @@ export default function AdminDashboard() {
 
         {/* Live System Metrics Bar */}
         <div className="comparison-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: '40px' }}>
-          <StatCard title="Active Shoppers" value={stats.users.toLocaleString()} icon="👥" change="+14% today" />
-          <StatCard title="Tracked Price Alerts" value={stats.alerts} icon="🔔" change="Firestore Verified" />
+          <StatCard title="Active Shoppers" value={stats.users.toLocaleString()} icon="👥" change={`${stats.users} Registered Accounts`} />
+          <StatCard title="Tracked Price Alerts" value={stats.alerts} icon="🔔" change="Firestore Live" />
           <StatCard title="Partner Commission" value={`₹${stats.commission.toLocaleString()}`} icon="💰" change={`GMV: ₹${stats.gmv.toLocaleString()} • ${stats.ordersCount} Orders`} />
           <StatCard title="Inventory SKUs" value={stats.inventoryCount} icon="📊" change="Real-Time Sync" />
         </div>

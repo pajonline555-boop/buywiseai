@@ -645,23 +645,27 @@ export async function getPartnerProducts(category?: string, includeAllStatuses: 
     console.warn('Firestore partner_products fetch notice:', err);
   }
 
-  // Combine memory products and Firestore products
+  // For admin inventory control and stats (includeAllStatuses === true), return 100% pure real Firestore products
+  if (includeAllStatuses) {
+    let allList = applyLocalOverrides(firestoreProds);
+    if (!category || category.toLowerCase() === 'all') {
+      return allList;
+    }
+    return allList.filter(p => p.category.toLowerCase() === category.toLowerCase());
+  }
+
+  // Combine memory products and Firestore products for public storefront fallback
   const combinedMap = new Map<string, PartnerProduct>();
-  
-  MOCK_PARTNER_PRODUCTS.forEach(p => {
-    combinedMap.set(p.id, p);
-  });
-  
-  firestoreProds.forEach(p => {
-    combinedMap.set(p.id, p);
-  });
+  if (firestoreProds.length === 0) {
+    MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
+  } else {
+    firestoreProds.forEach(p => combinedMap.set(p.id, p));
+  }
 
   // Apply persistent overrides so PAUSED or updated statuses survive refreshes!
   let allList = applyLocalOverrides(Array.from(combinedMap.values()));
 
-  if (!includeAllStatuses) {
-    allList = allList.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
-  }
+  allList = allList.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
 
   if (!category || category.toLowerCase() === 'all') {
     return allList;
@@ -679,7 +683,7 @@ export async function getPartnerProductsByPartnerId(partnerId: string): Promise<
   } catch (err) {
     console.warn('Firestore partner_products by partnerId notice:', err);
   }
-  return MOCK_PARTNER_PRODUCTS.filter(p => p.partnerId === partnerId);
+  return [];
 }
 
 export async function getPartnerOrders(partnerId?: string): Promise<PartnerOrder[]> {
@@ -696,10 +700,7 @@ export async function getPartnerOrders(partnerId?: string): Promise<PartnerOrder
     console.warn('Firestore partner_orders notice:', err);
   }
 
-  if (partnerId) {
-    return MOCK_PARTNER_ORDERS.filter(o => o.partnerId === partnerId);
-  }
-  return MOCK_PARTNER_ORDERS;
+  return [];
 }
 
 export async function logProductAuditAction(productId: string, action: string, userId: string = 'admin', details?: string): Promise<void> {
