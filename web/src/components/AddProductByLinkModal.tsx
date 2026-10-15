@@ -446,6 +446,8 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div
       style={{

@@ -121,6 +121,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const switchTabAndScroll = (tab: typeof activeTab, targetElementId?: string) => {
+    setActiveTab(tab);
+    setTimeout(() => {
+      if (targetElementId) {
+        const el = document.getElementById(targetElementId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+      }
+      const tabArea = document.getElementById('admin-tab-content-area');
+      if (tabArea) {
+        tabArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   useEffect(() => {
     if (isAuthorizedAdmin) {
       fetchStats();
@@ -333,7 +350,7 @@ export default function AdminDashboard() {
               Storefront ↗
             </Link>
             <Link
-              href="/admin/inventory"
+              href={`/admin/inventory?admin_email=${encodeURIComponent(sessionAdminEmail || 'pajonline555@gmail.com')}`}
               id="header-inventory-link"
               className="btn-primary"
               style={{
@@ -370,102 +387,109 @@ export default function AdminDashboard() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px' }}>
             <QuickActionButton
+              id="qa-create-competition"
               label="+ CREATE COMPETITION"
               color="#ffd700"
               active={activeTab === 'COMPETITIONS'}
               onClick={() => {
-                setActiveTab('COMPETITIONS');
                 setShowCreateCompetition(true);
+                switchTabAndScroll('COMPETITIONS');
               }}
             />
             <QuickActionButton
+              id="qa-add-comp-product"
               label="+ ADD COMPETITION PRODUCT"
               color="#00ff88"
               active={activeTab === 'PRODUCTS'}
               onClick={() => {
-                setActiveTab('PRODUCTS');
+                switchTabAndScroll('PRODUCTS');
                 setIsAddLinkModalOpen(true);
               }}
             />
             <QuickActionButton
+              id="qa-product-manager"
               label="📦 PRODUCT MANAGER"
               color="#00d4ff"
               active={activeTab === 'PRODUCTS'}
-              onClick={() => setActiveTab('PRODUCTS')}
+              onClick={() => switchTabAndScroll('PRODUCTS')}
             />
             <QuickActionButton
+              id="qa-review-submissions"
               label="👤 REVIEW SUBMISSIONS"
               color="#ff77c2"
               active={activeTab === 'SUBMISSIONS'}
-              onClick={() => setActiveTab('SUBMISSIONS')}
+              onClick={() => switchTabAndScroll('SUBMISSIONS')}
             />
             <QuickActionButton
+              id="qa-voting-management"
               label="🗳 VOTING MANAGEMENT"
               color="#ffd700"
               active={activeTab === 'VOTING'}
-              onClick={() => setActiveTab('VOTING')}
+              onClick={() => switchTabAndScroll('VOTING')}
             />
             <QuickActionButton
+              id="qa-declare-winner"
               label="🏆 DECLARE WINNER"
               color="#00ff88"
               active={activeTab === 'COMPETITIONS'}
               onClick={() => {
-                setActiveTab('COMPETITIONS');
                 setDeclareWinnerTrigger(prev => prev + 1);
+                switchTabAndScroll('COMPETITIONS');
               }}
             />
             <QuickActionButton
+              id="qa-feature-winner"
               label="⭐ FEATURE WINNER"
               color="#ff007f"
               active={activeTab === 'COMPETITIONS'}
               onClick={() => {
-                setActiveTab('COMPETITIONS');
                 setFeatureWinnerTrigger(prev => prev + 1);
+                switchTabAndScroll('COMPETITIONS');
               }}
             />
             <QuickActionButton
+              id="qa-add-product"
               label="+ ADD PRODUCT"
               color="#00d4ff"
               onClick={() => setIsAddLinkModalOpen(true)}
             />
             <QuickActionButton
+              id="qa-merchandising"
               label="💎 MERCHANDISING"
               color="#ffd700"
               active={activeTab === 'MERCHANDISING'}
-              onClick={() => setActiveTab('MERCHANDISING')}
+              onClick={() => switchTabAndScroll('MERCHANDISING')}
             />
             <QuickActionButton
+              id="qa-inventory-control"
               label="📊 INVENTORY CONTROL"
               color="#00d4ff"
               active={activeTab === 'INVENTORY'}
-              href="/admin/inventory"
-              onClick={() => {
-                setActiveTab('INVENTORY');
-                setTimeout(() => {
-                  const el = document.getElementById('inventory-control-panel');
-                  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 80);
-              }}
+              onClick={() => switchTabAndScroll('INVENTORY', 'inventory-control-panel')}
             />
             <QuickActionButton
+              id="qa-manage-partners"
               label="🏪 MANAGE PARTNERS"
               color="#ffd700"
               active={activeTab === 'PARTNERS'}
-              onClick={() => setActiveTab('PARTNERS')}
+              onClick={() => switchTabAndScroll('PARTNERS')}
             />
             <QuickActionButton
+              id="qa-orders-dispatch"
               label="🛒 MANAGE ORDERS & DISPATCH"
               color="#00ff88"
               active={activeTab === 'FULFILLMENT'}
-              onClick={() => setActiveTab('FULFILLMENT')}
+              onClick={() => switchTabAndScroll('FULFILLMENT')}
             />
             <QuickActionButton
+              id="qa-manage-coupons"
               label="🎟 MANAGE COUPONS"
               color="#ff77c2"
               active={activeTab === 'COUPONS'}
-              onClick={() => setActiveTab('COUPONS')}
+              onClick={() => switchTabAndScroll('COUPONS')}
             />
             <QuickActionButton
+              id="qa-send-notification"
               label="📢 SEND NOTIFICATION"
               color="#00d4ff"
               active={activeTab === 'OVERVIEW'}
@@ -478,38 +502,37 @@ export default function AdminDashboard() {
               }}
             />
             <QuickActionButton
+              id="qa-knowledge-hub"
               label="📚 KNOWLEDGE HUB"
               color="#ffffff"
-              href="/admin/knowledge"
+              href={`/admin/knowledge?admin_email=${encodeURIComponent(sessionAdminEmail || 'pajonline555@gmail.com')}`}
             />
             <QuickActionButton
+              id="qa-ad-management"
               label="🎯 AD MANAGEMENT"
               color="#ffd700"
               active={activeTab === 'SETTINGS'}
-              onClick={() => {
-                setActiveTab('SETTINGS');
-                setTimeout(() => {
-                  const el = document.getElementById('ad-management-section');
-                  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
-              }}
+              onClick={() => switchTabAndScroll('SETTINGS', 'ad-management-section')}
             />
             <QuickActionButton
+              id="qa-vto-media-audit"
               label="✨ VTO MEDIA AUDIT"
               color="#00ff88"
-              href="/admin/security/media-review"
+              href={`/admin/security/media-review?admin_email=${encodeURIComponent(sessionAdminEmail || 'pajonline555@gmail.com')}`}
             />
             <QuickActionButton
+              id="qa-security-logs"
               label="🔐 SECURITY LOGS"
               color="#ff4d4d"
               active={activeTab === 'SECURITY'}
-              onClick={() => setActiveTab('SECURITY')}
+              onClick={() => switchTabAndScroll('SECURITY')}
             />
             <QuickActionButton
+              id="qa-app-settings"
               label="⚙ APP SETTINGS"
               color="#a855f7"
               active={activeTab === 'SETTINGS'}
-              onClick={() => setActiveTab('SETTINGS')}
+              onClick={() => switchTabAndScroll('SETTINGS')}
             />
           </div>
         </div>
@@ -541,13 +564,7 @@ export default function AdminDashboard() {
             <button
               key={t.id}
               onClick={() => {
-                setActiveTab(t.id as any);
-                if (t.id === 'INVENTORY') {
-                  setTimeout(() => {
-                    const el = document.getElementById('inventory-control-panel');
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 80);
-                }
+                switchTabAndScroll(t.id as any, t.id === 'INVENTORY' ? 'inventory-control-panel' : undefined);
               }}
               style={{
                 padding: '11px 18px',
@@ -568,6 +585,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* TAB CONTENT PANELS */}
+        <div id="admin-tab-content-area" style={{ scrollMarginTop: '20px' }}>
         {activeTab === 'OVERVIEW' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '30px', marginBottom: '40px' }}>
             {/* Broadcast Push Notification Control */}
@@ -645,6 +663,7 @@ export default function AdminDashboard() {
 
         {/* Firestore Test Alerts Dashboard */}
         <TestAlerts />
+        </div>
       </div>
 
       {/* Add Product By Link Modal */}
@@ -658,12 +677,14 @@ export default function AdminDashboard() {
 }
 
 function QuickActionButton({
+  id,
   label,
   color,
   onClick,
   href,
   active,
 }: {
+  id?: string;
   label: string;
   color: string;
   onClick?: () => void;
@@ -675,8 +696,8 @@ function QuickActionButton({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    minHeight: '44px',
-    padding: '10px 14px',
+    minHeight: '48px',
+    padding: '12px 14px',
     borderRadius: '14px',
     background: active ? `${color}25` : 'rgba(255,255,255,0.05)',
     border: `1px solid ${active ? color : color + '40'}`,
@@ -686,38 +707,51 @@ function QuickActionButton({
     letterSpacing: '0.02em',
     cursor: 'pointer',
     textAlign: 'left',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'all 0.15s ease',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     textDecoration: 'none',
     boxSizing: 'border-box',
     boxShadow: active ? `0 0 16px ${color}35` : 'none',
+    touchAction: 'manipulation',
+    WebkitTapHighlightColor: 'transparent',
+    userSelect: 'none'
   };
 
   if (href) {
     return (
       <Link 
+        id={id}
         href={href} 
         style={commonStyle}
-        onClick={() => {
+        onClick={(e) => {
           if (onClick) onClick();
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-        <span style={{ fontSize: '11px', opacity: 0.8, marginLeft: '6px', flexShrink: 0 }}>↗</span>
+        <span style={{ fontSize: '12px', opacity: 0.9, marginLeft: '6px', flexShrink: 0 }}>↗</span>
       </Link>
     );
   }
 
   return (
-    <button type="button" onClick={onClick} style={commonStyle}>
+    <button
+      id={id}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onClick) onClick();
+      }}
+      style={commonStyle}
+    >
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       {active && (
         <span
           style={{
-            width: '6px',
-            height: '6px',
+            width: '8px',
+            height: '8px',
             borderRadius: '50%',
             background: color,
             marginLeft: '6px',
