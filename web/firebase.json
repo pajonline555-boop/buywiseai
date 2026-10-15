@@ -10,7 +10,10 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "**/*.apk",
+      "**/*.exe",
+      "buywise-ai.apk"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
