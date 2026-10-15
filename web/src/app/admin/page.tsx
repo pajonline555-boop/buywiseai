@@ -91,6 +91,11 @@ export default function AdminDashboard() {
           }
         } catch (e) {}
       }
+
+      const tabParam = params.get("tab")?.toUpperCase();
+      if (tabParam && ['OVERVIEW', 'INVENTORY', 'COMPETITIONS', 'SUBMISSIONS', 'VOTING', 'PRODUCTS', 'MERCHANDISING', 'PARTNERS', 'FULFILLMENT', 'COUPONS', 'SECURITY', 'SETTINGS'].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
     }
   }, []);
 
