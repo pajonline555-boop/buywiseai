@@ -23,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
@@ -74,6 +75,8 @@ fun MandatoryAuthScreen(
     var name by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var isGoogleLoading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val context = LocalContext.current
     val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
@@ -112,7 +115,7 @@ fun MandatoryAuthScreen(
             val displayName = account?.displayName
             if (!selectedEmail.isNullOrBlank()) {
                 authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
-                    isLoading = false
+                    isGoogleLoading = false
                     if (success) {
                         onAuthSuccess()
                     } else {
@@ -120,11 +123,11 @@ fun MandatoryAuthScreen(
                     }
                 }
             } else {
-                isLoading = false
+                isGoogleLoading = false
                 showManualGoogleEmailDialog = true
             }
         } catch (e: Exception) {
-            isLoading = false
+            isGoogleLoading = false
             android.util.Log.w("BuyWiseGoogleSignIn", "Google fallback exception: ${e.localizedMessage}")
             showManualGoogleEmailDialog = true
         }
@@ -141,7 +144,7 @@ fun MandatoryAuthScreen(
             val displayName = account?.displayName
             if (!idToken.isNullOrBlank()) {
                 authViewModel.signInWithGoogle(idToken = idToken, email = selectedEmail, displayName = displayName) { success, msg ->
-                    isLoading = false
+                    isGoogleLoading = false
                     if (success) {
                         onAuthSuccess()
                     } else {
@@ -150,7 +153,7 @@ fun MandatoryAuthScreen(
                 }
             } else if (!selectedEmail.isNullOrBlank()) {
                 authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
-                    isLoading = false
+                    isGoogleLoading = false
                     if (success) {
                         onAuthSuccess()
                     } else {
@@ -158,30 +161,33 @@ fun MandatoryAuthScreen(
                     }
                 }
             } else {
-                isLoading = false
+                isGoogleLoading = false
                 showManualGoogleEmailDialog = true
             }
         } catch (e: ApiException) {
             android.util.Log.w("BuyWiseGoogleSignIn", "Google Sign In ApiException code: ${e.statusCode}")
             if (e.statusCode == 12501 || e.statusCode == 16) {
-                isLoading = false
-                errorMessage = "Google sign-in was cancelled."
+                // User cancelled or tapped outside picker - cleanly restore UI without showing an error
+                isGoogleLoading = false
+                errorMessage = null
             } else if (e.statusCode == 8 || e.statusCode == 10 || e.statusCode == 12500 || e.statusCode == 7) {
-                // Smoothly trigger Google Account picker fallback without requiring server ID token
-                android.util.Log.i("BuyWiseGoogleSignIn", "Code ${e.statusCode} detected. Activating Google Account picker fallback...")
+                // Instant fallback directly to native Android Google account selector (0ms delay, no blocking signOut)
+                android.util.Log.i("BuyWiseGoogleSignIn", "Code ${e.statusCode} detected. Launching instant Google Account selector...")
                 try {
-                    googleSignInClientEmailOnly.signOut().addOnCompleteListener {
-                        googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
-                    }
+                    googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
                 } catch (fallbackEx: Exception) {
-                    isLoading = false
+                    isGoogleLoading = false
                     showManualGoogleEmailDialog = true
                 }
             } else {
-                isLoading = false
-                errorMessage = "Google sign-in error (code ${e.statusCode}). Please try again or sign in directly with Google."
+                isGoogleLoading = false
+                errorMessage = "Google sign-in error (code ${e.statusCode}). Tap below to sign in directly with Google."
                 showManualGoogleEmailDialog = true
             }
+        } catch (e: Exception) {
+            isGoogleLoading = false
+            android.util.Log.w("BuyWiseGoogleSignIn", "Unexpected Google Sign In exception: ${e.localizedMessage}")
+            showManualGoogleEmailDialog = true
         }
     }
 
@@ -240,8 +246,14 @@ fun MandatoryAuthScreen(
                         // ACTIVE GOOGLE SIGN IN BUTTON
                         OutlinedButton(
                             onClick = {
-                                isLoading = true
+                                isGoogleLoading = true
                                 errorMessage = null
+                                coroutineScope.launch {
+                                    kotlinx.coroutines.delay(7000)
+                                    if (isGoogleLoading) {
+                                        isGoogleLoading = false
+                                    }
+                                }
                                 try {
                                     googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
                                 } catch (e: Exception) {
@@ -254,37 +266,55 @@ fun MandatoryAuthScreen(
                             shape = RoundedCornerShape(14.dp),
                             border = BorderStroke(1.dp, Color(0xFF4285F4)),
                             colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFF1E2235)),
-                            enabled = !isLoading
+                            enabled = !isGoogleLoading && !isLoading
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Google Logo",
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = if (isSignUp) "SIGN UP WITH GOOGLE" else "CONTINUE WITH GOOGLE",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp
-                                )
+                                if (isGoogleLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = Color(0xFF4285F4),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "CONNECTING GOOGLE...",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 13.sp
+                                    )
+                                } else {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_google_logo),
+                                        contentDescription = "Google Logo",
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = if (isSignUp) "SIGN UP WITH GOOGLE" else "CONTINUE WITH GOOGLE",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 13.sp
+                                    )
+                                }
                             }
                         }
 
-                        TextButton(
-                            onClick = { showManualGoogleEmailDialog = true },
-                            modifier = Modifier.padding(top = 4.dp)
-                        ) {
-                            Text(
-                                text = "⚡ Experiencing Google Sign-In error? Sign in directly ➔",
-                                color = BuyWiseCyan,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        // Help link only appears if an error actually occurred, avoiding confusing user with an error hint
+                        if (errorMessage != null) {
+                            TextButton(
+                                onClick = { showManualGoogleEmailDialog = true },
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Text(
+                                    text = "⚡ Need help signing in with Google? Tap here ➔",
+                                    color = BuyWiseCyan,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
@@ -391,7 +421,7 @@ fun MandatoryAuthScreen(
                                 .height(48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = !isLoading
+                            enabled = !isLoading && !isGoogleLoading
                         ) {
                             Text(
                                 text = if (isLoading) "PROCESSING..." else if (isSignUp) "CREATE MY ACCOUNT" else "SIGN IN TO BUYWISE",
@@ -453,7 +483,9 @@ fun AuthDialog(
     var name by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var isGoogleLoading by remember { mutableStateOf(false) }
     var showManualGoogleEmailDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val context = LocalContext.current
     val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
@@ -489,7 +521,7 @@ fun AuthDialog(
             val displayName = account?.displayName
             if (!selectedEmail.isNullOrBlank()) {
                 authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
-                    isLoading = false
+                    isGoogleLoading = false
                     if (success) {
                         onAuthSuccess()
                     } else {
@@ -497,11 +529,11 @@ fun AuthDialog(
                     }
                 }
             } else {
-                isLoading = false
+                isGoogleLoading = false
                 showManualGoogleEmailDialog = true
             }
         } catch (e: Exception) {
-            isLoading = false
+            isGoogleLoading = false
             android.util.Log.w("BuyWiseGoogleSignIn", "Google fallback exception: ${e.localizedMessage}")
             showManualGoogleEmailDialog = true
         }
@@ -518,7 +550,7 @@ fun AuthDialog(
             val displayName = account?.displayName
             if (!idToken.isNullOrBlank()) {
                 authViewModel.signInWithGoogle(idToken = idToken, email = selectedEmail, displayName = displayName) { success, msg ->
-                    isLoading = false
+                    isGoogleLoading = false
                     if (success) {
                         onAuthSuccess()
                     } else {
@@ -527,7 +559,7 @@ fun AuthDialog(
                 }
             } else if (!selectedEmail.isNullOrBlank()) {
                 authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
-                    isLoading = false
+                    isGoogleLoading = false
                     if (success) {
                         onAuthSuccess()
                     } else {
@@ -535,30 +567,33 @@ fun AuthDialog(
                     }
                 }
             } else {
-                isLoading = false
+                isGoogleLoading = false
                 showManualGoogleEmailDialog = true
             }
         } catch (e: ApiException) {
             android.util.Log.w("BuyWiseGoogleSignIn", "Google Sign In ApiException code: ${e.statusCode}")
             if (e.statusCode == 12501 || e.statusCode == 16) {
-                isLoading = false
-                errorMessage = "Google sign-in was cancelled."
+                // User cancelled or tapped outside picker - cleanly restore UI without showing an error
+                isGoogleLoading = false
+                errorMessage = null
             } else if (e.statusCode == 8 || e.statusCode == 10 || e.statusCode == 12500 || e.statusCode == 7) {
-                // Auto-recovery for code 8 (Play App Signing OAuth key mismatch on online build) / code 10
-                android.util.Log.i("BuyWiseGoogleSignIn", "Code ${e.statusCode} detected. Activating Google Account picker fallback...")
+                // Instant fallback directly to native Android Google account selector (0ms delay, no blocking signOut)
+                android.util.Log.i("BuyWiseGoogleSignIn", "Code ${e.statusCode} detected. Launching instant Google Account selector...")
                 try {
-                    googleSignInClientEmailOnly.signOut().addOnCompleteListener {
-                        googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
-                    }
+                    googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
                 } catch (fallbackEx: Exception) {
-                    isLoading = false
+                    isGoogleLoading = false
                     showManualGoogleEmailDialog = true
                 }
             } else {
-                isLoading = false
+                isGoogleLoading = false
                 errorMessage = "Google sign-in error (code ${e.statusCode}). Tap below to sign in directly with Google."
                 showManualGoogleEmailDialog = true
             }
+        } catch (e: Exception) {
+            isGoogleLoading = false
+            android.util.Log.w("BuyWiseGoogleSignIn", "Unexpected Google Sign In exception: ${e.localizedMessage}")
+            showManualGoogleEmailDialog = true
         }
     }
 
@@ -584,8 +619,14 @@ fun AuthDialog(
                 // Google Sign In / Sign Up Button
                 OutlinedButton(
                     onClick = {
-                        isLoading = true
+                        isGoogleLoading = true
                         errorMessage = null
+                        coroutineScope.launch {
+                            kotlinx.coroutines.delay(7000)
+                            if (isGoogleLoading) {
+                                isGoogleLoading = false
+                            }
+                        }
                         try {
                             googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
                         } catch (e: Exception) {
@@ -596,37 +637,55 @@ fun AuthDialog(
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, Color(0xFF4285F4)),
                     colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFF1E2235)),
-                    enabled = !isLoading
+                    enabled = !isGoogleLoading && !isLoading
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_google_logo),
-                            contentDescription = "Google Logo",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isSignUp) "SIGN UP WITH GOOGLE" else "CONTINUE WITH GOOGLE",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+                        if (isGoogleLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color(0xFF4285F4),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "CONNECTING GOOGLE...",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_google_logo),
+                                contentDescription = "Google Logo",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isSignUp) "SIGN UP WITH GOOGLE" else "CONTINUE WITH GOOGLE",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
 
-                TextButton(
-                    onClick = { showManualGoogleEmailDialog = true },
-                    modifier = Modifier.padding(top = 4.dp)
-                ) {
-                    Text(
-                        text = "⚡ Experiencing Google Sign-In error? Sign in directly ➔",
-                        color = BuyWiseCyan,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                // Help link only appears if an error actually occurred, avoiding confusing user with an error hint
+                if (errorMessage != null) {
+                    TextButton(
+                        onClick = { showManualGoogleEmailDialog = true },
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(
+                            text = "⚡ Need help signing in with Google? Tap here ➔",
+                            color = BuyWiseCyan,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -793,7 +852,7 @@ fun AuthDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
+                    enabled = !isLoading && !isGoogleLoading
                 ) {
                     Text(
                         text = if (isLoading) "PROCESSING..." else if (isSignUp) "REGISTER ACCOUNT" else "SIGN IN",

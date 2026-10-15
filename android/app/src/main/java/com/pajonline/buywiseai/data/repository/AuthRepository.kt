@@ -280,55 +280,69 @@ class AuthRepository private constructor() {
 
     fun signInWithGoogle(idToken: String? = null, email: String? = null, displayName: String? = null, onResult: (Boolean, String) -> Unit) {
         isExplicitSignedOut = false
-        
-        // Path 1: Valid Google ID token provided by Google Play Services
-        if (!idToken.isNullOrBlank()) {
-            val targetAuth = auth
-            if (targetAuth != null) {
+        val cleanEmail = email?.lowercase()?.trim() ?: ""
+        val targetAuth = auth
+
+        // If email is already provided by Google account picker, authenticate UI immediately (0ms delay)
+        if (cleanEmail.isNotBlank()) {
+            val userDisplayName = if (!displayName.isNullOrBlank()) displayName else cleanEmail.substringBefore("@")
+            val role = determineRole(cleanEmail)
+            _authState.value = AuthState.Authenticated(cleanEmail, userDisplayName, role)
+            onResult(true, "Signed in with Google as $cleanEmail")
+
+            // Background Firebase credential binding and Firestore synchronization
+            if (!idToken.isNullOrBlank() && targetAuth != null) {
                 try {
                     val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
                     targetAuth.signInWithCredential(credential)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 val user = targetAuth.currentUser
-                                val userEmail = user?.email ?: email ?: ""
-                                val userDisplayName = user?.displayName ?: displayName ?: userEmail.substringBefore("@")
-                                val role = determineRole(userEmail)
-                                _authState.value = AuthState.Authenticated(userEmail, userDisplayName, role)
-                                onResult(true, "Signed in with Google as $userEmail")
-                                syncUserProfileToFirestore(userEmail, userDisplayName, role)
+                                val finalEmail = user?.email ?: cleanEmail
+                                val finalName = user?.displayName ?: userDisplayName
+                                val finalRole = determineRole(finalEmail)
+                                _authState.value = AuthState.Authenticated(finalEmail, finalName, finalRole)
+                                syncUserProfileToFirestore(finalEmail, finalName, finalRole)
                             } else {
-                                // If Firebase credential validation fails but we have the verified Google email, fall back safely
-                                if (!email.isNullOrBlank()) {
-                                    completeGoogleAccountFallback(email, displayName, onResult)
-                                } else {
-                                    _authState.value = AuthState.Unauthenticated
-                                    val err = task.exception?.localizedMessage ?: "Firebase credential validation failed."
-                                    onResult(false, "Google authentication failed: $err")
-                                }
+                                syncUserProfileToFirestore(cleanEmail, userDisplayName, role)
                             }
                         }
                 } catch (e: Exception) {
-                    if (!email.isNullOrBlank()) {
-                        completeGoogleAccountFallback(email, displayName, onResult)
-                    } else {
-                        _authState.value = AuthState.Unauthenticated
-                        onResult(false, "Google authentication error: ${e.localizedMessage}")
-                    }
+                    syncUserProfileToFirestore(cleanEmail, userDisplayName, role)
                 }
-            } else if (!email.isNullOrBlank()) {
-                completeGoogleAccountFallback(email, displayName, onResult)
             } else {
-                _authState.value = AuthState.Unauthenticated
-                onResult(false, "Firebase Auth service unavailable.")
+                completeGoogleAccountFallback(cleanEmail, userDisplayName) { _, _ -> }
             }
-        } else if (!email.isNullOrBlank()) {
-            // Path 2: Google Play Services returned Code 8 (INTERNAL_ERROR - Play App Signing SHA-1 mismatch),
-            // but the device verified the user's Google Account email. Authenticate directly via fallback.
-            completeGoogleAccountFallback(email, displayName, onResult)
+            return
+        }
+
+        // Path when email wasn't passed directly but idToken is present
+        if (!idToken.isNullOrBlank() && targetAuth != null) {
+            try {
+                val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+                targetAuth.signInWithCredential(credential)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val user = targetAuth.currentUser
+                            val userEmail = user?.email ?: ""
+                            val userDisplayName = user?.displayName ?: userEmail.substringBefore("@")
+                            val role = determineRole(userEmail)
+                            _authState.value = AuthState.Authenticated(userEmail, userDisplayName, role)
+                            onResult(true, "Signed in with Google as $userEmail")
+                            syncUserProfileToFirestore(userEmail, userDisplayName, role)
+                        } else {
+                            _authState.value = AuthState.Unauthenticated
+                            val err = task.exception?.localizedMessage ?: "Firebase credential validation failed."
+                            onResult(false, "Google authentication failed: $err")
+                        }
+                    }
+            } catch (e: Exception) {
+                _authState.value = AuthState.Unauthenticated
+                onResult(false, "Google authentication error: ${e.localizedMessage}")
+            }
         } else {
             _authState.value = AuthState.Unauthenticated
-            onResult(false, "Google authentication failed: missing ID token and email.")
+            onResult(false, "Google sign-in was cancelled or unavailable.")
         }
     }
 }

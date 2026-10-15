@@ -775,25 +775,52 @@ export default function InventoryPage() {
             </p>
           </div>
 
-          <button 
-            onClick={handleOpenNewModal}
-            style={{
-              padding: '12px 24px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #a855f7, #ff007f)',
-              color: '#ffffff',
-              fontWeight: 900,
-              fontSize: '13.5px',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 8px 25px rgba(255, 0, 127, 0.4)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ➕ Onboard New Partner Product
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  try {
+                    sessionStorage.clear();
+                  } catch (e) {}
+                  loadProducts();
+                }
+              }}
+              style={{
+                padding: '12px 18px',
+                borderRadius: '16px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: '#00d4ff',
+                fontWeight: 800,
+                fontSize: '13px',
+                border: '1px solid rgba(0, 212, 255, 0.4)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🔄 Refresh Catalog
+            </button>
+            <button 
+              onClick={handleOpenNewModal}
+              style={{
+                padding: '12px 24px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #a855f7, #ff007f)',
+                color: '#ffffff',
+                fontWeight: 900,
+                fontSize: '13.5px',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 8px 25px rgba(255, 0, 127, 0.4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              ➕ Onboard New Partner Product
+            </button>
+          </div>
         </div>
 
         {/* Feedback Notices */}
@@ -875,7 +902,7 @@ export default function InventoryPage() {
                     </span>
                   </div>
 
-                  {/* Quick Action Buttons */}
+                  {/* Quick Action Buttons (Row 1: Edit & Status) */}
                   <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                     <button
                       onClick={() => handleEditProduct(p)}
@@ -887,11 +914,15 @@ export default function InventoryPage() {
                         border: '1px solid #00d4ff',
                         color: '#00d4ff',
                         fontWeight: 800,
-                        fontSize: '12px',
-                        cursor: 'pointer'
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
                       }}
                     >
-                      ✏️ Edit
+                      ✏️ Edit Details
                     </button>
                     <button
                       onClick={() => handleStatusToggle(p.id, p.status)}
@@ -904,31 +935,41 @@ export default function InventoryPage() {
                         border: isLive ? '1px solid #ff4d4d' : '1px solid #00ff88',
                         color: isLive ? '#ff4d4d' : '#00ff88',
                         fontWeight: 800,
-                        fontSize: '12px',
-                        cursor: 'pointer'
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
                       }}
                     >
                       {isLive ? '⏸ Pause' : '▶ Publish'}
                     </button>
+                  </div>
+
+                  {/* Quick Action Buttons (Row 2: Dedicated Full-Width Delete Button) */}
+                  <div style={{ marginTop: '8px' }}>
                     <button
                       onClick={() => setProductToDelete(p)}
                       title="Permanently Delete Product"
                       style={{
-                        padding: '10px 16px',
+                        width: '100%',
+                        padding: '11px 16px',
                         borderRadius: '12px',
-                        background: 'linear-gradient(135deg, rgba(255, 0, 80, 0.25), rgba(217, 0, 64, 0.35))',
-                        border: '1px solid #ff0050',
+                        background: 'linear-gradient(135deg, rgba(255, 0, 80, 0.2), rgba(217, 0, 64, 0.3))',
+                        border: '1.5px solid #ff0050',
                         color: '#ff4d79',
                         fontWeight: 900,
-                        fontSize: '12px',
+                        fontSize: '13px',
                         cursor: 'pointer',
-                        display: 'inline-flex',
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        boxShadow: '0 4px 12px rgba(255, 0, 80, 0.2)'
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 12px rgba(255, 0, 80, 0.25)'
                       }}
                     >
-                      🗑️ Delete
+                      🗑️ Delete Product from Catalog
                     </button>
                   </div>
                 </div>
