@@ -222,6 +222,17 @@ export default function InventoryPage() {
     loadProducts();
   }, [isAuthorized]);
 
+  useEffect(() => {
+    if (showModal || productToDelete) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showModal, productToDelete]);
+
   const fetchScrapedProductMetadata = async (rawInput: string) => {
     if (!rawInput || !rawInput.trim()) return;
     setScraping(true);
@@ -903,18 +914,23 @@ export default function InventoryPage() {
                   </div>
 
                   {/* Quick Action Buttons (Row 1: Edit & Status) */}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px', position: 'relative', zIndex: 10 }}>
                     <button
-                      onClick={() => handleEditProduct(p)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEditProduct(p);
+                      }}
                       style={{
                         flex: 1,
-                        padding: '10px 14px',
+                        padding: '12px 14px',
                         borderRadius: '12px',
-                        background: 'rgba(0, 212, 255, 0.15)',
-                        border: '1px solid #00d4ff',
+                        background: 'rgba(0, 212, 255, 0.18)',
+                        border: '1.5px solid #00d4ff',
                         color: '#00d4ff',
-                        fontWeight: 800,
-                        fontSize: '12.5px',
+                        fontWeight: 900,
+                        fontSize: '13px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -925,17 +941,22 @@ export default function InventoryPage() {
                       ✏️ Edit Details
                     </button>
                     <button
-                      onClick={() => handleStatusToggle(p.id, p.status)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleStatusToggle(p.id, p.status);
+                      }}
                       disabled={busy === p.id}
                       style={{
                         flex: 1,
-                        padding: '10px 14px',
+                        padding: '12px 14px',
                         borderRadius: '12px',
-                        background: isLive ? 'rgba(255, 77, 77, 0.15)' : 'rgba(0, 255, 136, 0.15)',
-                        border: isLive ? '1px solid #ff4d4d' : '1px solid #00ff88',
+                        background: isLive ? 'rgba(255, 77, 77, 0.18)' : 'rgba(0, 255, 136, 0.18)',
+                        border: isLive ? '1.5px solid #ff4d4d' : '1.5px solid #00ff88',
                         color: isLive ? '#ff4d4d' : '#00ff88',
-                        fontWeight: 800,
-                        fontSize: '12.5px',
+                        fontWeight: 900,
+                        fontSize: '13px',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -948,15 +969,20 @@ export default function InventoryPage() {
                   </div>
 
                   {/* Quick Action Buttons (Row 2: Dedicated Full-Width Delete Button) */}
-                  <div style={{ marginTop: '8px' }}>
+                  <div style={{ marginTop: '8px', position: 'relative', zIndex: 10 }}>
                     <button
-                      onClick={() => setProductToDelete(p)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setProductToDelete(p);
+                      }}
                       title="Permanently Delete Product"
                       style={{
                         width: '100%',
-                        padding: '11px 16px',
+                        padding: '12px 16px',
                         borderRadius: '12px',
-                        background: 'linear-gradient(135deg, rgba(255, 0, 80, 0.2), rgba(217, 0, 64, 0.3))',
+                        background: 'linear-gradient(135deg, rgba(255, 0, 80, 0.22), rgba(217, 0, 64, 0.35))',
                         border: '1.5px solid #ff0050',
                         color: '#ff4d79',
                         fontWeight: 900,
@@ -966,7 +992,7 @@ export default function InventoryPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px',
-                        boxShadow: '0 4px 12px rgba(255, 0, 80, 0.25)'
+                        boxShadow: '0 4px 14px rgba(255, 0, 80, 0.3)'
                       }}
                     >
                       🗑️ Delete Product from Catalog
@@ -1115,14 +1141,61 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        {/* Modal Form for Onboarding New Partner Product */}
+        {/* Modal Form for Onboarding / Editing Partner Product */}
         {showModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-            <div className="glass" style={{ width: '100%', maxWidth: '640px', borderRadius: '24px', padding: '32px', background: 'rgba(18, 14, 36, 0.98)', border: '1px solid rgba(255, 255, 255, 0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(5, 3, 15, 0.94)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            zIndex: 99999,
+            padding: '16px 12px',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch'
+          }}>
+            <div className="glass" style={{
+              width: '100%',
+              maxWidth: '680px',
+              borderRadius: '24px',
+              padding: '24px 20px',
+              background: '#120e24',
+              border: '1.5px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)',
+              marginTop: '12px',
+              marginBottom: '40px'
+            }}>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff' }}>🛍️ Onboard Partner Product</h2>
-                <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: '#ffffff', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+                  {editingProduct ? '✏️ Edit Product Details' : '🛍️ Onboard Partner Product'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingProduct(null);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ Close
+                </button>
               </div>
 
               {validationErrors.length > 0 && (
