@@ -97,7 +97,10 @@ fun WebViewerScreen(
                         )
                     }
 
-                    IconButton(onClick = { webViewInstance?.reload() }) {
+                    IconButton(onClick = { 
+                        webViewInstance?.clearCache(true)
+                        webViewInstance?.reload() 
+                    }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Reload", tint = Color.LightGray)
                     }
 
@@ -138,9 +141,11 @@ fun WebViewerScreen(
                                 loadWithOverviewMode = true
                                 allowFileAccess = false
                                 allowContentAccess = false
+                                cacheMode = WebSettings.LOAD_NO_CACHE
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                 userAgentString = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 BuyWiseNativeApp/1.0"
                             }
+                            clearCache(true)
                             webViewClient = object : WebViewClient() {
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                     isLoading = true

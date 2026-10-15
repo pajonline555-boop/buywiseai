@@ -224,7 +224,7 @@ fun ProfileScreen(
         if (isAdmin && (cleanPath.startsWith("/admin") || cleanPath.startsWith("/partner-portal")) && !fullUrl.contains("admin_email")) {
             val sep = if (fullUrl.contains("?")) "&" else "?"
             val emailParam = if (userEmail.isNotBlank()) userEmail else "pajonline555@gmail.com"
-            fullUrl += "${sep}native=true&admin_email=$emailParam"
+            fullUrl += "${sep}native=true&admin_email=$emailParam&_t=${System.currentTimeMillis()}"
         }
         onNavigateToWeb(title, fullUrl)
     }

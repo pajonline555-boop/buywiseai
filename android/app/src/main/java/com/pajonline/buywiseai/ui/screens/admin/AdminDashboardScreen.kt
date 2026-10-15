@@ -205,7 +205,7 @@ fun AdminDashboardScreen(
     fun launchWebAdmin(title: String, path: String) {
         val cleanPath = if (path.startsWith("/")) path else "/$path"
         val sep = if (cleanPath.contains("?")) "&" else "?"
-        val fullUrl = "https://buywiseai.pajonline.co.in$cleanPath${sep}native=true&admin_email=$currentEmail"
+        val fullUrl = "https://buywiseai.pajonline.co.in$cleanPath${sep}native=true&admin_email=$currentEmail&_t=${System.currentTimeMillis()}"
         onNavigateToWeb(title, fullUrl)
     }
 
