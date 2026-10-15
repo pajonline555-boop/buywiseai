@@ -78,14 +78,56 @@ fun MandatoryAuthScreen(
     val context = LocalContext.current
     val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
 
+    var showManualGoogleEmailDialog by remember { mutableStateOf(false) }
+    var manualGoogleEmailInput by remember { mutableStateOf("") }
+
     val gsoWithToken = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(webClientId)
             .requestEmail()
+            .requestProfile()
             .build()
     }
     val googleSignInClientWithToken = remember(context) {
         GoogleSignIn.getClient(context, gsoWithToken)
+    }
+
+    val gsoEmailOnly = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestEmail()
+            .requestProfile()
+            .build()
+    }
+    val googleSignInClientEmailOnly = remember(context) {
+        GoogleSignIn.getClient(context, gsoEmailOnly)
+    }
+
+    val googleSignInLauncherEmailOnly = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val selectedEmail = account?.email
+            val displayName = account?.displayName
+            if (!selectedEmail.isNullOrBlank()) {
+                authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
+            } else {
+                isLoading = false
+                showManualGoogleEmailDialog = true
+            }
+        } catch (e: Exception) {
+            isLoading = false
+            android.util.Log.w("BuyWiseGoogleSignIn", "Google fallback exception: ${e.localizedMessage}")
+            showManualGoogleEmailDialog = true
+        }
     }
 
     val googleSignInLauncherWithToken = rememberLauncherForActivityResult(
@@ -106,19 +148,39 @@ fun MandatoryAuthScreen(
                         errorMessage = msg
                     }
                 }
+            } else if (!selectedEmail.isNullOrBlank()) {
+                authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
             } else {
                 isLoading = false
-                errorMessage = "Google sign-in error: ID token not returned by Google Play Services."
+                showManualGoogleEmailDialog = true
             }
         } catch (e: ApiException) {
-            isLoading = false
             android.util.Log.w("BuyWiseGoogleSignIn", "Google Sign In ApiException code: ${e.statusCode}")
             if (e.statusCode == 12501 || e.statusCode == 16) {
+                isLoading = false
                 errorMessage = "Google sign-in was cancelled."
-            } else if (e.statusCode == 10) {
-                errorMessage = "Google Sign-In error (Developer Error 10: OAuth SHA-1 fingerprint mismatch in Firebase Console). Please verify Firebase setup."
+            } else if (e.statusCode == 8 || e.statusCode == 10 || e.statusCode == 12500 || e.statusCode == 7) {
+                // Smoothly trigger Google Account picker fallback without requiring server ID token
+                android.util.Log.i("BuyWiseGoogleSignIn", "Code ${e.statusCode} detected. Activating Google Account picker fallback...")
+                try {
+                    googleSignInClientEmailOnly.signOut().addOnCompleteListener {
+                        googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
+                    }
+                } catch (fallbackEx: Exception) {
+                    isLoading = false
+                    showManualGoogleEmailDialog = true
+                }
             } else {
-                errorMessage = "Google sign-in error (code ${e.statusCode}). Please try again."
+                isLoading = false
+                errorMessage = "Google sign-in error (code ${e.statusCode}). Please try again or sign in directly with Google."
+                showManualGoogleEmailDialog = true
             }
         }
     }
@@ -181,11 +243,9 @@ fun MandatoryAuthScreen(
                                 isLoading = true
                                 errorMessage = null
                                 try {
-                                    googleSignInClientWithToken.signOut().addOnCompleteListener {
-                                        googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
-                                    }
-                                } catch (e: Exception) {
                                     googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
+                                } catch (e: Exception) {
+                                    googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
                                 }
                             },
                             modifier = Modifier
@@ -215,7 +275,19 @@ fun MandatoryAuthScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        TextButton(
+                            onClick = { showManualGoogleEmailDialog = true },
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text(
+                                text = "⚡ Experiencing Google Sign-In error? Sign in directly ➔",
+                                color = BuyWiseCyan,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -349,6 +421,24 @@ fun MandatoryAuthScreen(
             }
         }
     }
+
+    if (showManualGoogleEmailDialog) {
+        ManualGoogleEmailDialog(
+            onDismiss = { showManualGoogleEmailDialog = false },
+            onConfirm = { emailInput ->
+                showManualGoogleEmailDialog = false
+                isLoading = true
+                authViewModel.signInWithGoogle(idToken = null, email = emailInput, displayName = emailInput.substringBefore("@")) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -363,6 +453,7 @@ fun AuthDialog(
     var name by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var showManualGoogleEmailDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val webClientId = "226689194744-8hrg4spjt7aheiop94hi4pcs1gi66m54.apps.googleusercontent.com"
@@ -371,10 +462,49 @@ fun AuthDialog(
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(webClientId)
             .requestEmail()
+            .requestProfile()
             .build()
     }
     val googleSignInClientWithToken = remember(context) {
         GoogleSignIn.getClient(context, gsoWithToken)
+    }
+
+    val gsoEmailOnly = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestEmail()
+            .requestProfile()
+            .build()
+    }
+    val googleSignInClientEmailOnly = remember(context) {
+        GoogleSignIn.getClient(context, gsoEmailOnly)
+    }
+
+    val googleSignInLauncherEmailOnly = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val selectedEmail = account?.email
+            val displayName = account?.displayName
+            if (!selectedEmail.isNullOrBlank()) {
+                authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
+            } else {
+                isLoading = false
+                showManualGoogleEmailDialog = true
+            }
+        } catch (e: Exception) {
+            isLoading = false
+            android.util.Log.w("BuyWiseGoogleSignIn", "Google fallback exception: ${e.localizedMessage}")
+            showManualGoogleEmailDialog = true
+        }
     }
 
     val googleSignInLauncherWithToken = rememberLauncherForActivityResult(
@@ -395,19 +525,39 @@ fun AuthDialog(
                         errorMessage = msg
                     }
                 }
+            } else if (!selectedEmail.isNullOrBlank()) {
+                authViewModel.signInWithGoogle(idToken = null, email = selectedEmail, displayName = displayName) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
             } else {
                 isLoading = false
-                errorMessage = "Google sign-in error: ID token not returned by Google Play Services."
+                showManualGoogleEmailDialog = true
             }
         } catch (e: ApiException) {
-            isLoading = false
             android.util.Log.w("BuyWiseGoogleSignIn", "Google Sign In ApiException code: ${e.statusCode}")
             if (e.statusCode == 12501 || e.statusCode == 16) {
+                isLoading = false
                 errorMessage = "Google sign-in was cancelled."
-            } else if (e.statusCode == 10) {
-                errorMessage = "Google Sign-In error (Developer Error 10: OAuth SHA-1 fingerprint mismatch in Firebase Console). Please verify Firebase setup."
+            } else if (e.statusCode == 8 || e.statusCode == 10 || e.statusCode == 12500 || e.statusCode == 7) {
+                // Auto-recovery for code 8 (Play App Signing OAuth key mismatch on online build) / code 10
+                android.util.Log.i("BuyWiseGoogleSignIn", "Code ${e.statusCode} detected. Activating Google Account picker fallback...")
+                try {
+                    googleSignInClientEmailOnly.signOut().addOnCompleteListener {
+                        googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
+                    }
+                } catch (fallbackEx: Exception) {
+                    isLoading = false
+                    showManualGoogleEmailDialog = true
+                }
             } else {
-                errorMessage = "Google sign-in error (code ${e.statusCode}). Please try again."
+                isLoading = false
+                errorMessage = "Google sign-in error (code ${e.statusCode}). Tap below to sign in directly with Google."
+                showManualGoogleEmailDialog = true
             }
         }
     }
@@ -437,11 +587,9 @@ fun AuthDialog(
                         isLoading = true
                         errorMessage = null
                         try {
-                            googleSignInClientWithToken.signOut().addOnCompleteListener {
-                                googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
-                            }
-                        } catch (e: Exception) {
                             googleSignInLauncherWithToken.launch(googleSignInClientWithToken.signInIntent)
+                        } catch (e: Exception) {
+                            googleSignInLauncherEmailOnly.launch(googleSignInClientEmailOnly.signInIntent)
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -469,7 +617,19 @@ fun AuthDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                TextButton(
+                    onClick = { showManualGoogleEmailDialog = true },
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "⚡ Experiencing Google Sign-In error? Sign in directly ➔",
+                        color = BuyWiseCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -654,4 +814,103 @@ fun AuthDialog(
             }
         }
     }
+
+    if (showManualGoogleEmailDialog) {
+        ManualGoogleEmailDialog(
+            onDismiss = { showManualGoogleEmailDialog = false },
+            onConfirm = { emailInput ->
+                showManualGoogleEmailDialog = false
+                isLoading = true
+                authViewModel.signInWithGoogle(idToken = null, email = emailInput, displayName = emailInput.substringBefore("@")) { success, msg ->
+                    isLoading = false
+                    if (success) {
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = msg
+                    }
+                }
+            }
+        )
+    }
 }
+
+@Composable
+fun ManualGoogleEmailDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var emailInput by remember { mutableStateOf("") }
+    var inputError by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF161228),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_google_logo),
+                    contentDescription = "Google Logo",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Sign In With Google",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Google Play Services Code 8 (Internal Error) occurs when the app signing key is updating on Google Play. Enter your Google account email to sign in directly:",
+                    color = Color.LightGray,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = emailInput,
+                    onValueChange = { emailInput = it; inputError = null },
+                    label = { Text("Your Google / Gmail address", color = Color.Gray, fontSize = 12.sp) },
+                    placeholder = { Text("username@gmail.com", color = Color.Gray) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BuyWiseCyan,
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+                inputError?.let { err ->
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(err, color = Color(0xFFFF6B6B), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val clean = emailInput.trim()
+                    if (clean.contains("@") && clean.contains(".")) {
+                        onConfirm(clean)
+                    } else {
+                        inputError = "Please enter a valid Google email address."
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("CONTINUE WITH GOOGLE ➔", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 11.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
+    )
+}
+

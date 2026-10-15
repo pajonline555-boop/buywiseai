@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CheckoutModal from '@/components/CheckoutModal';
 import { PartnerProduct, PartnerCategory } from '@/lib/partners/types';
-import { getPartnerProducts } from '@/lib/partners/partnerService';
+import { getPartnerProducts, getYoutubeEmbedUrl } from '@/lib/partners/partnerService';
 import { getProxiedImageUrl } from '@/lib/imageUtils';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
@@ -31,6 +31,7 @@ export default function PartnersStorefront() {
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<PartnerProduct | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState<{ url: string; title: string } | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -45,6 +46,8 @@ export default function PartnersStorefront() {
   }, []);
 
   const filteredProducts = products.filter(p => {
+    // Strictly exclude any paused or non-live products
+    if (p.status !== 'LIVE' && (p.status as any) !== 'ACTIVE') return false;
     if (activeTab === 'All') return true;
     if (activeTab === 'Featured') return p.rating && p.rating >= 4.8;
     if (activeTab === 'Deals') return (p.mrp - p.sellingPrice) >= 1000;
@@ -264,6 +267,30 @@ export default function PartnersStorefront() {
                         </h3>
                       </Link>
 
+                      {prod.youtubeUrl && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedVideoUrl({ url: prod.youtubeUrl!, title: prod.title })}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '5px 12px',
+                              borderRadius: '10px',
+                              background: 'rgba(255, 0, 77, 0.2)',
+                              border: '1px solid #ff004d',
+                              color: '#ff4d79',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <span>▶️</span> Watch Video Demo
+                          </button>
+                        </div>
+                      )}
+
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '18px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {t(prod.description)}
                       </p>
@@ -361,6 +388,78 @@ export default function PartnersStorefront() {
         onClose={() => setIsCheckoutOpen(false)}
         product={selectedProductForCheckout}
       />
+
+      {/* Embedded YouTube Video Demo Modal */}
+      {selectedVideoUrl && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0, 0, 0, 0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="glass" style={{
+            width: '100%',
+            maxWidth: '720px',
+            background: 'rgba(15, 12, 30, 0.98)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 77, 77, 0.4)',
+            padding: '24px',
+            boxShadow: '0 25px 60px rgba(255, 0, 77, 0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>▶️</span> {selectedVideoUrl.title}
+              </h3>
+              <button
+                onClick={() => setSelectedVideoUrl(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '16px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            {getYoutubeEmbedUrl(selectedVideoUrl.url) ? (
+              <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <iframe
+                  src={getYoutubeEmbedUrl(selectedVideoUrl.url)!}
+                  title={selectedVideoUrl.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                />
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '30px' }}>
+                <a
+                  href={selectedVideoUrl.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                  style={{ padding: '12px 24px', borderRadius: '14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  ▶️ Watch Video on YouTube ➔
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

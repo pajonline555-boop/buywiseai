@@ -530,11 +530,25 @@ export function findProductBySlug(slug: string): BestsellerProduct | undefined {
 }
 
 export function getProductionProducts(): BestsellerProduct[] {
-  const allPartnerProds = applyLocalOverrides(MOCK_PARTNER_PRODUCTS || []);
-  const mappedPartnerProds = allPartnerProds.map(mapPartnerProductToBestsellerProduct);
+  const overrides = applyLocalOverrides(MOCK_PARTNER_PRODUCTS || []);
+  const activePartnerProds = overrides.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
+  const mappedPartnerProds = activePartnerProds.map(mapPartnerProductToBestsellerProduct);
+  
+  // Exclude paused partner items or their static mock aliases from public production listings
+  const pausedIds = new Set(
+    overrides
+      .filter(p => p.status === 'PAUSED' || p.status === 'DRAFT')
+      .map(p => p.id)
+  );
+  if (pausedIds.has('prod_partner_louiscraft_panties_1')) pausedIds.add('louis-craft-panties-pack');
+  if (pausedIds.has('prod_partner_zivame_bra_1')) pausedIds.add('zivame-tshirt-bra');
+  if (pausedIds.has('prod_partner_jockey_trunk_1')) pausedIds.add('jockey-men-trunk-pack');
+
+  const staticCategories = TOP_CATEGORIES.flatMap(c => c.products).filter(p => !pausedIds.has(p.id));
+
   const all = [
     ...mappedPartnerProds,
-    ...TOP_CATEGORIES.flatMap(c => c.products),
+    ...staticCategories,
     ...DYNAMIC_PARTNER_PRODUCTS
   ];
   return all.filter(p => p.environment !== 'TEST');

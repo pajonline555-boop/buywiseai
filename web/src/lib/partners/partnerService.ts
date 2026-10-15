@@ -18,6 +18,7 @@ import {
   where, 
   doc, 
   updateDoc, 
+  deleteDoc,
   orderBy 
 } from 'firebase/firestore';
 
@@ -25,6 +26,30 @@ import {
 // LOCAL STORAGE PERSISTENCE HELPERS
 // ==========================================
 const OVERRIDES_KEY = 'BUYWISE_PRODUCT_OVERRIDES_V2';
+const DELETED_IDS_KEY = 'BUYWISE_DELETED_PRODUCT_IDS_V1';
+
+export function getDeletedProductIds(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(DELETED_IDS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveDeletedProductId(productId: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const ids = getDeletedProductIds();
+    if (!ids.includes(productId)) {
+      ids.push(productId);
+      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(ids));
+    }
+  } catch (e) {
+    console.warn('LocalStorage deleted ids notice:', e);
+  }
+}
 
 export function getLocalProductOverrides(): Record<string, Partial<PartnerProduct>> {
   if (typeof window === 'undefined') return {};
@@ -304,7 +329,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Return & Refund Guaranteed',
     warranty: 'Amazon Fulfilled Guaranteed',
     gstPercent: 5,
-    status: 'LIVE',
+    status: 'PAUSED',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.9,
@@ -334,7 +359,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Return & Exchange',
     warranty: 'Amazon Fulfilled Guaranteed',
     gstPercent: 5,
-    status: 'LIVE',
+    status: 'PAUSED',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.8,
@@ -364,7 +389,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Return & Exchange',
     warranty: 'Amazon Fulfilled Guaranteed',
     gstPercent: 5,
-    status: 'LIVE',
+    status: 'PAUSED',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.9,
@@ -660,7 +685,10 @@ export async function getPartnerProducts(category?: string, includeAllStatuses: 
   // Combine baseline catalog and Firestore products so no items are missing
   const combinedMap = new Map<string, PartnerProduct>();
   MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
-  firestoreProds.forEach(p => combinedMap.set(p.id, p));
+  firestoreProds.forEach(p => {
+    const existing = combinedMap.get(p.id) || ({} as PartnerProduct);
+    combinedMap.set(p.id, { ...existing, ...p });
+  });
 
   // Auto-sync recovery: if localStorage has onboarded partner products not yet in Firestore, sync them to Firestore!
   if (typeof window !== 'undefined') {
@@ -676,7 +704,8 @@ export async function getPartnerProducts(category?: string, includeAllStatuses: 
     } catch (e) {}
   }
 
-  let allList = applyLocalOverrides(Array.from(combinedMap.values()));
+  const deletedIds = new Set(getDeletedProductIds());
+  let allList = applyLocalOverrides(Array.from(combinedMap.values())).filter(p => !deletedIds.has(p.id) && !(p as any).isDeleted);
 
   // For admin inventory control and stats (includeAllStatuses === true), return all products (LIVE, PAUSED, DRAFT)
   if (includeAllStatuses) {
@@ -1003,7 +1032,8 @@ export async function approvePartnerProduct(productId: string, status: PartnerPr
   saveLocalProductOverride(productId, { status });
 
   try {
-    await setDoc(doc(db, 'partner_products', productId), { status, updatedAt: new Date().toISOString() }, { merge: true });
+    const fullDoc = p ? { ...p, status, updatedAt: new Date().toISOString() } : { status, updatedAt: new Date().toISOString() };
+    await setDoc(doc(db, 'partner_products', productId), fullDoc, { merge: true });
     await logProductAuditAction(productId, `STATUS_CHANGED_${status}`, 'admin');
     return { success: true };
   } catch (err) {
@@ -1036,6 +1066,40 @@ export async function updatePartnerProduct(productId: string, updates: Partial<P
   }
 
   return existing || null;
+}
+
+export async function deletePartnerProduct(productId: string): Promise<boolean> {
+  const timestamp = new Date().toISOString();
+
+  // 1. Remove from in-memory baseline catalog
+  const idx = MOCK_PARTNER_PRODUCTS.findIndex(p => p.id === productId);
+  if (idx !== -1) {
+    MOCK_PARTNER_PRODUCTS.splice(idx, 1);
+  }
+
+  // 2. Persist deletion in localStorage so it never reappears on reload
+  saveDeletedProductId(productId);
+  if (typeof window !== 'undefined') {
+    try {
+      const overrides = getLocalProductOverrides();
+      delete overrides[productId];
+      saveAllLocalProductOverrides(overrides);
+    } catch (e) {
+      console.warn('LocalStorage delete override notice:', e);
+    }
+  }
+
+  // 3. Delete from Firestore collection 'partner_products'
+  try {
+    const docRef = doc(db, 'partner_products', productId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn('Firestore delete notice:', err);
+  }
+
+  // 4. Audit log
+  await logProductAuditAction(productId, 'PRODUCT_DELETED', 'admin', `Deleted from inventory workspace at ${timestamp}`);
+  return true;
 }
 
 export function mapPartnerProductToBestsellerProduct(p: PartnerProduct): BestsellerProduct {
@@ -1113,6 +1177,34 @@ export async function getPartnerProductBySlug(slug: string): Promise<PartnerProd
     console.warn('Firestore fetch partner product by slug notice:', err);
   }
 
+  return null;
+}
+
+export function getYoutubeEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  const cleanUrl = url.trim();
+  try {
+    let videoId = '';
+    if (cleanUrl.includes('youtu.be/')) {
+      videoId = cleanUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0] || '';
+    } else if (cleanUrl.includes('youtube.com/watch')) {
+      const u = new URL(cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`);
+      videoId = u.searchParams.get('v') || '';
+    } else if (cleanUrl.includes('youtube.com/shorts/')) {
+      videoId = cleanUrl.split('youtube.com/shorts/')[1]?.split(/[?#&]/)[0] || '';
+    } else if (cleanUrl.includes('youtube.com/live/')) {
+      videoId = cleanUrl.split('youtube.com/live/')[1]?.split(/[?#&]/)[0] || '';
+    } else if (cleanUrl.includes('youtube.com/embed/')) {
+      const match = cleanUrl.match(/embed\/([a-zA-Z0-9_-]{11})/);
+      if (match && match[1]) return `https://www.youtube.com/embed/${match[1]}`;
+      return cleanUrl;
+    }
+    // Direct 11-char video ID fallback
+    if (!videoId && /^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+      videoId = cleanUrl;
+    }
+    if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+  } catch (e) {}
   return null;
 }
 

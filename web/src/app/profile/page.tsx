@@ -903,6 +903,10 @@ export default function ProfilePage() {
               <Link href="/partner-terms" style={{ color: '#ffd700', textDecoration: 'none', fontWeight: 700, display: 'block', padding: '6px 0' }}>
                 🏬 {t('partner_terms')} →
               </Link>
+              <Link href="/download-app" style={{ color: '#00ff88', textDecoration: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'linear-gradient(135deg, rgba(0, 255, 136, 0.12), rgba(0, 212, 255, 0.12))', borderRadius: '12px', border: '1px solid rgba(0, 255, 136, 0.35)', marginTop: '4px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🚀 <strong>App Update Center (v1.0.5)</strong></span>
+                <span style={{ fontSize: '11px', background: '#00ff88', color: '#000', padding: '3px 8px', borderRadius: '6px', fontWeight: 900 }}>Get Latest Release →</span>
+              </Link>
             </div>
           </div>
 

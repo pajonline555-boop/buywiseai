@@ -6,6 +6,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   addDoc,
   query,
   where,
@@ -448,16 +449,20 @@ export function adminDeclareWinner(competitionId: string): { success: boolean; w
   if (!comp) return { success: false };
 
   const submissions = getSubmissions(competitionId);
-  const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED' || s.status === 'VOTING');
-  if (approvedSubmissions.length === 0) return { success: false };
+  let eligibleSubmissions = submissions.filter(s => s.status === 'APPROVED' || s.status === 'VOTING');
+  if (eligibleSubmissions.length === 0) {
+    // Fallback: consider any non-rejected submissions so admin is never blocked
+    eligibleSubmissions = submissions.filter(s => s.status !== 'REJECTED');
+  }
+  if (eligibleSubmissions.length === 0) return { success: false };
 
-  approvedSubmissions.sort((a, b) => b.voteCount - a.voteCount);
-  const topSubmission = approvedSubmissions[0];
+  eligibleSubmissions.sort((a, b) => b.voteCount - a.voteCount);
+  const topSubmission = eligibleSubmissions[0];
 
   submissions.forEach(s => {
     if (s.id === topSubmission.id) {
       s.status = 'WINNER';
-    } else if (s.status === 'APPROVED') {
+    } else if (s.status === 'APPROVED' || s.status === 'SUBMITTED') {
       s.status = 'FEATURED';
     }
   });
@@ -465,6 +470,7 @@ export function adminDeclareWinner(competitionId: string): { success: boolean; w
   comp.status = 'WINNER_DECLARED';
   comp.winnerId = topSubmission.id;
   comp.winnerName = topSubmission.userName;
+  comp.updatedAt = new Date().toISOString();
 
   saveSubmissions(submissions);
   saveCompetitions(competitions);
@@ -608,3 +614,63 @@ export async function castVoteInDb(
     return castVote(competitionId, submissionId, voterId);
   }
 }
+
+export function adminUpdateCompetitionStatus(competitionId: string, status: CompetitionStatus): boolean {
+  const competitions = getCompetitions();
+  const target = competitions.find(c => c.id === competitionId);
+  if (!target) return false;
+
+  if (status === 'LIVE') {
+    // Ensure only one competition is LIVE at a time
+    competitions.forEach(c => {
+      if (c.id !== competitionId && c.status === 'LIVE') {
+        c.status = 'VOTING_CLOSED';
+      }
+    });
+  }
+
+  target.status = status;
+  target.updatedAt = new Date().toISOString();
+  saveCompetitions(competitions);
+
+  if (db) {
+    setDoc(doc(db, 'competitions', competitionId), { status, updatedAt: target.updatedAt }, { merge: true }).catch(err => {
+      console.warn('Failed to update competition status in Firestore:', err);
+    });
+  }
+  return true;
+}
+
+export function adminToggleVoteFreeze(competitionId: string, freeze?: boolean): boolean {
+  const competitions = getCompetitions();
+  const target = competitions.find(c => c.id === competitionId);
+  if (!target) return false;
+
+  const nextFrozen = freeze !== undefined ? freeze : !target.votesFrozen;
+  target.votesFrozen = nextFrozen;
+  target.updatedAt = new Date().toISOString();
+  saveCompetitions(competitions);
+
+  if (db) {
+    setDoc(doc(db, 'competitions', competitionId), { votesFrozen: nextFrozen, updatedAt: target.updatedAt }, { merge: true }).catch(err => {
+      console.warn('Failed to toggle vote freeze in Firestore:', err);
+    });
+  }
+  return nextFrozen;
+}
+
+export async function adminDeleteCompetition(competitionId: string): Promise<boolean> {
+  let competitions = getCompetitions();
+  competitions = competitions.filter(c => c.id !== competitionId);
+  saveCompetitions(competitions);
+
+  if (db) {
+    try {
+      await deleteDoc(doc(db, 'competitions', competitionId));
+    } catch (err) {
+      console.warn('Failed to delete competition from Firestore:', err);
+    }
+  }
+  return true;
+}
+

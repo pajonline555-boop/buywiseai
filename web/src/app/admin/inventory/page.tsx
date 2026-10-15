@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth, checkIsAdminUser } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, cleanProductTitle, getCategoryFallbackImage } from "@/lib/partners/partnerService";
+import { getPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, deletePartnerProduct, cleanProductTitle, getCategoryFallbackImage, getYoutubeEmbedUrl } from "@/lib/partners/partnerService";
 import { PartnerProduct, PartnerProductStatus, ProductSource, FulfillmentType } from "@/lib/partners/types";
 import { compressImageForStorage, formatFileSize, CompressionResult } from "@/lib/imageOptimizer";
 
@@ -20,6 +20,9 @@ export default function InventoryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [optimizationInfo, setOptimizationInfo] = useState<CompressionResult | null>(null);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<{ url: string; title: string } | null>(null);
+  const [productToDelete, setProductToDelete] = useState<PartnerProduct | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -593,6 +596,27 @@ export default function InventoryPage() {
     }
   };
 
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setDeleting(true);
+    const prodTitle = cleanProductTitle(productToDelete.title);
+    try {
+      await deletePartnerProduct(productToDelete.id);
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      setSuccessMessage(`🗑️ Product "${prodTitle}" permanently deleted from inventory!`);
+      setProductToDelete(null);
+      if (editingProduct?.id === productToDelete.id) {
+        setShowModal(false);
+        setEditingProduct(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete product:", err);
+      alert("Failed to delete product. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <main style={{ paddingTop: '100px', paddingBottom: '100px', textAlign: 'center', color: '#ffffff' }}>
@@ -812,6 +836,24 @@ export default function InventoryPage() {
                         <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
                           Store: {p.brand || p.partnerName}
                         </span>
+                        {p.youtubeUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewVideoUrl({ url: p.youtubeUrl!, title: displayTitle })}
+                            style={{
+                              fontSize: '11px',
+                              color: '#ff007f',
+                              fontWeight: 800,
+                              background: 'rgba(255,0,127,0.15)',
+                              border: '1px solid rgba(255,0,127,0.4)',
+                              padding: '2px 8px',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ▶️ Video Attached
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -849,7 +891,7 @@ export default function InventoryPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      ✏️ Edit Details
+                      ✏️ Edit
                     </button>
                     <button
                       onClick={() => handleStatusToggle(p.id, p.status)}
@@ -867,6 +909,26 @@ export default function InventoryPage() {
                       }}
                     >
                       {isLive ? '⏸ Pause' : '▶ Publish'}
+                    </button>
+                    <button
+                      onClick={() => setProductToDelete(p)}
+                      title="Permanently Delete Product"
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, rgba(255, 0, 80, 0.25), rgba(217, 0, 64, 0.35))',
+                        border: '1px solid #ff0050',
+                        color: '#ff4d79',
+                        fontWeight: 900,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        boxShadow: '0 4px 12px rgba(255, 0, 80, 0.2)'
+                      }}
+                    >
+                      🗑️ Delete
                     </button>
                   </div>
                 </div>
@@ -886,7 +948,7 @@ export default function InventoryPage() {
                   <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Selling Price</th>
                   <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Fulfillment / Source</th>
                   <th style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>Status</th>
-                  <th style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap', position: 'sticky', right: 0, background: '#120e24', zIndex: 2, boxShadow: '-4px 0 10px rgba(0,0,0,0.5)' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -914,8 +976,26 @@ export default function InventoryPage() {
                               <Link href={`/product/${slug}`} target="_blank" style={{ textDecoration: 'none', color: '#ffffff', fontWeight: 800, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
                                 {displayTitle} ↗
                               </Link>
-                              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px' }}>
-                                Store: {p.brand || p.partnerName} {p.youtubeUrl ? '• ▶️ Video attached' : ''}
+                              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>Store: {p.brand || p.partnerName}</span>
+                                {p.youtubeUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewVideoUrl({ url: p.youtubeUrl!, title: displayTitle })}
+                                    style={{
+                                      background: 'rgba(255, 0, 77, 0.2)',
+                                      border: '1px solid #ff004d',
+                                      color: '#ff4d79',
+                                      fontSize: '10.5px',
+                                      fontWeight: 800,
+                                      padding: '2px 8px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    ▶️ Preview Video
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -934,7 +1014,7 @@ export default function InventoryPage() {
                             {p.status}
                           </span>
                         </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap', position: 'sticky', right: 0, background: '#120e24', zIndex: 1, boxShadow: '-4px 0 10px rgba(0,0,0,0.5)' }}>
                           <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                             <button
                               onClick={() => handleEditProduct(p)}
@@ -966,6 +1046,22 @@ export default function InventoryPage() {
                               }}
                             >
                               {isLive ? 'Pause' : 'Activate (Publish)'}
+                            </button>
+                            <button
+                              onClick={() => setProductToDelete(p)}
+                              title="Permanently Delete Product"
+                              style={{
+                                padding: '6px 14px',
+                                borderRadius: '10px',
+                                background: 'rgba(255, 0, 80, 0.15)',
+                                border: '1px solid rgba(255, 0, 80, 0.45)',
+                                color: '#ff4d79',
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🗑️ Delete
                             </button>
                           </div>
                         </td>
@@ -1275,6 +1371,22 @@ export default function InventoryPage() {
                     placeholder="https://www.youtube.com/watch?v=... or YouTube Shorts link"
                     style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255, 0, 127, 0.4)', color: '#ffffff', fontSize: '14px' }}
                   />
+                  {formData.youtubeUrl && getYoutubeEmbedUrl(formData.youtubeUrl) && (
+                    <div style={{ marginTop: '10px', padding: '12px', borderRadius: '14px', background: 'rgba(255, 0, 77, 0.1)', border: '1px solid rgba(255, 0, 77, 0.3)' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#00ff88', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>🟢</span> Live YouTube Player Verified &amp; Connected
+                      </div>
+                      <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden' }}>
+                        <iframe
+                          src={getYoutubeEmbedUrl(formData.youtubeUrl)!}
+                          title="Live Video Preview"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1288,24 +1400,220 @@ export default function InventoryPage() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '14px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    style={{ padding: '10px 20px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ffffff', fontWeight: 700 }}
-                  >
-                    Cancel
-                  </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    {editingProduct && (
+                      <button
+                        type="button"
+                        onClick={() => setProductToDelete(editingProduct)}
+                        style={{
+                          padding: '10px 18px',
+                          borderRadius: '12px',
+                          background: 'rgba(255, 0, 80, 0.15)',
+                          border: '1px solid rgba(255, 0, 80, 0.5)',
+                          color: '#ff4d79',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        🗑️ Delete Product
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      style={{ padding: '10px 20px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
 
-                  <button
-                    type="submit"
-                    disabled={busy === 'saving'}
-                    style={{ padding: '10px 24px', borderRadius: '12px', background: 'linear-gradient(135deg, #a855f7, #ff007f)', border: 'none', color: '#ffffff', fontWeight: 900, cursor: 'pointer' }}
-                  >
-                    {busy === 'saving' ? 'Publishing...' : 'Validate & Publish Product ➔'}
-                  </button>
+                    <button
+                      type="submit"
+                      disabled={busy === 'saving'}
+                      style={{ padding: '10px 24px', borderRadius: '12px', background: 'linear-gradient(135deg, #a855f7, #ff007f)', border: 'none', color: '#ffffff', fontWeight: 900, cursor: 'pointer' }}
+                    >
+                      {busy === 'saving' ? 'Publishing...' : editingProduct ? 'Save Changes ➔' : 'Validate & Publish Product ➔'}
+                    </button>
+                  </div>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Admin YouTube Video Test Preview Modal */}
+        {previewVideoUrl && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.88)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}>
+            <div className="glass" style={{
+              width: '100%',
+              maxWidth: '720px',
+              background: 'rgba(18, 14, 36, 0.98)',
+              borderRadius: '24px',
+              border: '1px solid rgba(255, 77, 77, 0.4)',
+              padding: '24px',
+              boxShadow: '0 25px 60px rgba(255, 0, 77, 0.25)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>▶️</span> {previewVideoUrl.title}
+                </h3>
+                <button
+                  onClick={() => setPreviewVideoUrl(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '16px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              {getYoutubeEmbedUrl(previewVideoUrl.url) ? (
+                <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <iframe
+                    src={getYoutubeEmbedUrl(previewVideoUrl.url)!}
+                    title={previewVideoUrl.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                  />
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '30px' }}>
+                  <a
+                    href={previewVideoUrl.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary"
+                    style={{ padding: '12px 24px', borderRadius: '14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    ▶️ Open on YouTube ➔
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Delete Product Confirmation Modal */}
+        {productToDelete && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}>
+            <div className="glass" style={{
+              width: '100%',
+              maxWidth: '520px',
+              borderRadius: '24px',
+              padding: '28px',
+              background: 'rgba(20, 10, 24, 0.98)',
+              border: '1px solid rgba(255, 0, 80, 0.4)',
+              boxShadow: '0 25px 60px rgba(255, 0, 80, 0.3)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255, 0, 80, 0.2)', border: '1px solid #ff0050', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+                  🗑️
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#ffffff', margin: 0 }}>Permanently Delete Product</h3>
+                  <div style={{ fontSize: '12px', color: '#ff4d79', fontWeight: 700 }}>Irreversible Inventory Operation</div>
+                </div>
+              </div>
+
+              {/* Product Preview Card */}
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'center', padding: '14px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                  <img
+                    src={productToDelete.primaryImage || (productToDelete.images && productToDelete.images[0]) || getCategoryFallbackImage(productToDelete.category, productToDelete.title)}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, color: '#ffffff', fontSize: '14px', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {cleanProductTitle(productToDelete.title)}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px' }}>
+                    <span style={{ color: '#00d4ff' }}>SKU: {productToDelete.sku || productToDelete.id}</span> • ₹{productToDelete.sellingPrice?.toLocaleString()} • {productToDelete.category}
+                  </div>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.5, marginBottom: '24px' }}>
+                Are you sure you want to permanently delete this SKU? It will be removed immediately from your active inventory, Cloud Firestore, and the storefront catalog.
+              </p>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setProductToDelete(null)}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={confirmDeleteProduct}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #ff0050, #d90040)',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    boxShadow: '0 8px 20px rgba(255, 0, 80, 0.4)'
+                  }}
+                >
+                  {deleting ? 'Deleting...' : '🗑️ Yes, Delete Product'}
+                </button>
+              </div>
             </div>
           </div>
         )}

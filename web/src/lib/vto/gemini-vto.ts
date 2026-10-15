@@ -3,7 +3,7 @@ import { VtoJobResult, VtoProviderConfig, VtoUserPhoto } from './types';
 
 export class GeminiVtoProvider {
   public id = "gemini-vto";
-  public name = "Google Gemini 3.1 Flash Image VTO Engine";
+  public name = "Google Gemini 2.0 Flash Image VTO Engine";
 
   public isConfigured(): boolean {
     return Boolean(process.env.GEMINI_API_KEY);
@@ -15,9 +15,9 @@ export class GeminiVtoProvider {
       id: this.id,
       name: this.name,
       isConfigured: configured,
-      modelName: "gemini-3.1-flash-image",
+      modelName: "gemini-2.0-flash-preview-image-generation",
       statusMessage: configured 
-        ? "Google Gemini 3.1 Flash Image VTO Engine active." 
+        ? "Google Gemini 2.0 Flash Image VTO Engine active." 
         : "AI Virtual Try-On provider is unconfigured. Please set GEMINI_API_KEY in .env.local to enable live AI image editing."
     };
   }
@@ -39,7 +39,7 @@ export class GeminiVtoProvider {
   ): Promise<VtoJobResult> {
     const configured = this.isConfigured();
     const apiKey = process.env.GEMINI_API_KEY;
-    const modelName = "gemini-3.1-flash-image";
+    const modelName = "gemini-2.0-flash-preview-image-generation";
     const jobId = `vto_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const createdAt = new Date().toISOString();
 
@@ -135,7 +135,7 @@ export class GeminiVtoProvider {
           providerId: this.id,
           createdAt,
           completedAt: createdAt,
-          error: "IMAGE_OUTPUT_UNAVAILABLE: gemini-3.1-flash-image did not return inlineData image bytes."
+          error: "IMAGE_OUTPUT_UNAVAILABLE: gemini-2.5-flash-image did not return inlineData image bytes."
         };
       }
     } catch (err: any) {
@@ -143,9 +143,9 @@ export class GeminiVtoProvider {
       let classifiedError = "VTO_GENERATION_FAILED";
 
       if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("Quota exceeded")) {
-        classifiedError = "QUOTA_EXHAUSTED: Google Gemini API quota limit 0 reached for model gemini-3.1-flash-image. Enable billing or check quotas at ai.google.dev.";
+        classifiedError = "QUOTA_EXHAUSTED: Google Gemini API quota limit reached for model gemini-2.5-flash-image. Enable billing or check quotas at ai.google.dev.";
       } else if (errMsg.includes("404") || errMsg.includes("not found")) {
-        classifiedError = "MODEL_NOT_FOUND: gemini-3.1-flash-image endpoint is not enabled or accessible for this API key.";
+        classifiedError = "MODEL_NOT_FOUND: gemini-2.5-flash-image endpoint is not enabled or accessible for this API key.";
       } else if (errMsg.includes("403") || errMsg.includes("API_KEY_INVALID")) {
         classifiedError = "INVALID_API_KEY: Provided GEMINI_API_KEY is invalid or unauthorized.";
       }

@@ -89,46 +89,32 @@ fun GenGStoreShowcase(
                 slug = "etietnic-gujarati-traditional-embroidered-kamarbandh"
             ),
             PartnerProductSlide(
-                id = "prod_partner_louiscraft_panties_1",
-                title = "Louis Craft Women's Cotton Printed Panties (Pack of 5)",
-                description = "Verified Amazon India Best Seller: 100% Super Soft Combed Cotton Panties with Anti-Bacterial Hipster Fit.",
-                retailer = "AMAZON INDIA",
-                rating = "4.9",
-                reviewCount = "1420",
-                sellingPrice = "₹289",
-                mrp = "₹499",
-                discountPercent = "42% OFF SPECIAL DEAL",
-                imageUrl = "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg",
-                productUrl = "https://www.amazon.in/Louis-Craft-Printed-Panties-Multicolour/dp/B0FNWFT4FB",
-                slug = "louis-craft-panties-pack"
+                id = "prod_partner_flipkart_s24_1",
+                title = "Samsung Galaxy S24 5G (Onyx Black, 256 GB)",
+                description = "Flipkart Big Billion Deal: 8 GB RAM, Galaxy AI Features with Circle to Search, 50MP Pro-Grade Camera.",
+                retailer = "FLIPKART",
+                rating = "4.6",
+                reviewCount = "2890",
+                sellingPrice = "₹64,999",
+                mrp = "₹79,999",
+                discountPercent = "18% OFF SPECIAL DEAL",
+                imageUrl = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+                productUrl = "https://www.flipkart.com/samsung-galaxy-s24-5g/p/itm12345",
+                slug = "samsung-s24-ultra"
             ),
             PartnerProductSlide(
-                id = "prod_partner_zivame_bra_1",
-                title = "Zivame Padded Wirefree Seamless T-Shirt Bra",
-                description = "Amazon India Best Seller: Super Soft Polyamide Microfiber Stretch with 3/4th Coverage Seamless Moulded Padded Cups.",
-                retailer = "AMAZON INDIA",
+                id = "prod_partner_meesho_georgette_1",
+                title = "Meesho Trending Heavy Georgette Sequence Saree with Blouse",
+                description = "Meesho Verified Super Deal: Premium Bollywood style embroidered sequence work Georgette saree.",
+                retailer = "MEESHO",
                 rating = "4.8",
-                reviewCount = "3890",
-                sellingPrice = "₹999",
-                mrp = "₹1,999",
-                discountPercent = "50% OFF SPECIAL DEAL",
-                imageUrl = "https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg",
-                productUrl = "https://www.amazon.in/Zivame-Padded-Wirefree-Seamless-T-Shirt/dp/B09XYZBRA1",
-                slug = "zivame-tshirt-bra"
-            ),
-            PartnerProductSlide(
-                id = "prod_partner_jockey_trunk_1",
-                title = "Jockey Men's Super Combed Cotton Trunk (Pack of 3)",
-                description = "Amazon India Top Rated: 100% Super Combed Cotton Ribbed Fabric with Ultra-Soft Microfiber Elastic Waistband.",
-                retailer = "AMAZON INDIA",
-                rating = "4.9",
-                reviewCount = "6120",
+                reviewCount = "8940",
                 sellingPrice = "₹899",
-                mrp = "₹1,199",
-                discountPercent = "25% OFF SPECIAL DEAL",
-                imageUrl = "https://m.media-amazon.com/images/I/61W8YLsLmSL._AC_SL800_.jpg",
-                productUrl = "https://www.amazon.in/s?k=Jockey+Men+Cotton+Trunk",
-                slug = "jockey-men-trunk-pack"
+                mrp = "₹2,499",
+                discountPercent = "64% OFF SPECIAL DEAL",
+                imageUrl = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+                productUrl = "https://www.meesho.com/s/p/trending-georgette-saree-1234",
+                slug = "biba-anarkali-suit"
             ),
             PartnerProductSlide(
                 id = "prod_partner_iphone17_1",
@@ -177,10 +163,10 @@ fun GenGStoreShowcase(
 
     var currentIndex by remember { mutableStateOf(0) }
 
-    // STRICT OWNER REQUIREMENT: Auto-slide interval MUST be 1000ms (1 second)
+    // Auto-slide interval: 4 seconds (comfortable reading pace)
     LaunchedEffect(key1 = items.size) {
         while (true) {
-            delay(1000L) // 1 second interval
+            delay(4000L) // 4 second interval
             currentIndex = (currentIndex + 1) % items.size
         }
     }
@@ -643,7 +629,7 @@ fun GenGStoreShowcase(
                     }
 
                     Text(
-                        text = "SLIDE 0${currentIndex + 1} / 0${items.size} • 1s AUTOPLAY",
+                        text = "SLIDE 0${currentIndex + 1} / 0${items.size} • 4s AUTOPLAY",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = BuyWiseEmerald

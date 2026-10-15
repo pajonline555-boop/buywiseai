@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
@@ -93,6 +94,7 @@ fun ProfileScreen(
     var activeModalSubtitle by remember { mutableStateOf("") }
     var activeModalContent by remember { mutableStateOf("") }
     var activeModalWebsiteUrl by remember { mutableStateOf("") }
+    var showAppUpdateDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("buywise_profile_prefs", Context.MODE_PRIVATE) }
@@ -136,6 +138,21 @@ fun ProfileScreen(
                     .putString("saved_display_name", name)
                     .putString("saved_user_email", email)
                     .apply()
+            }
+            // Load full profile from Firestore (gets mobile, updated name, etc.)
+            authRepo.loadUserProfileFromFirestore { firestoreName, firestoreEmail, firestoreMobile, _ ->
+                if (firestoreName.isNotBlank()) {
+                    userDisplayName = firestoreName
+                    sharedPrefs.edit().putString("saved_display_name", firestoreName).apply()
+                }
+                if (firestoreEmail.isNotBlank()) {
+                    userEmail = firestoreEmail
+                    sharedPrefs.edit().putString("saved_user_email", firestoreEmail).apply()
+                }
+                if (firestoreMobile.isNotBlank()) {
+                    userPhone = firestoreMobile
+                    sharedPrefs.edit().putString("saved_user_phone", firestoreMobile).apply()
+                }
             }
         } else if (state is AuthState.Unauthenticated) {
             userDisplayName = "Guest Shopper"
@@ -838,7 +855,16 @@ fun ProfileScreen(
             val versionName = BuildConfig.VERSION_NAME
             val versionCode = BuildConfig.VERSION_CODE
             ProfileMenuItem(
-                title = "App Version: v$versionName (Code: $versionCode)",
+                title = "Check for App Updates (v$versionName)",
+                actionText = "Update ➔",
+                icon = Icons.Default.Refresh,
+                accentColor = BuyWiseEmerald,
+                onClick = {
+                    showAppUpdateDialog = true
+                }
+            )
+            ProfileMenuItem(
+                title = "App Version: v$versionName (Build: $versionCode)",
                 actionText = "v$versionName ($versionCode) ➔",
                 icon = Icons.Default.Info,
                 accentColor = Color.Gray,
@@ -886,6 +912,93 @@ fun ProfileScreen(
             )
 
             Spacer(modifier = Modifier.height(40.dp))
+
+            // APP UPDATE CENTER DIALOG
+            if (showAppUpdateDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAppUpdateDialog = false },
+                    containerColor = Color(0xFF141026),
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🚀", fontSize = 24.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("App Update Center", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                Text("BuyWise AI for Android", color = BuyWiseCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    },
+                    text = {
+                        Column {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1F1A38)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Installed Version", color = Color.Gray, fontSize = 12.sp)
+                                        Text("v$versionName (Build $versionCode)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Platform", color = Color.Gray, fontSize = 12.sp)
+                                        Text("Android 15 (API 35)", color = BuyWiseCyan, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Status", color = Color.Gray, fontSize = 12.sp)
+                                        Text("● Official Production Release", color = BuyWiseEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Text("✨ WHAT'S NEW IN THIS UPDATE:", color = BuyWiseGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("• ⚡ Instant Google Sign-In with Dual-Engine Auto-Recovery (fixes Google Play Services Code 8 & Code 10)", color = Color.LightGray, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("• 👗 AI Virtual Try-On 2.0 with On-Device Private DPDP 2025 Storage", color = Color.LightGray, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("• 🛍️ Real-Time Price Comparison across Amazon, Flipkart, Croma & Meesho", color = Color.LightGray, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("• 🏷️ Verified Live Coupons & Gen-G Direct Merchant Store", color = Color.LightGray, fontSize = 11.sp)
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = {
+                                    showAppUpdateDialog = false
+                                    openPlayStorePage()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("UPDATE ON GOOGLE PLAY STORE ➔", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showAppUpdateDialog = false }) {
+                            Text("Close", color = Color.Gray)
+                        }
+                    }
+                )
+            }
 
             // LEGAL DOCUMENT MODAL WITH PROMINENT WEBSITE LINK BUTTON
             activeModalTitle?.let { title ->

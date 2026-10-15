@@ -230,18 +230,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      googleProvider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, googleProvider);
       if (result?.user) {
         const isSysAdmin = checkIsAdminUser(result.user.email, result.user.phoneNumber);
         setUser(result.user);
         setIsAdmin(isSysAdmin);
-        await fetchProfile(result.user.uid, result.user);
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        } else {
-          router.push('/');
-        }
+        // Instant non-blocking profile sync in background
+        fetchProfile(result.user.uid, result.user).catch(() => {});
+        router.push('/');
       }
     } catch (popupErr: any) {
       console.warn("Google popup notice, attempting redirect fallback:", popupErr?.code || popupErr?.message);

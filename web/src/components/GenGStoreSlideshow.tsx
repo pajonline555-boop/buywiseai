@@ -5,17 +5,20 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CheckoutModal from '@/components/CheckoutModal';
 import { PartnerProduct } from '@/lib/partners/types';
-import { getPartnerProducts, MOCK_PARTNER_PRODUCTS, getCategoryFallbackImage } from '@/lib/partners/partnerService';
+import { getPartnerProducts, MOCK_PARTNER_PRODUCTS, getCategoryFallbackImage, getYoutubeEmbedUrl } from '@/lib/partners/partnerService';
 import SafeProductImage from '@/components/SafeProductImage';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 
 export default function GenGStoreSlideshow() {
-  const [products, setProducts] = useState<PartnerProduct[]>(MOCK_PARTNER_PRODUCTS);
+  const [products, setProducts] = useState<PartnerProduct[]>(() =>
+    MOCK_PARTNER_PRODUCTS.filter(p => (p.status === 'LIVE' || (p.status as any) === 'ACTIVE') && p.primaryImage)
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<PartnerProduct | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
@@ -25,7 +28,10 @@ export default function GenGStoreSlideshow() {
       try {
         const liveProds = await getPartnerProducts();
         if (liveProds.length > 0) {
-          const withImagesOnly = liveProds.filter(p => p.primaryImage && typeof p.primaryImage === "string" && p.primaryImage.trim() !== "");
+          const withImagesOnly = liveProds.filter(
+            p => (p.status === 'LIVE' || (p.status as any) === 'ACTIVE') &&
+                 p.primaryImage && typeof p.primaryImage === "string" && p.primaryImage.trim() !== ""
+          );
           setProducts(withImagesOnly);
         }
       } catch (err) {
@@ -35,7 +41,10 @@ export default function GenGStoreSlideshow() {
     loadData();
   }, []);
 
-  const validProducts = products.filter(p => p.primaryImage && typeof p.primaryImage === "string" && p.primaryImage.trim() !== "");
+  const validProducts = products.filter(
+    p => (p.status === 'LIVE' || (p.status as any) === 'ACTIVE') &&
+         p.primaryImage && typeof p.primaryImage === "string" && p.primaryImage.trim() !== ""
+  );
 
   // Auto-play slideshow timer (3 seconds rotation)
   useEffect(() => {
@@ -299,6 +308,31 @@ export default function GenGStoreSlideshow() {
                 </h3>
               </Link>
 
+              {currentProduct.youtubeUrl && (
+                <div style={{ marginBottom: '12px' }}>
+                  <button
+                    onClick={() => setIsVideoModalOpen(true)}
+                    title="Watch Official YouTube Video Demo"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 0, 77, 0.22)',
+                      border: '1px solid #ff004d',
+                      color: '#ff4d79',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>▶️</span> Watch Official Video Demo
+                  </button>
+                </div>
+              )}
+
               <p style={{ fontSize: '14px', color: '#cbd5e1', marginBottom: '24px', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {currentProduct.description}
               </p>
@@ -479,6 +513,78 @@ export default function GenGStoreSlideshow() {
         onClose={() => setIsCheckoutOpen(false)}
         product={selectedProductForCheckout}
       />
+
+      {/* Embedded YouTube Video Demo Modal */}
+      {isVideoModalOpen && currentProduct.youtubeUrl && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0, 0, 0, 0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="glass" style={{
+            width: '100%',
+            maxWidth: '720px',
+            background: 'rgba(15, 12, 30, 0.98)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 77, 77, 0.4)',
+            padding: '24px',
+            boxShadow: '0 25px 60px rgba(255, 0, 77, 0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>▶️</span> {currentProduct.title}
+              </h3>
+              <button
+                onClick={() => setIsVideoModalOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '16px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            {getYoutubeEmbedUrl(currentProduct.youtubeUrl) ? (
+              <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <iframe
+                  src={getYoutubeEmbedUrl(currentProduct.youtubeUrl)!}
+                  title={currentProduct.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                />
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '30px' }}>
+                <a
+                  href={currentProduct.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                  style={{ padding: '12px 24px', borderRadius: '14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  ▶️ Watch Video on YouTube ➔
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { savePartnerProduct } from '@/lib/partners/partnerService';
 import { generateBuyWiseShareUrl } from '@/lib/affiliate/affiliateLinkBuilder';
@@ -47,6 +47,25 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [optimizationInfo, setOptimizationInfo] = useState<CompressionResult | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth <= 768) {
+        setIsFullScreen(true);
+      }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   const processImageFile = async (file: File | Blob) => {
     if (!file.type || !file.type.startsWith('image/')) {
@@ -428,45 +447,128 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(5, 3, 12, 0.85)',
-      backdropFilter: 'blur(16px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000,
-      padding: '20px'
-    }}>
-      <div className="glass" style={{
-        width: '100%',
-        maxWidth: '540px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        borderRadius: '28px',
-        border: '1px solid rgba(0, 255, 136, 0.4)',
-        padding: '30px',
-        background: '#0d0a1a',
-        boxShadow: '0 25px 60px rgba(0, 255, 136, 0.15)'
-      }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100dvh',
+        background: 'rgba(5, 3, 12, 0.92)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex',
+        alignItems: isFullScreen ? 'stretch' : 'center',
+        justifyContent: 'center',
+        zIndex: 999999,
+        padding: isFullScreen ? 0 : '20px',
+        overflow: 'hidden'
+      }}
+    >
+      <div
+        className="glass"
+        style={{
+          width: '100%',
+          maxWidth: isFullScreen ? '100%' : '580px',
+          height: isFullScreen ? '100%' : 'auto',
+          maxHeight: isFullScreen ? '100dvh' : '90vh',
+          borderRadius: isFullScreen ? 0 : '28px',
+          border: isFullScreen ? 'none' : '1px solid rgba(0, 255, 136, 0.4)',
+          background: '#0d0a1a',
+          boxShadow: '0 25px 60px rgba(0, 255, 136, 0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Sticky Header with Title, Fullscreen toggle and Close */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 20px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            background: 'rgba(13, 10, 26, 0.98)',
+            flexShrink: 0,
+            zIndex: 10
+          }}
+        >
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 900, padding: '4px 10px', borderRadius: '12px', background: 'rgba(0, 255, 136, 0.15)', color: '#00ff88', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 900,
+                padding: '4px 10px',
+                borderRadius: '12px',
+                background: 'rgba(0, 255, 136, 0.15)',
+                color: '#00ff88',
+                border: '1px solid rgba(0, 255, 136, 0.3)'
+              }}
+            >
               ⚡ REAL-TIME ADMIN CMS
             </span>
-            <h2 style={{ fontSize: '24px', fontWeight: 900, marginTop: '6px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, marginTop: '4px', margin: 0, color: '#ffffff' }}>
               Add Product by Link 🔗
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '24px', cursor: 'pointer' }}>✕</button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setIsFullScreen(prev => !prev)}
+              title={isFullScreen ? "Exit Fullscreen" : "Fullscreen View"}
+              style={{
+                background: 'rgba(0, 212, 255, 0.12)',
+                border: '1px solid rgba(0, 212, 255, 0.4)',
+                color: '#00d4ff',
+                padding: '6px 12px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              {isFullScreen ? '🗗 Normal' : '⛶ Fullscreen'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                color: 'white',
+                fontSize: '18px',
+                cursor: 'pointer',
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {/* Scrollable Form Area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: isFullScreen ? '18px 16px 80px' : '24px 30px 40px'
+          }}
+        >
+          <form onSubmit={handleSubmit}>
           {/* Product Link Input */}
           <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -768,6 +870,7 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
             {loading ? 'Saving in Real-Time...' : '🚀 Publish Product by Link (Real-Time)'}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );
