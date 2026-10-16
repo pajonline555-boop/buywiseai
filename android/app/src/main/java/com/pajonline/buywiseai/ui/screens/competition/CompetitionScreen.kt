@@ -61,8 +61,8 @@ fun CompetitionScreen(
     onNavigateToVto: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val activeComp = remember { CompetitionRepository.getActiveCompetition() }
-    val pastWinnerPair = remember { CompetitionRepository.getPastWinnerCompetition() }
+    val activeComp = CompetitionRepository.getActiveCompetition()
+    val pastWinnerPair = CompetitionRepository.getPastWinnerCompetition()
     val submissions = remember(activeComp?.id) {
         if (activeComp != null) CompetitionRepository.getSubmissionsForCompetition(activeComp.id) else emptyList()
     }

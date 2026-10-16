@@ -1,6 +1,7 @@
 package com.pajonline.buywiseai.data.repository
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import com.pajonline.buywiseai.domain.model.Competition
 import com.pajonline.buywiseai.domain.model.CompetitionSubmission
 import com.pajonline.buywiseai.domain.model.CompetitionVote
@@ -12,9 +13,26 @@ object CompetitionRepository {
 
     private val initialCompetitions = listOf(
         Competition(
+            id = "comp-1792144504194",
+            title = "Weekly BuyWise Fashion Challenge: Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh/Waist Band for Chaniya Choli & Garba Dress",
+            description = "Try on this week's featured fashion product and submit your entry to win!",
+            featuredProductId = "prod-1792144504194",
+            featuredProductTitle = "Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh/Waist Band for Chaniya Choli & Garba Dress",
+            featuredProductImage = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+            featuredProductPrice = 499,
+            retailer = "Amazon India",
+            startDate = "2026-10-16T09:55:04.194Z",
+            endDate = "2026-10-23T09:55:04.194Z",
+            votingEndDate = "2026-10-23T09:55:04.194Z",
+            status = "LIVE",
+            prizeDescription = "Free Dress+ BuyWise Home & Social Media Spotlight",
+            createdBy = "pajonline555@gmail.com",
+            createdAt = "2026-10-16T09:55:04.194Z"
+        ),
+        Competition(
             id = "comp-week-37-2026",
             title = "Weekly BuyWise Fashion Challenge: Royal Kanjivaram Silk Saree",
-            description = "Try on this week's featured Kanjivaram Silk Saree, submit your look, and compete for the top community vote!",
+            description = "Previous challenge: Authentic Banarasi Kanjivaram Silk Saree in Crimson Gold.",
             featuredProductId = "prod-kanjivaram-silk-1",
             featuredProductTitle = "Authentic Banarasi Kanjivaram Silk Saree in Crimson Gold",
             featuredProductImage = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
@@ -23,7 +41,7 @@ object CompetitionRepository {
             startDate = "2026-09-07T00:00:00Z",
             endDate = "2026-09-12T23:59:59Z",
             votingEndDate = "2026-09-13T18:00:00Z",
-            status = "LIVE",
+            status = "VOTING_CLOSED",
             prizeDescription = "₹5,000 Shopping Voucher + Featured Banner on BuyWise Home Screen",
             createdBy = "pajonline555@gmail.com",
             createdAt = "2026-09-07T00:00:00Z"
@@ -91,14 +109,95 @@ object CompetitionRepository {
 
     private val userVotes = mutableStateListOf<CompetitionVote>()
 
-    fun getActiveCompetition(): Competition? {
-        return initialCompetitions.firstOrNull { it.status == "LIVE" } ?: initialCompetitions.firstOrNull()
+    private val _activeCompetition = mutableStateOf<Competition?>(
+        initialCompetitions.firstOrNull { it.status == "LIVE" } ?: initialCompetitions.firstOrNull()
+    )
+
+    private val _pastWinnerCompetition = mutableStateOf<Pair<Competition, CompetitionSubmission>?>(
+        computeInitialWinnerPair()
+    )
+
+    init {
+        startFirestoreSync()
     }
 
-    fun getPastWinnerCompetition(): Pair<Competition, CompetitionSubmission>? {
+    private fun computeInitialWinnerPair(): Pair<Competition, CompetitionSubmission>? {
         val pastComp = initialCompetitions.firstOrNull { it.status == "WINNER_DECLARED" } ?: return null
         val winnerSub = initialSubmissions.firstOrNull { it.id == pastComp.winnerId || it.status == "WINNER" } ?: return null
         return Pair(pastComp, winnerSub)
+    }
+
+    private fun startFirestoreSync() {
+        try {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            db.collection("competitions").addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val parsed = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val priceNum = doc.get("featuredProductPrice")
+                        val price = when (priceNum) {
+                            is Number -> priceNum.toInt()
+                            is String -> priceNum.toIntOrNull() ?: 0
+                            else -> 0
+                        }
+                        Competition(
+                            id = doc.id,
+                            title = doc.getString("title") ?: "",
+                            description = doc.getString("description") ?: "",
+                            featuredProductId = doc.getString("featuredProductId") ?: "",
+                            featuredProductTitle = doc.getString("featuredProductTitle") ?: "",
+                            featuredProductImage = doc.getString("featuredProductImage") ?: "",
+                            featuredProductPrice = price,
+                            retailer = doc.getString("retailer") ?: "Amazon India",
+                            startDate = doc.getString("startDate") ?: "",
+                            endDate = doc.getString("endDate") ?: "",
+                            votingEndDate = doc.getString("votingEndDate") ?: "",
+                            status = doc.getString("status") ?: "LIVE",
+                            prizeDescription = doc.getString("prizeDescription") ?: "",
+                            termsVersion = doc.getString("termsVersion") ?: "1.0",
+                            createdBy = doc.getString("createdBy") ?: "pajonline555@gmail.com",
+                            createdAt = doc.getString("createdAt") ?: "",
+                            votesFrozen = doc.getBoolean("votesFrozen") ?: false,
+                            winnerId = doc.getString("winnerId"),
+                            winnerName = doc.getString("winnerName")
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                if (parsed.isNotEmpty()) {
+                    val live = parsed.firstOrNull { it.status == "LIVE" }
+                    if (live != null) {
+                        _activeCompetition.value = live
+                    }
+                    val winnerComp = parsed.firstOrNull { it.status == "WINNER_DECLARED" }
+                    if (winnerComp != null) {
+                        val sub = initialSubmissions.firstOrNull { it.id == winnerComp.winnerId || it.status == "WINNER" }
+                            ?: CompetitionSubmission(
+                                id = winnerComp.winnerId ?: "sub-winner",
+                                competitionId = winnerComp.id,
+                                userId = "user-winner",
+                                userName = winnerComp.winnerName ?: "Sneha Reddy",
+                                vtoResultImage = winnerComp.featuredProductImage,
+                                submittedAt = winnerComp.createdAt,
+                                status = "WINNER",
+                                voteCount = 1284
+                            )
+                        _pastWinnerCompetition.value = Pair(winnerComp, sub)
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            // Keep current active fallback
+        }
+    }
+
+    fun getActiveCompetition(): Competition? {
+        return _activeCompetition.value
+    }
+
+    fun getPastWinnerCompetition(): Pair<Competition, CompetitionSubmission>? {
+        return _pastWinnerCompetition.value
     }
 
     fun getSubmissionsForCompetition(competitionId: String): List<CompetitionSubmission> {

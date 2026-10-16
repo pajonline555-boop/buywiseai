@@ -176,8 +176,8 @@ fun HomeScreen(
         }
     }
 
-    val activeComp = remember { CompetitionRepository.getActiveCompetition() }
-    val pastWinnerPair = remember { CompetitionRepository.getPastWinnerCompetition() }
+    val activeComp = CompetitionRepository.getActiveCompetition()
+    val pastWinnerPair = CompetitionRepository.getPastWinnerCompetition()
 
     val retailers = listOf("Amazon India", "Flipkart", "Meesho", "Myntra", "AJIO", "Nykaa", "Tata CLiQ", "eBay")
     val categories = listOf(
