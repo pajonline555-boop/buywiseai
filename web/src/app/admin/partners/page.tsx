@@ -3,18 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { Partner, PartnerProduct, PartnerOrder } from '@/lib/partners/types';
 import { 
   getPartners, 
+  getCachedPartners,
   getPartnerProducts, 
+  getCachedPartnerProducts,
   getPartnerOrders, 
+  getCachedPartnerOrders,
   approvePartner, 
   approvePartnerProduct 
 } from '@/lib/partners/partnerService';
 import AddProductByLinkModal from '@/components/AddProductByLinkModal';
 
 export default function AdminPartnersPage() {
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const [products, setProducts] = useState<PartnerProduct[]>([]);
-  const [orders, setOrders] = useState<PartnerOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [partners, setPartners] = useState<Partner[]>(() => getCachedPartners());
+  const [products, setProducts] = useState<PartnerProduct[]>(() => getCachedPartnerProducts());
+  const [orders, setOrders] = useState<PartnerOrder[]>(() => getCachedPartnerOrders());
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'partners' | 'products' | 'orders'>('partners');
   const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
 

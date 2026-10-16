@@ -4,14 +4,15 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth, checkIsAdminUser } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, deletePartnerProduct, cleanProductTitle, getCategoryFallbackImage, getYoutubeEmbedUrl } from "@/lib/partners/partnerService";
+import { getPartnerProducts, getCachedPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, deletePartnerProduct, cleanProductTitle, getCategoryFallbackImage, getYoutubeEmbedUrl } from "@/lib/partners/partnerService";
 import { PartnerProduct, PartnerProductStatus, ProductSource, FulfillmentType } from "@/lib/partners/types";
 import { compressImageForStorage, formatFileSize, CompressionResult } from "@/lib/imageOptimizer";
 
 export default function InventoryPage() {
   const { isAdmin, user, loading } = useAuth();
   const router = useRouter();
-  const [products, setProducts] = useState<PartnerProduct[]>([]);
+  const [products, setProducts] = useState<PartnerProduct[]>(() => getCachedPartnerProducts('all', true));
+  const [isSyncing, setIsSyncing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<PartnerProduct | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -209,18 +210,21 @@ export default function InventoryPage() {
     }
   };
 
-  const loadProducts = async () => {
-    const list = await getPartnerProducts('all', true);
-    setProducts(list);
+  const loadProducts = async (force: boolean = false) => {
+    setIsSyncing(true);
+    try {
+      const list = await getPartnerProducts('all', true, force);
+      setProducts(list);
+    } catch (err) {
+      console.warn('Inventory sync notice:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {
     loadProducts();
   }, []);
-
-  useEffect(() => {
-    loadProducts();
-  }, [isAuthorized]);
 
   useEffect(() => {
     if (showModal || productToDelete) {
@@ -789,28 +793,24 @@ export default function InventoryPage() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => {
-                if (typeof window !== 'undefined') {
-                  try {
-                    sessionStorage.clear();
-                  } catch (e) {}
-                  loadProducts();
-                }
+                loadProducts(true);
               }}
+              disabled={isSyncing}
               style={{
                 padding: '12px 18px',
                 borderRadius: '16px',
                 background: 'rgba(255, 255, 255, 0.08)',
-                color: '#00d4ff',
+                color: isSyncing ? '#ffd700' : '#00d4ff',
                 fontWeight: 800,
                 fontSize: '13px',
-                border: '1px solid rgba(0, 212, 255, 0.4)',
-                cursor: 'pointer',
+                border: isSyncing ? '1px solid rgba(255, 215, 0, 0.5)' : '1px solid rgba(0, 212, 255, 0.4)',
+                cursor: isSyncing ? 'wait' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
             >
-              🔄 Refresh Catalog
+              {isSyncing ? '⚡ Syncing Live...' : '🔄 Refresh Catalog'}
             </button>
             <button 
               onClick={handleOpenNewModal}
@@ -845,7 +845,7 @@ export default function InventoryPage() {
         <div className="mobile-inventory-cards">
           {products.length === 0 ? (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: '#cbd5e1', background: 'rgba(18, 14, 36, 0.95)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-              No partner products registered yet. Click &quot;Onboard New Partner Product&quot; above.
+              {isSyncing ? '⚡ Syncing verified partner inventory...' : 'No partner products registered yet. Click "Onboard New Partner Product" above.'}
             </div>
           ) : (
             products.map(p => {
@@ -1022,7 +1022,7 @@ export default function InventoryPage() {
                 {products.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '60px', textAlign: 'center', color: '#cbd5e1' }}>
-                      No partner products registered yet. Click &quot;Onboard New Partner Product&quot; above.
+                      {isSyncing ? '⚡ Syncing verified partner inventory...' : 'No partner products registered yet. Click "Onboard New Partner Product" above.'}
                     </td>
                   </tr>
                 ) : (

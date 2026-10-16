@@ -298,11 +298,11 @@ export async function processReturnInspection(
       (prod as any).soldStock = Math.max(0, ((prod as any).soldStock || 0) - quantity);
       
       try {
-        withTimeout(updateDoc(doc(db, 'partner_products', prod.id), {
+        withTimeout(setDoc(doc(db, 'partner_products', prod.id), {
           stock: prod.stock,
           soldStock: (prod as any).soldStock,
           updatedAt: timestamp
-        }));
+        }, { merge: true }));
       } catch (e) {
         // Sync notice
       }

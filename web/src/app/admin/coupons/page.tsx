@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BuyWiseCoupon, CouponStatus, RetailerName, CouponDiscountType } from '@/lib/coupons/types';
-import { getCoupons, updateCouponStatus, createCoupon } from '@/lib/coupons/couponService';
+import { getCoupons, getCachedCoupons, updateCouponStatus, createCoupon } from '@/lib/coupons/couponService';
 
 export default function AdminCouponsWorkspace() {
-  const [coupons, setCoupons] = useState<BuyWiseCoupon[]>([]);
+  const [coupons, setCoupons] = useState<BuyWiseCoupon[]>(() => getCachedCoupons('ALL'));
   const [activeTab, setActiveTab] = useState<string>('ALL');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);

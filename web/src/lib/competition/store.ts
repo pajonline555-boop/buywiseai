@@ -130,6 +130,33 @@ export function isTestRecord(item?: { id?: string; environment?: string; isTest?
 // Initial fallback competitions
 export const INITIAL_COMPETITIONS: Competition[] = [
   {
+    id: 'comp-1792144504194',
+    title: 'Weekly BuyWise Fashion Challenge: Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh/Waist Band for Chaniya Choli & Garba Dress',
+    description: "Try on this week's featured fashion product and submit your entry to win!",
+    featuredProductId: 'prod-1792144504194',
+    featuredProductTitle: 'Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh/Waist Band for Chaniya Choli & Garba Dress',
+    featuredProductImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    featuredProductPrice: 499,
+    retailer: 'Amazon India',
+    startDate: '2026-10-16T09:55:04.194Z',
+    submissionCloseDate: '2026-10-23T09:55:04.194Z',
+    votingStartDate: '2026-10-16T09:55:04.194Z',
+    votingCloseDate: '2026-10-23T09:55:04.194Z',
+    winnerAnnouncementDate: '2026-10-23T09:55:04.194Z',
+    endDate: '2026-10-23T09:55:04.194Z',
+    votingEndDate: '2026-10-23T09:55:04.194Z',
+    status: 'LIVE',
+    prizeDescription: 'Free Dress+ BuyWise Home & Social Media Spotlight',
+    eligibility: 'Registered Shoppers in India',
+    rules: 'One submission per user.',
+    termsVersion: '1.0',
+    createdBy: 'pajonline555@gmail.com',
+    createdAt: '2026-10-16T09:55:04.194Z',
+    updatedAt: '2026-10-16T09:55:04.194Z',
+    votesFrozen: false,
+    environment: 'PRODUCTION'
+  },
+  {
     id: 'comp-week-37-2026',
     title: 'Weekly BuyWise Fashion Challenge: Royal Kanjivaram Silk Saree',
     description: 'Try on this week\'s featured Kanjivaram Silk Saree, submit your look, and compete for the top community vote!',
@@ -145,7 +172,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     winnerAnnouncementDate: '2026-09-13T20:00:00Z',
     endDate: '2026-09-12T23:59:59Z',
     votingEndDate: '2026-09-13T18:00:00Z',
-    status: 'LIVE',
+    status: 'VOTING_CLOSED',
     prizeDescription: '₹5,000 Shopping Voucher + Featured Banner on BuyWise Home Screen',
     eligibility: 'All verified BuyWise registered shoppers in India',
     rules: 'One Try-On submission per user per week. Explicit consent required.',
@@ -245,17 +272,30 @@ export function getCompetitions(): Competition[] {
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(STORAGE_COMPETITIONS_KEY);
-      if (saved) list = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge with INITIAL_COMPETITIONS so new additions are never masked by stale cache
+          const map = new Map<string, Competition>();
+          INITIAL_COMPETITIONS.forEach(c => map.set(c.id, c));
+          parsed.forEach((c: Competition) => map.set(c.id, c));
+          list = Array.from(map.values());
+        }
+      }
     } catch {
       list = INITIAL_COMPETITIONS;
     }
   }
-  return list.filter(c => !isTestRecord(c));
+  return list
+    .filter(c => !isTestRecord(c))
+    .sort((a, b) => new Date(b.createdAt || b.startDate || 0).getTime() - new Date(a.createdAt || a.startDate || 0).getTime());
 }
 
 export function getActiveCompetition(): Competition | undefined {
   const comps = getCompetitions();
-  return comps.find(c => c.status === 'LIVE' && !isTestRecord(c)) || comps.find(c => !isTestRecord(c));
+  const live = comps.filter(c => c.status === 'LIVE' && !isTestRecord(c));
+  if (live.length > 0) return live[0];
+  return comps.find(c => !isTestRecord(c));
 }
 
 export function getSubmissions(competitionId?: string): CompetitionSubmission[] {
@@ -428,19 +468,54 @@ export function adminCreateCompetition(data: Partial<Competition>): Competition 
     rules: data.rules || 'One submission per user.',
     termsVersion: '1.0',
     createdBy: data.createdBy || 'pajonline555@gmail.com',
-    createdAt: now.toISOString(),
+    createdAt: data.createdAt || now.toISOString(),
     updatedAt: now.toISOString(),
     votesFrozen: false,
+    environment: 'PRODUCTION',
   };
 
   competitions.unshift(newComp);
   saveCompetitions(competitions);
+
   if (db) {
     setDoc(doc(db, 'competitions', newComp.id), newComp, { merge: true }).catch(err => {
       console.warn('Failed to persist competition to Firestore:', err);
     });
+
+    if (newComp.status === 'LIVE') {
+      getDocs(query(collection(db, 'competitions'), where('status', '==', 'LIVE'))).then(snap => {
+        snap.forEach(d => {
+          if (d.id !== newComp.id) {
+            updateDoc(doc(db, 'competitions', d.id), { status: 'VOTING_CLOSED', updatedAt: now.toISOString() }).catch(() => {});
+          }
+        });
+      }).catch(() => {});
+    }
   }
+
   return newComp;
+}
+
+export async function adminCreateCompetitionInDb(data: Partial<Competition>): Promise<Competition> {
+  const comp = adminCreateCompetition(data);
+  if (db) {
+    try {
+      await setDoc(doc(db, 'competitions', comp.id), comp, { merge: true });
+      if (comp.status === 'LIVE') {
+        const snap = await getDocs(query(collection(db, 'competitions'), where('status', '==', 'LIVE')));
+        const batchUpdates: Promise<any>[] = [];
+        snap.forEach(d => {
+          if (d.id !== comp.id) {
+            batchUpdates.push(updateDoc(doc(db, 'competitions', d.id), { status: 'VOTING_CLOSED', updatedAt: new Date().toISOString() }));
+          }
+        });
+        await Promise.all(batchUpdates);
+      }
+    } catch (err) {
+      console.warn('adminCreateCompetitionInDb error:', err);
+    }
+  }
+  return comp;
 }
 
 export function adminDeclareWinner(competitionId: string): { success: boolean; winner?: CompetitionSubmission } {
@@ -506,7 +581,11 @@ export async function fetchCompetitionsFromDb(): Promise<Competition[]> {
   try {
     const snap = await getDocs(collection(db, 'competitions'));
     if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition)).filter(c => !isTestRecord(c));
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Competition))
+        .filter(c => !isTestRecord(c))
+        .sort((a, b) => new Date(b.createdAt || b.startDate || 0).getTime() - new Date(a.createdAt || a.startDate || 0).getTime());
+
       if (list.length > 0) {
         if (typeof window !== 'undefined') {
           try {
@@ -550,11 +629,28 @@ export async function fetchSubmissionsFromDb(competitionId?: string): Promise<Co
 
 export async function fetchActiveCompetitionFromDb(): Promise<Competition | undefined> {
   try {
-    const q = query(collection(db, 'competitions'), where('status', '==', 'LIVE'), limit(10));
+    const q = query(collection(db, 'competitions'), where('status', '==', 'LIVE'), limit(20));
     const snap = await getDocs(q);
     if (!snap.empty) {
-      const activeList = snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition)).filter(c => !isTestRecord(c));
-      if (activeList.length > 0) return activeList[0];
+      const activeList = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Competition))
+        .filter(c => !isTestRecord(c))
+        .sort((a, b) => new Date(b.createdAt || b.startDate || 0).getTime() - new Date(a.createdAt || a.startDate || 0).getTime());
+
+      if (activeList.length > 0) {
+        const topLive = activeList[0];
+        // Cache to localStorage alongside any known competitions
+        if (typeof window !== 'undefined') {
+          try {
+            const current = getCompetitions();
+            const map = new Map<string, Competition>();
+            current.forEach(c => map.set(c.id, c));
+            activeList.forEach(c => map.set(c.id, c));
+            localStorage.setItem(STORAGE_COMPETITIONS_KEY, JSON.stringify(Array.from(map.values())));
+          } catch (e) {}
+        }
+        return topLive;
+      }
     }
     return getActiveCompetition();
   } catch {
@@ -620,25 +716,58 @@ export function adminUpdateCompetitionStatus(competitionId: string, status: Comp
   const target = competitions.find(c => c.id === competitionId);
   if (!target) return false;
 
+  const now = new Date().toISOString();
+
   if (status === 'LIVE') {
     // Ensure only one competition is LIVE at a time
     competitions.forEach(c => {
       if (c.id !== competitionId && c.status === 'LIVE') {
         c.status = 'VOTING_CLOSED';
+        if (db) {
+          updateDoc(doc(db, 'competitions', c.id), { status: 'VOTING_CLOSED', updatedAt: now }).catch(() => {});
+        }
       }
     });
   }
 
   target.status = status;
-  target.updatedAt = new Date().toISOString();
+  target.updatedAt = now;
   saveCompetitions(competitions);
 
   if (db) {
-    setDoc(doc(db, 'competitions', competitionId), { status, updatedAt: target.updatedAt }, { merge: true }).catch(err => {
+    setDoc(doc(db, 'competitions', competitionId), { status, updatedAt: now }, { merge: true }).catch(err => {
       console.warn('Failed to update competition status in Firestore:', err);
     });
   }
   return true;
+}
+
+export async function adminUpdateCompetitionStatusInDb(competitionId: string, status: CompetitionStatus): Promise<boolean> {
+  const now = new Date().toISOString();
+  if (db && status === 'LIVE') {
+    try {
+      const snap = await getDocs(query(collection(db, 'competitions'), where('status', '==', 'LIVE')));
+      const batchUpdates: Promise<any>[] = [];
+      snap.forEach(d => {
+        if (d.id !== competitionId) {
+          batchUpdates.push(updateDoc(doc(db, 'competitions', d.id), { status: 'VOTING_CLOSED', updatedAt: now }));
+        }
+      });
+      await Promise.all(batchUpdates);
+    } catch (e) {
+      console.warn('Error closing other live competitions in Firestore:', e);
+    }
+  }
+
+  if (db) {
+    try {
+      await updateDoc(doc(db, 'competitions', competitionId), { status, updatedAt: now });
+    } catch (e) {
+      console.warn('Error updating status in Firestore:', e);
+    }
+  }
+
+  return adminUpdateCompetitionStatus(competitionId, status);
 }
 
 export function adminToggleVoteFreeze(competitionId: string, freeze?: boolean): boolean {

@@ -1,5 +1,7 @@
 "use client"
 
+import { getActiveCompetition } from '@/lib/competition/store';
+
 export interface CompetitionSubmission {
   submissionId: string;
   competitionId: string;
@@ -21,18 +23,21 @@ export async function submitToCompetition(
   vtoResultId: string,
   imageRef: string,
   consentAgreed: boolean,
-  competitionId: string = 'comp_festive_looks_2026'
+  competitionId?: string
 ): Promise<CompetitionSubmission> {
   if (!consentAgreed) {
     throw new Error('Explicit consent is required to submit an image to a BuyWise competition.');
   }
+
+  const activeId = getActiveCompetition()?.id || 'comp-1792144504194';
+  const resolvedCompetitionId = competitionId && competitionId !== 'comp_festive_looks_2026' ? competitionId : activeId;
 
   const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const now = Date.now();
 
   const submission: CompetitionSubmission = {
     submissionId,
-    competitionId,
+    competitionId: resolvedCompetitionId,
     userId: 'user_current_session',
     vtoResultId,
     submissionImageReference: imageRef,
@@ -88,8 +93,10 @@ export async function withdrawSubmission(submissionId: string): Promise<Competit
  * Public competition gallery fetcher - only returns PUBLISHED entries
  */
 export async function getPublishedCompetitionGallery(
-  competitionId: string = 'comp_festive_looks_2026'
+  competitionId?: string
 ): Promise<CompetitionSubmission[]> {
+  const activeId = getActiveCompetition()?.id || 'comp-1792144504194';
+  const targetId = competitionId && competitionId !== 'comp_festive_looks_2026' ? competitionId : activeId;
   const all = getStoredSubmissions();
-  return all.filter((s) => s.competitionId === competitionId && s.visibility === 'PUBLISHED');
+  return all.filter((s) => s.competitionId === targetId && s.visibility === 'PUBLISHED');
 }

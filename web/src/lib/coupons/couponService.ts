@@ -233,33 +233,71 @@ export const SEED_COUPONS: BuyWiseCoupon[] = [
 
 // In-Memory cache for coupons during runtime
 let memoryCoupons: BuyWiseCoupon[] = [...SEED_COUPONS];
+let lastCouponsFetchTime = 0;
+let couponsInFlightPromise: Promise<BuyWiseCoupon[]> | null = null;
 
-/**
- * Fetch all coupons from Firestore or fallback to memory seed data
- */
-export async function getCoupons(statusFilter: string = 'ACTIVE'): Promise<BuyWiseCoupon[]> {
-  try {
-    const couponsRef = collection(db, 'coupons');
-    const snapshot = await getDocs(couponsRef);
-    if (!snapshot.empty) {
-      const dbCoupons: BuyWiseCoupon[] = [];
-      snapshot.forEach(docSnap => {
-        dbCoupons.push({ id: docSnap.id, ...docSnap.data() } as BuyWiseCoupon);
-      });
-      const map = new Map<string, BuyWiseCoupon>();
-      memoryCoupons.forEach(c => map.set(c.id, c));
-      dbCoupons.forEach(c => map.set(c.id, c));
-      const merged = Array.from(map.values());
-      
-      if (statusFilter === 'ALL') return merged;
-      return merged.filter(c => c.status === statusFilter);
-    }
-  } catch (err) {
-    console.warn('Firestore coupon fetch fallback:', err);
+export function getCachedCoupons(statusFilter: string = 'ACTIVE'): BuyWiseCoupon[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('buywise_cached_coupons');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryCoupons = parsed;
+        }
+      }
+    } catch (e) {}
   }
-
   if (statusFilter === 'ALL') return memoryCoupons;
   return memoryCoupons.filter(c => c.status === statusFilter);
+}
+
+/**
+ * Fetch all coupons from Firestore with 0ms local caching, request deduplication, and fast fallback
+ */
+export async function getCoupons(statusFilter: string = 'ACTIVE', forceRefresh: boolean = false): Promise<BuyWiseCoupon[]> {
+  const isFresh = Date.now() - lastCouponsFetchTime < 60000;
+  if (!forceRefresh && isFresh) {
+    return getCachedCoupons(statusFilter);
+  }
+
+  if (couponsInFlightPromise) {
+    return couponsInFlightPromise.then(coups => statusFilter === 'ALL' ? coups : coups.filter(c => c.status === statusFilter));
+  }
+
+  couponsInFlightPromise = (async () => {
+    try {
+      const couponsRef = collection(db, 'coupons');
+      const fetchPromise = getDocs(couponsRef);
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+      const snapshot: any = await Promise.race([fetchPromise, timeoutPromise]);
+      if (snapshot && !snapshot.empty) {
+        const dbCoupons: BuyWiseCoupon[] = [];
+        snapshot.forEach((docSnap: any) => {
+          dbCoupons.push({ id: docSnap.id, ...docSnap.data() } as BuyWiseCoupon);
+        });
+        const map = new Map<string, BuyWiseCoupon>();
+        memoryCoupons.forEach(c => map.set(c.id, c));
+        dbCoupons.forEach(c => map.set(c.id, c));
+        const merged = Array.from(map.values());
+        memoryCoupons = merged;
+        lastCouponsFetchTime = Date.now();
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem('buywise_cached_coupons', JSON.stringify(merged)); } catch (e) {}
+        }
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Firestore coupon fetch fallback:', err);
+    } finally {
+      couponsInFlightPromise = null;
+    }
+    return getCachedCoupons('ALL');
+  })();
+
+  const allCoupons = await couponsInFlightPromise;
+  if (statusFilter === 'ALL') return allCoupons;
+  return allCoupons.filter(c => c.status === statusFilter);
 }
 
 /**

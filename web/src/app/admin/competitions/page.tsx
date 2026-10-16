@@ -11,7 +11,9 @@ import {
   getActiveCompetition,
   getSubmissions,
   adminCreateCompetition,
+  adminCreateCompetitionInDb,
   adminUpdateCompetitionStatus,
+  adminUpdateCompetitionStatusInDb,
   adminDeleteCompetition,
   adminDeclareWinner,
   adminModerateSubmission,
@@ -20,15 +22,16 @@ import {
   fetchActiveCompetitionFromDb,
   fetchSubmissionsFromDb,
 } from "@/lib/competition/store";
-import { getPartnerProducts, cleanProductTitle } from "@/lib/partners/partnerService";
+import { getPartnerProducts, getCachedPartnerProducts, cleanProductTitle } from "@/lib/partners/partnerService";
 import { PartnerProduct } from "@/lib/partners/types";
+import RulesAndRegulationsModal from "@/components/competition/RulesAndRegulationsModal";
 
 export default function AdminCompetitionsPage() {
   const { user: authUser, isAdmin: isAuthContextAdmin } = useAuth();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [activeComp, setActiveComp] = useState<Competition | undefined>(undefined);
   const [activeSubmissions, setActiveSubmissions] = useState<CompetitionSubmission[]>([]);
-  const [catalogProducts, setCatalogProducts] = useState<PartnerProduct[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<PartnerProduct[]>(() => getCachedPartnerProducts("all", true));
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +45,12 @@ export default function AdminCompetitionsPage() {
   const [newRetailer, setNewRetailer] = useState("Amazon India");
   const [newPrize, setNewPrize] = useState("₹5,000 Amazon Voucher + BuyWise Home Spotlight");
   const [newStatus, setNewStatus] = useState<string>("LIVE");
+  const [newRules, setNewRules] = useState("1. 100% Free Entry - No purchase necessary to enter or vote.\n2. One look submission per participant per week.\n3. Entrants must be 18 years or older.\n4. Submissions must feature this week's challenge item.\n5. Anti-fraud vote monitoring: Only 1 verified vote per user.");
+  const [newEligibility, setNewEligibility] = useState("All verified BuyWise registered shoppers in India (18+ only)");
+  const [newTerms, setNewTerms] = useState("Participants retain copyright of their photos and grant BuyWise AI a non-exclusive license to display submitted try-on looks for community voting and winner recognition. Explicit consent can be revoked at any time. Winners are verified by administration and announced every Sunday.");
   const [selectedInventorySku, setSelectedInventorySku] = useState("");
+  const [showRulesPreviewModal, setShowRulesPreviewModal] = useState(false);
+  const [selectedRulesComp, setSelectedRulesComp] = useState<Competition | null>(null);
 
   const [sessionAdminEmail, setSessionAdminEmail] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -171,8 +179,8 @@ export default function AdminCompetitionsPage() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const handleStatusChange = (compId: string, nextStatus: any) => {
-    adminUpdateCompetitionStatus(compId, nextStatus);
+  const handleStatusChange = async (compId: string, nextStatus: any) => {
+    await adminUpdateCompetitionStatusInDb(compId, nextStatus);
     setFeedback(`Competition status updated to ${nextStatus}!`);
     refreshData();
     setTimeout(() => setFeedback(null), 3000);
@@ -212,7 +220,7 @@ export default function AdminCompetitionsPage() {
 
     const fallbackImg = newProductImg || "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80";
 
-    const created = adminCreateCompetition({
+    const created = await adminCreateCompetitionInDb({
       title: newTitle,
       description: newDesc || "Try on this week's featured fashion product and submit your entry to win!",
       featuredProductTitle: newProductTitle,
@@ -220,6 +228,8 @@ export default function AdminCompetitionsPage() {
       featuredProductPrice: newPrice,
       retailer: newRetailer,
       prizeDescription: newPrize,
+      rules: newRules,
+      eligibility: newEligibility,
       status: (newStatus as any) || "LIVE"
     });
 
@@ -493,6 +503,47 @@ export default function AdminCompetitionsPage() {
               <input type="text" value={newPrize} onChange={e => setNewPrize(e.target.value)} placeholder="e.g. ₹5,000 Shopping Voucher + Featured Banner on BuyWise Home Screen" style={{ width: "100%", padding: "10px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontSize: "13px" }} />
             </div>
 
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px", marginBottom: "16px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 800, color: "#ffd700", display: "block", marginBottom: "4px" }}>
+                  📜 Challenge Rules &amp; Regulations
+                </label>
+                <textarea
+                  value={newRules}
+                  onChange={e => setNewRules(e.target.value)}
+                  rows={4}
+                  placeholder="Enter challenge rules..."
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255, 215, 0, 0.3)", color: "white", fontSize: "12.5px", lineHeight: 1.4, resize: "vertical" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 800, color: "#00ff88", display: "block", marginBottom: "4px" }}>
+                  ⚖️ Challenge Terms &amp; Conditions / Consent
+                </label>
+                <textarea
+                  value={newTerms}
+                  onChange={e => setNewTerms(e.target.value)}
+                  rows={4}
+                  placeholder="Enter terms and consent details..."
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0, 255, 136, 0.3)", color: "white", fontSize: "12.5px", lineHeight: 1.4, resize: "vertical" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.8)", display: "block", marginBottom: "4px" }}>
+                👤 Eligibility Criteria
+              </label>
+              <input
+                type="text"
+                value={newEligibility}
+                onChange={e => setNewEligibility(e.target.value)}
+                placeholder="e.g. All verified BuyWise shoppers aged 18+ in India"
+                style={{ width: "100%", padding: "10px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "white", fontSize: "13px" }}
+              />
+            </div>
+
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button type="button" onClick={() => setShowCreateForm(false)} style={{ padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", color: "white", border: "none", cursor: "pointer", fontWeight: 800 }}>
                 Cancel
@@ -527,14 +578,40 @@ export default function AdminCompetitionsPage() {
                 </div>
               </div>
 
-              <div style={{ padding: "12px 18px", borderRadius: "14px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", minWidth: "180px" }}>
-                <div style={{ fontSize: "10.5px", color: "#ffd700", fontWeight: 800 }}>🏆 CURRENT LEADER</div>
-                <div style={{ fontSize: "14px", fontWeight: 900, color: "white", marginTop: "2px" }}>
-                  {leadingSubmission ? leadingSubmission.userName : "No submissions yet"}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ padding: "10px 16px", borderRadius: "14px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", minWidth: "180px" }}>
+                  <div style={{ fontSize: "10.5px", color: "#ffd700", fontWeight: 800 }}>🏆 CURRENT LEADER</div>
+                  <div style={{ fontSize: "14px", fontWeight: 900, color: "white", marginTop: "2px" }}>
+                    {leadingSubmission ? leadingSubmission.userName : "No submissions yet"}
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "#00ff88", marginTop: "2px" }}>
+                    {leadingSubmission ? `❤️ ${leadingSubmission.voteCount} community votes` : "Awaiting entries"}
+                  </div>
                 </div>
-                <div style={{ fontSize: "11.5px", color: "#00ff88", marginTop: "2px" }}>
-                  {leadingSubmission ? `❤️ ${leadingSubmission.voteCount} community votes` : "Awaiting entries"}
-                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRulesComp(activeComp);
+                    setShowRulesPreviewModal(true);
+                  }}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: "12px",
+                    background: "rgba(255, 215, 0, 0.15)",
+                    border: "1px solid rgba(255, 215, 0, 0.4)",
+                    color: "#ffd700",
+                    fontWeight: 900,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <span>📜</span> Rules &amp; Regulations / Terms
+                </button>
               </div>
             </div>
           </div>
@@ -759,6 +836,13 @@ export default function AdminCompetitionsPage() {
           )}
         </div>
       </div>
+
+      {/* Rules & Regulations / Terms Modal */}
+      <RulesAndRegulationsModal
+        isOpen={showRulesPreviewModal}
+        onClose={() => setShowRulesPreviewModal(false)}
+        competition={selectedRulesComp || activeComp}
+      />
     </main>
   );
 }

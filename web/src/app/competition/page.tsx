@@ -19,6 +19,7 @@ import {
   fetchCompetitionsFromDb,
   submitToCompetition,
 } from '@/lib/competition/store';
+import RulesAndRegulationsModal from '@/components/competition/RulesAndRegulationsModal';
 
 export default function CompetitionPage() {
   const { t } = useTranslation();
@@ -31,6 +32,7 @@ export default function CompetitionPage() {
   const [pastCompetitions, setPastCompetitions] = useState<Competition[]>([]);
   const [activeTab, setActiveTab] = useState<'CURRENT' | 'FASHION_WALL'>('CURRENT');
   const [votingBusy, setVotingBusy] = useState<string | null>(null);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   // Submit Look Modal State
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -347,22 +349,26 @@ export default function CompetitionPage() {
               📸 Submit Your Look
             </button>
 
-            <Link href="/competition-terms" style={{ textDecoration: 'none' }}>
-              <button
-                style={{
-                  padding: '12px 18px',
-                  borderRadius: '20px',
-                  background: 'rgba(255,255,255,0.08)',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  cursor: 'pointer',
-                }}
-              >
-                ⚖️ Rules
-              </button>
-            </Link>
+            <button
+              onClick={() => setShowRulesModal(true)}
+              style={{
+                padding: '12px 20px',
+                borderRadius: '20px',
+                background: 'rgba(255, 215, 0, 0.14)',
+                color: '#ffd700',
+                fontWeight: 900,
+                fontSize: '13.5px',
+                border: '1px solid rgba(255, 215, 0, 0.45)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(255, 215, 0, 0.2)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>📜</span> Rules &amp; Regulations / Terms
+            </button>
           </div>
         </div>
 
@@ -674,6 +680,12 @@ export default function CompetitionPage() {
           </div>
         </div>
       )}
+      {/* Rules and Regulations / Terms & Conditions Modal */}
+      <RulesAndRegulationsModal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+        competition={competition}
+      />
     </main>
   );
 }

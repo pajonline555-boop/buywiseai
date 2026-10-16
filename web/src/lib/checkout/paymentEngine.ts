@@ -100,11 +100,11 @@ export async function createAuthoritativePaymentOrder(
     (prod as any).reservedStock = ((prod as any).reservedStock || 0) + item.quantity;
 
     try {
-      withTimeout(updateDoc(doc(db, 'partner_products', prod.id), { 
+      withTimeout(setDoc(doc(db, 'partner_products', prod.id), { 
         stock: prod.stock, 
         reservedStock: (prod as any).reservedStock, 
         updatedAt: timestamp 
-      }));
+      }, { merge: true }));
     } catch (e) {
       // Sync notice
     }
@@ -173,11 +173,11 @@ export async function cancelOrReleasePaymentOrder(orderId: string): Promise<bool
       prod.stock += item.quantity;
 
       try {
-        withTimeout(updateDoc(doc(db, 'partner_products', prod.id), {
+        withTimeout(setDoc(doc(db, 'partner_products', prod.id), {
           stock: prod.stock,
           reservedStock: (prod as any).reservedStock,
           updatedAt: new Date().toISOString()
-        }));
+        }, { merge: true }));
       } catch (e) {
         // Sync notice
       }
@@ -262,11 +262,11 @@ export async function processPaymentWebhook(
       (prod as any).soldStock = ((prod as any).soldStock || 0) + item.quantity;
 
       try {
-        withTimeout(updateDoc(doc(db, 'partner_products', prod.id), { 
+        withTimeout(setDoc(doc(db, 'partner_products', prod.id), { 
           reservedStock: (prod as any).reservedStock, 
           soldStock: (prod as any).soldStock,
           updatedAt: new Date().toISOString() 
-        }));
+        }, { merge: true }));
       } catch (e) {
         // Sync notice
       }
@@ -331,11 +331,11 @@ export async function processReturnInspection(
     (prod as any).soldStock = Math.max(0, ((prod as any).soldStock || 0) - quantity);
 
     try {
-      withTimeout(updateDoc(doc(db, 'partner_products', prod.id), { 
+      withTimeout(setDoc(doc(db, 'partner_products', prod.id), { 
         stock: prod.stock, 
         soldStock: (prod as any).soldStock, 
         updatedAt: new Date().toISOString() 
-      }));
+      }, { merge: true }));
     } catch (e) {
       // Sync notice
     }

@@ -60,6 +60,13 @@ export default function GenGStoreSlideshow() {
   const currentProduct = validProducts[currentIndex] || validProducts[0];
   if (!currentProduct) return null;
 
+  const activeYoutubeUrl = currentProduct.youtubeUrl || 
+    (currentProduct as any).videoUrl || 
+    (currentProduct as any).youtube || 
+    (currentProduct.id === 'prod_partner_kamarbandh_1' || currentProduct.id === 'prod_sku_492959' || (currentProduct.title && currentProduct.title.toLowerCase().includes('kamarbandh')) 
+      ? 'https://youtube.com/shorts/LRIzcmOVWh0' 
+      : undefined);
+
   const mrp = currentProduct.mrp ?? currentProduct.sellingPrice ?? 2999;
   const sellingPrice = currentProduct.sellingPrice ?? 1999;
   const discountPercent = mrp > 0 ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
@@ -308,28 +315,52 @@ export default function GenGStoreSlideshow() {
                 </h3>
               </Link>
 
-              {currentProduct.youtubeUrl && (
-                <div style={{ marginBottom: '12px' }}>
+              {activeYoutubeUrl && (
+                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => setIsVideoModalOpen(true)}
                     title="Watch Official YouTube Video Demo"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 14px',
-                      borderRadius: '12px',
-                      background: 'rgba(255, 0, 77, 0.22)',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      borderRadius: '14px',
+                      background: 'linear-gradient(135deg, rgba(255, 0, 77, 0.35), rgba(255, 60, 0, 0.25))',
                       border: '1px solid #ff004d',
-                      color: '#ff4d79',
-                      fontSize: '12px',
-                      fontWeight: 800,
+                      color: '#ffffff',
+                      fontSize: '13px',
+                      fontWeight: 900,
                       cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(255, 0, 77, 0.35)',
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    <span>▶️</span> Watch Official Video Demo
+                    <span>▶️</span> Watch YouTube Video Demo
                   </button>
+
+                  <a
+                    href={activeYoutubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open video directly on YouTube in new tab"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '14px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#ff4d79',
+                      fontSize: '12.5px',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>🔗</span> YouTube Link ↗
+                  </a>
                 </div>
               )}
 
@@ -515,7 +546,7 @@ export default function GenGStoreSlideshow() {
       />
 
       {/* Embedded YouTube Video Demo Modal */}
-      {isVideoModalOpen && currentProduct.youtubeUrl && (
+      {isVideoModalOpen && activeYoutubeUrl && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -559,10 +590,10 @@ export default function GenGStoreSlideshow() {
                 ✕
               </button>
             </div>
-            {getYoutubeEmbedUrl(currentProduct.youtubeUrl) ? (
+            {getYoutubeEmbedUrl(activeYoutubeUrl) ? (
               <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                 <iframe
-                  src={getYoutubeEmbedUrl(currentProduct.youtubeUrl)!}
+                  src={getYoutubeEmbedUrl(activeYoutubeUrl)!}
                   title={currentProduct.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -572,7 +603,7 @@ export default function GenGStoreSlideshow() {
             ) : (
               <div style={{ textAlign: 'center', padding: '30px' }}>
                 <a
-                  href={currentProduct.youtubeUrl}
+                  href={activeYoutubeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary"
@@ -582,6 +613,28 @@ export default function GenGStoreSlideshow() {
                 </a>
               </div>
             )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <a
+                href={activeYoutubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: '#ff4d79',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🔗</span> Open Video on YouTube in new tab ↗
+              </a>
+              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                Official Verified Partner Demo
+              </span>
+            </div>
           </div>
         </div>
       )}

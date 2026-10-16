@@ -6,6 +6,7 @@ import {
   fetchCompetitionsFromDb,
   saveCompetitionToDb,
   adminCreateCompetition,
+  adminCreateCompetitionInDb,
   validateStateTransition,
   Competition,
   CompetitionStatus
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const created: Competition = adminCreateCompetition({
+    const created: Competition = await adminCreateCompetitionInDb({
       title: body.title,
       description: body.description,
       featuredProductId: body.featuredProductId,
@@ -62,8 +63,6 @@ export async function POST(request: NextRequest) {
       status: requestedStatus,
       createdBy: auth.adminContext.email, // STRICT SERVER-SUPPLIED ADMIN IDENTITY
     });
-
-    await saveCompetitionToDb(created);
 
     logSecurityEvent({
       eventType: "ROLE_CHANGE",

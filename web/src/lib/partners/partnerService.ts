@@ -304,6 +304,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     commissionValue: 15,
     rating: 4.9,
     reviewCount: 24,
+    youtubeUrl: 'https://youtube.com/shorts/LRIzcmOVWh0',
     createdAt: '2026-09-04T08:00:00Z',
     updatedAt: '2026-09-04T08:00:00Z',
   },
@@ -644,83 +645,231 @@ export const MOCK_PARTNER_ORDERS: PartnerOrder[] = [
 ];
 
 // ==========================================
-// FIRESTORE & IN-MEMORY SERVICE METHODS
+// HIGH-PERFORMANCE SWR CACHE & SERVICE METHODS
 // ==========================================
 
-export async function getPartners(): Promise<Partner[]> {
-  try {
-    const snap = await getDocs(collection(db, 'partners'));
-    if (!snap.empty) {
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
+// In-Memory & Request Deduplication Singletons
+let cachedPartnerProducts: PartnerProduct[] | null = null;
+let lastProductsFetchTime = 0;
+let productsInFlightPromise: Promise<PartnerProduct[]> | null = null;
+
+let cachedPartners: Partner[] | null = null;
+let lastPartnersFetchTime = 0;
+let partnersInFlightPromise: Promise<Partner[]> | null = null;
+
+let cachedPartnerOrders: PartnerOrder[] | null = null;
+let lastOrdersFetchTime = 0;
+let ordersInFlightPromise: Promise<PartnerOrder[]> | null = null;
+
+function filterPartnerProducts(list: PartnerProduct[], category?: string, includeAllStatuses: boolean = false): PartnerProduct[] {
+  if (includeAllStatuses) {
+    if (!category || category.toLowerCase() === 'all') {
+      return list;
     }
-  } catch (err) {
-    console.warn('Firestore partners fetch notice, returning mock partners:', err);
+    return list.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
   }
-  return MOCK_PARTNERS;
+
+  const live = list.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
+  if (!category || category.toLowerCase() === 'all') {
+    return live;
+  }
+  return live.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
 }
 
-export async function getPartnerProducts(category?: string, includeAllStatuses: boolean = false): Promise<PartnerProduct[]> {
-  let firestoreProds: PartnerProduct[] = [];
-  try {
-    const snap = await getDocs(collection(db, 'partner_products'));
-    if (!snap.empty) {
-      firestoreProds = snap.docs.map(d => ({ id: d.id, ...d.data() } as PartnerProduct));
-    }
-  } catch (err) {
-    console.warn('Firestore partner_products fetch notice:', err);
+/**
+ * Returns partner products instantly (0ms) from memory cache, localStorage, or base catalog.
+ * Eliminates the delay when rendering Admin Inventory tables and dashboards.
+ */
+export function getCachedPartnerProducts(category?: string, includeAllStatuses: boolean = false): PartnerProduct[] {
+  if (cachedPartnerProducts && cachedPartnerProducts.length > 0) {
+    return filterPartnerProducts(cachedPartnerProducts, category, includeAllStatuses);
   }
 
-  // Safety fallback: if Firestore is empty or returned 0, load baseline partner products and sync to Firestore
-  if (firestoreProds.length === 0) {
-    firestoreProds = [...MOCK_PARTNER_PRODUCTS];
-    if (db) {
-      try {
-        MOCK_PARTNER_PRODUCTS.forEach(p => {
-          setDoc(doc(db, 'partner_products', p.id), p, { merge: true }).catch(() => {});
-        });
-      } catch (e) {}
-    }
-  }
-
-  // Combine baseline catalog and Firestore products so no items are missing
-  const combinedMap = new Map<string, PartnerProduct>();
-  MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
-  firestoreProds.forEach(p => {
-    const existing = combinedMap.get(p.id) || ({} as PartnerProduct);
-    combinedMap.set(p.id, { ...existing, ...p });
-  });
-
-  // Auto-sync recovery: if localStorage has onboarded partner products not yet in Firestore, sync them to Firestore!
   if (typeof window !== 'undefined') {
     try {
-      const overrides = getLocalProductOverrides();
-      for (const [id, prod] of Object.entries(overrides)) {
-        if (prod && (prod as any).title) {
-          const merged = { ...(combinedMap.get(id) || {}), ...prod } as PartnerProduct;
-          combinedMap.set(id, merged);
-          setDoc(doc(db, 'partner_products', id), merged, { merge: true }).catch(() => {});
+      const stored = localStorage.getItem('buywise_cached_partner_products');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedPartnerProducts = parsed;
+          return filterPartnerProducts(parsed, category, includeAllStatuses);
         }
       }
     } catch (e) {}
   }
 
+  // Fast baseline fallback merged with local overrides
+  const combinedMap = new Map<string, PartnerProduct>();
+  MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
+  if (typeof window !== 'undefined') {
+    try {
+      const overrides = getLocalProductOverrides();
+      for (const [id, prod] of Object.entries(overrides)) {
+        if (prod && (prod as any).title) {
+          combinedMap.set(id, { ...(combinedMap.get(id) || {}), ...prod } as PartnerProduct);
+        }
+      }
+    } catch (e) {}
+  }
   const deletedIds = new Set(getDeletedProductIds());
-  let allList = applyLocalOverrides(Array.from(combinedMap.values())).filter(p => !deletedIds.has(p.id) && !(p as any).isDeleted);
+  const fallback = applyLocalOverrides(Array.from(combinedMap.values())).filter(p => !deletedIds.has(p.id) && !(p as any).isDeleted);
+  return filterPartnerProducts(fallback, category, includeAllStatuses);
+}
 
-  // For admin inventory control and stats (includeAllStatuses === true), return all products (LIVE, PAUSED, DRAFT)
-  if (includeAllStatuses) {
-    if (!category || category.toLowerCase() === 'all') {
-      return allList;
+/**
+ * Synchronous instant getter for Partners
+ */
+export function getCachedPartners(): Partner[] {
+  if (cachedPartners && cachedPartners.length > 0) return cachedPartners;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('buywise_cached_partners');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedPartners = parsed;
+          return parsed;
+        }
+      }
+    } catch (e) {}
+  }
+  return MOCK_PARTNERS;
+}
+
+/**
+ * Synchronous instant getter for Partner Orders
+ */
+export function getCachedPartnerOrders(partnerId?: string): PartnerOrder[] {
+  let list = cachedPartnerOrders;
+  if (!list && typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('buywise_cached_orders');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedPartnerOrders = parsed;
+          list = parsed;
+        }
+      }
+    } catch (e) {}
+  }
+  const orders = list || MOCK_PARTNER_ORDERS;
+  if (partnerId) {
+    return orders.filter(o => o.partnerId === partnerId);
+  }
+  return orders;
+}
+
+export async function getPartners(forceRefresh: boolean = false): Promise<Partner[]> {
+  const isFresh = cachedPartners && cachedPartners.length > 0 && (Date.now() - lastPartnersFetchTime < 60000);
+  if (!forceRefresh && isFresh) {
+    return cachedPartners!;
+  }
+
+  if (partnersInFlightPromise) {
+    return partnersInFlightPromise;
+  }
+
+  partnersInFlightPromise = (async () => {
+    try {
+      const fetchPromise = getDocs(collection(db, 'partners'));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+      const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+      if (snap && !snap.empty) {
+        const list = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Partner));
+        cachedPartners = list;
+        lastPartnersFetchTime = Date.now();
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem('buywise_cached_partners', JSON.stringify(list)); } catch (e) {}
+        }
+        return list;
+      }
+    } catch (err) {
+      console.warn('Firestore partners fetch notice, using cached/mock partners:', err);
+    } finally {
+      partnersInFlightPromise = null;
     }
-    return allList.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    const fallback = getCachedPartners();
+    cachedPartners = fallback;
+    return fallback;
+  })();
+
+  return partnersInFlightPromise;
+}
+
+export async function getPartnerProducts(
+  category?: string, 
+  includeAllStatuses: boolean = false,
+  forceRefresh: boolean = false
+): Promise<PartnerProduct[]> {
+  const isFresh = cachedPartnerProducts && cachedPartnerProducts.length > 0 && (Date.now() - lastProductsFetchTime < 45000);
+  if (!forceRefresh && isFresh) {
+    return filterPartnerProducts(cachedPartnerProducts!, category, includeAllStatuses);
   }
 
-  allList = allList.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
+  if (productsInFlightPromise) {
+    return productsInFlightPromise.then(prods => filterPartnerProducts(prods, category, includeAllStatuses));
+  }
 
-  if (!category || category.toLowerCase() === 'all') {
+  productsInFlightPromise = (async () => {
+    let firestoreProds: PartnerProduct[] = [];
+    try {
+      const fetchPromise = getDocs(collection(db, 'partner_products'));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500));
+      const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+      if (snap && !snap.empty) {
+        firestoreProds = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as PartnerProduct));
+      }
+    } catch (err) {
+      console.warn('Firestore partner_products fetch notice, using instant fallback/cache:', err);
+    } finally {
+      productsInFlightPromise = null;
+    }
+
+    // Safety fallback: if Firestore returned 0, ensure baseline partner products exist
+    if (firestoreProds.length === 0) {
+      firestoreProds = [...MOCK_PARTNER_PRODUCTS];
+    }
+
+    // Combine baseline catalog and Firestore products so no items are missing
+    const combinedMap = new Map<string, PartnerProduct>();
+    MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
+    firestoreProds.forEach(p => {
+      const existing = combinedMap.get(p.id) || ({} as PartnerProduct);
+      combinedMap.set(p.id, { ...existing, ...p });
+    });
+
+    // Auto-sync recovery: if localStorage has onboarded partner products not yet in Firestore, sync them
+    if (typeof window !== 'undefined') {
+      try {
+        const overrides = getLocalProductOverrides();
+        for (const [id, prod] of Object.entries(overrides)) {
+          if (prod && (prod as any).title) {
+            const merged = { ...(combinedMap.get(id) || {}), ...prod } as PartnerProduct;
+            combinedMap.set(id, merged);
+            setDoc(doc(db, 'partner_products', id), merged, { merge: true }).catch(() => {});
+          }
+        }
+      } catch (e) {}
+    }
+
+    const deletedIds = new Set(getDeletedProductIds());
+    const allList = applyLocalOverrides(Array.from(combinedMap.values())).filter(p => !deletedIds.has(p.id) && !(p as any).isDeleted);
+
+    // Update in-memory and persistent cache
+    cachedPartnerProducts = allList;
+    lastProductsFetchTime = Date.now();
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('buywise_cached_partner_products', JSON.stringify(allList));
+      } catch (e) {}
+    }
+
     return allList;
-  }
-  return allList.filter(p => p.category.toLowerCase() === category.toLowerCase());
+  })();
+
+  const list = await productsInFlightPromise;
+  return filterPartnerProducts(list, category, includeAllStatuses);
 }
 
 export async function getPartnerProductsByPartnerId(partnerId: string): Promise<PartnerProduct[]> {
@@ -736,21 +885,42 @@ export async function getPartnerProductsByPartnerId(partnerId: string): Promise<
   return [];
 }
 
-export async function getPartnerOrders(partnerId?: string): Promise<PartnerOrder[]> {
-  try {
-    let q = query(collection(db, 'partner_orders'), orderBy('createdAt', 'desc'));
-    if (partnerId) {
-      q = query(collection(db, 'partner_orders'), where('partnerId', '==', partnerId));
-    }
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as PartnerOrder));
-    }
-  } catch (err) {
-    console.warn('Firestore partner_orders notice:', err);
+export async function getPartnerOrders(partnerId?: string, forceRefresh: boolean = false): Promise<PartnerOrder[]> {
+  const isFresh = cachedPartnerOrders && cachedPartnerOrders.length > 0 && (Date.now() - lastOrdersFetchTime < 45000);
+  if (!forceRefresh && isFresh) {
+    return getCachedPartnerOrders(partnerId);
   }
 
-  return [];
+  if (ordersInFlightPromise) {
+    return ordersInFlightPromise.then(ords => partnerId ? ords.filter(o => o.partnerId === partnerId) : ords);
+  }
+
+  ordersInFlightPromise = (async () => {
+    try {
+      const q = query(collection(db, 'partner_orders'), orderBy('createdAt', 'desc'));
+      const fetchPromise = getDocs(q);
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+      const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+      if (snap && !snap.empty) {
+        const list = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as PartnerOrder));
+        cachedPartnerOrders = list;
+        lastOrdersFetchTime = Date.now();
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem('buywise_cached_orders', JSON.stringify(list)); } catch (e) {}
+        }
+        return list;
+      }
+    } catch (err) {
+      console.warn('Firestore partner_orders notice, using cached/mock:', err);
+    } finally {
+      ordersInFlightPromise = null;
+    }
+    const fallback = getCachedPartnerOrders();
+    cachedPartnerOrders = fallback;
+    return fallback;
+  })();
+
+  return ordersInFlightPromise.then(ords => partnerId ? ords.filter(o => o.partnerId === partnerId) : ords);
 }
 
 export async function logProductAuditAction(productId: string, action: string, userId: string = 'admin', details?: string): Promise<void> {
@@ -779,7 +949,7 @@ export async function createPartnerOrder(orderInput: Omit<PartnerOrder, 'id' | '
       // Reserve Inventory (Decrement Stock)
       prod.stock = Math.max(0, prod.stock - item.quantity);
       try {
-        updateDoc(doc(db, 'partner_products', prod.id), { stock: prod.stock, updatedAt: timestamp });
+        setDoc(doc(db, 'partner_products', prod.id), { stock: prod.stock, updatedAt: timestamp }, { merge: true });
       } catch (e) {
         // Firestore sync notice
       }
@@ -849,7 +1019,7 @@ export async function updateOrderStatus(
         if (prod) {
           prod.stock += item.quantity;
           try {
-            updateDoc(doc(db, 'partner_products', prod.id), { stock: prod.stock, updatedAt: timestamp });
+            setDoc(doc(db, 'partner_products', prod.id), { stock: prod.stock, updatedAt: timestamp }, { merge: true });
           } catch (e) {
             // Firestore sync notice
           }
@@ -985,6 +1155,14 @@ export async function savePartnerProduct(productInput: Omit<PartnerProduct, 'id'
   // Instantly unshift into active state for immediate UI feedback
   MOCK_PARTNER_PRODUCTS.unshift(newProduct);
   saveLocalProductOverride(newProduct.id, newProduct);
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = [newProduct, ...cachedPartnerProducts.filter(p => p.id !== newProduct.id)];
+  } else {
+    cachedPartnerProducts = [newProduct];
+  }
+  if (typeof window !== 'undefined') {
+    try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+  }
 
   await logProductAuditAction(newProduct.id, status === 'LIVE' ? 'PUBLISHED' : 'CREATED_DRAFT', 'admin', validationErrors.join('; '));
 
@@ -1030,6 +1208,12 @@ export async function approvePartnerProduct(productId: string, status: PartnerPr
 
   // Save status change locally so it persists across refreshes!
   saveLocalProductOverride(productId, { status });
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.map(item => item.id === productId ? { ...item, status } : item);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+    }
+  }
 
   try {
     const fullDoc = p ? { ...p, status, updatedAt: new Date().toISOString() } : { status, updatedAt: new Date().toISOString() };
@@ -1057,6 +1241,12 @@ export async function updatePartnerProduct(productId: string, updates: Partial<P
   }
 
   saveLocalProductOverride(productId, sanitizedUpdates);
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.map(item => item.id === productId ? { ...item, ...sanitizedUpdates, updatedAt: timestamp } : item);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+    }
+  }
 
   try {
     const docRef = doc(db, 'partner_products', productId);
@@ -1086,6 +1276,13 @@ export async function deletePartnerProduct(productId: string): Promise<boolean> 
       saveAllLocalProductOverrides(overrides);
     } catch (e) {
       console.warn('LocalStorage delete override notice:', e);
+    }
+  }
+
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.filter(p => p.id !== productId);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
     }
   }
 

@@ -1,6 +1,6 @@
 "use client"
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PhotoUploadModal from "@/components/PhotoUploadModal";
@@ -13,15 +13,54 @@ import { resolveProductImage } from "@/lib/categoryResolver";
 import { calculateEffectivePrice } from "@/lib/coupons/couponService";
 import BrandPillars from "@/components/BrandPillars";
 import { useTranslation } from "@/lib/i18n/i18nContext";
-import { getActiveCompetition, getCompetitions, getWinnerSubmission } from "@/lib/competition/store";
+import {
+  getActiveCompetition,
+  getCompetitions,
+  getWinnerSubmission,
+  fetchActiveCompetitionFromDb,
+  fetchCompetitionsFromDb,
+  Competition,
+} from "@/lib/competition/store";
+import RulesAndRegulationsModal from "@/components/competition/RulesAndRegulationsModal";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [activeCategoryTab, setActiveCategoryTab] = useState("mobiles");
+  const [activeComp, setActiveComp] = useState<Competition | null>(null);
+  const [pastComp, setPastComp] = useState<Competition | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    // Initial fast synchronous load from store / localStorage
+    const initialActive = getActiveCompetition();
+    if (initialActive) setActiveComp(initialActive);
+
+    const initialComps = getCompetitions();
+    const initialPast = initialComps.find(c => c.status === 'WINNER_DECLARED');
+    if (initialPast) setPastComp(initialPast);
+
+    // Dynamic live sync from Firestore so new challenges show immediately
+    const syncRealData = async () => {
+      try {
+        const live = await fetchActiveCompetitionFromDb();
+        if (live) setActiveComp(live);
+
+        const all = await fetchCompetitionsFromDb();
+        if (all && all.length > 0) {
+          const past = all.find(c => c.status === 'WINNER_DECLARED');
+          if (past) setPastComp(past);
+        }
+      } catch (err) {
+        console.warn('Home competition sync notice:', err);
+      }
+    };
+
+    syncRealData();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,49 +303,46 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '30px', alignItems: 'stretch' }}>
           
           {/* Card 1: Active Weekly Challenge Banner */}
-          {(() => {
-            const activeComp = getActiveCompetition();
-            if (!activeComp) return null;
-
-            return (
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(138, 43, 226, 0.2))',
-                  border: '1px solid rgba(255, 215, 0, 0.4)',
-                  borderRadius: '28px',
-                  padding: '28px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 14px', borderRadius: '16px', background: 'rgba(255, 215, 0, 0.2)', border: '1px solid rgba(255, 215, 0, 0.5)' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#ffd700' }}>🏆 THIS WEEK&apos;S BUYWISE CHALLENGE</span>
-                    </div>
-                    <span style={{ fontSize: '11px', color: '#00ff88', fontWeight: 800, background: 'rgba(0, 255, 136, 0.15)', padding: '4px 10px', borderRadius: '12px', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
-                      🆓 Free Entry • 🔞 18+ Only
-                    </span>
+          {activeComp && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(138, 43, 226, 0.2))',
+                border: '1px solid rgba(255, 215, 0, 0.4)',
+                borderRadius: '28px',
+                padding: '28px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 14px', borderRadius: '16px', background: 'rgba(255, 215, 0, 0.2)', border: '1px solid rgba(255, 215, 0, 0.5)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#ffd700' }}>🏆 THIS WEEK&apos;S BUYWISE CHALLENGE</span>
                   </div>
-
-                  <h3 style={{ fontSize: '24px', fontWeight: 900, color: 'white', marginBottom: '8px' }}>
-                    {activeComp.title}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', lineHeight: 1.5 }}>
-                    Featured: <strong>{activeComp.featuredProductTitle}</strong> (₹{activeComp.featuredProductPrice.toLocaleString()})
-                  </p>
-
-                  <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '18px', overflow: 'hidden', marginBottom: '20px' }}>
-                    <Image src={activeComp.featuredProductImage} alt={activeComp.featuredProductTitle} fill unoptimized style={{ objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', bottom: '12px', left: '12px', padding: '4px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.8)', color: '#00ff88', fontWeight: 900, fontSize: '11px' }}>
-                      🎁 Prize: {activeComp.prizeDescription}
-                    </div>
-                  </div>
+                  <span style={{ fontSize: '11px', color: '#00ff88', fontWeight: 800, background: 'rgba(0, 255, 136, 0.15)', padding: '4px 10px', borderRadius: '12px', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
+                    🆓 Free Entry • 🔞 18+ Only
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: 900, color: 'white', marginBottom: '8px' }}>
+                  {activeComp.title}
+                </h3>
+                <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', lineHeight: 1.5 }}>
+                  Featured: <strong>{activeComp.featuredProductTitle}</strong> (₹{activeComp.featuredProductPrice.toLocaleString()})
+                </p>
+
+                <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '18px', overflow: 'hidden', marginBottom: '20px' }}>
+                  <Image src={activeComp.featuredProductImage} alt={activeComp.featuredProductTitle} fill unoptimized style={{ objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', bottom: '12px', left: '12px', padding: '4px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.8)', color: '#00ff88', fontWeight: 900, fontSize: '11px' }}>
+                    🎁 Prize: {activeComp.prizeDescription}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
                   <Link href="/try-on" style={{ flex: 1, textDecoration: 'none' }}>
                     <button style={{ width: '100%', padding: '12px', borderRadius: '16px', background: 'linear-gradient(135deg, #ffd700, #ff8c00)', color: '#000', fontWeight: 900, fontSize: '13px', border: 'none', cursor: 'pointer' }}>
                       ✨ Try Product
@@ -318,14 +354,34 @@ export default function Home() {
                     </button>
                   </Link>
                 </div>
+
+                <button
+                  onClick={() => setIsRulesModalOpen(true)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '14px',
+                    background: 'rgba(255, 215, 0, 0.12)',
+                    border: '1px solid rgba(255, 215, 0, 0.4)',
+                    color: '#ffd700',
+                    fontWeight: 900,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>📜</span> Rules &amp; Regulations / Terms &amp; Conditions
+                </button>
               </div>
-            );
-          })()}
+            </div>
+          )}
 
           {/* Card 2: Sunday Winner Spotlight */}
           {(() => {
-            const comps = getCompetitions();
-            const pastComp = comps.find(c => c.status === 'WINNER_DECLARED');
             if (!pastComp) return null;
             const winner = getWinnerSubmission(pastComp.id);
             if (!winner) return null;
@@ -573,6 +629,13 @@ export default function Home() {
             router.push(`/search?q=${encodeURIComponent(text.trim())}`);
           }
         }}
+      />
+
+      {/* Rules and Regulations / Terms & Conditions Modal */}
+      <RulesAndRegulationsModal
+        isOpen={isRulesModalOpen}
+        onClose={() => setIsRulesModalOpen(false)}
+        competition={activeComp}
       />
     </main>
   );

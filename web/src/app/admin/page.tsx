@@ -13,6 +13,7 @@ import {
   fetchCompetitionsFromDb,
   fetchSubmissionsFromDb,
   adminCreateCompetition,
+  adminCreateCompetitionInDb,
   adminDeclareWinner,
   adminModerateSubmission,
   adminUpdateCompetitionStatus,
@@ -21,27 +22,40 @@ import {
   Competition,
   CompetitionSubmission,
 } from "@/lib/competition/store";
+import RulesAndRegulationsModal from "@/components/competition/RulesAndRegulationsModal";
 import { useAuth, checkIsAdminUser } from "@/lib/AuthContext";
 import {
   getPartnerProducts,
+  getCachedPartnerProducts,
   approvePartnerProduct,
   updatePartnerProduct,
   deletePartnerProduct,
   cleanProductTitle,
   getPartners,
+  getCachedPartners,
   approvePartner,
-  getPartnerOrders
+  getPartnerOrders,
+  getCachedPartnerOrders
 } from "@/lib/partners/partnerService";
 import { PartnerProduct, PartnerProductStatus, Partner, PartnerOrder } from "@/lib/partners/types";
 import { PREMIUM_COLLECTIONS_REGISTRY, recordMerchandisingAuditLog } from "@/lib/merchandising/premiumCollectionEngine";
 import { MerchandisingCollection } from "@/lib/merchandising/types";
-import { getCoupons, updateCouponStatus } from "@/lib/coupons/couponService";
+import { getCoupons, getCachedCoupons, updateCouponStatus } from "@/lib/coupons/couponService";
 import { BuyWiseCoupon } from "@/lib/coupons/types";
 import { retryFailedFulfillments } from "@/lib/partners/fulfillment/fulfillmentDispatcher";
 
 export default function AdminDashboard() {
   const { user: authUser, isAdmin: isAuthContextAdmin, loading } = useAuth();
-  const [stats, setStats] = useState({ users: 2, alerts: 0, commission: 0, gmv: 0, ordersCount: 0, blogs: 0, inventoryCount: 0 });
+  const [stats, setStats] = useState(() => ({
+    users: 2,
+    alerts: 0,
+    commission: 0,
+    gmv: 0,
+    ordersCount: 0,
+    blogs: 0,
+    inventoryCount: getCachedPartnerProducts('all', true).length
+  }));
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [broadcastMsg, setBroadcastMsg] = useState("");
   const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
   const [showCreateCompetition, setShowCreateCompetition] = useState(false);
@@ -142,12 +156,20 @@ export default function AdminDashboard() {
     if (isAuthorizedAdmin) {
       fetchStats();
 
-      // Real-time Firestore sync to keep figures up to date always
-      const unsubProducts = onSnapshot(collection(db, "partner_products"), () => fetchStats(), () => {});
-      const unsubOrders = onSnapshot(collection(db, "partner_orders"), () => fetchStats(), () => {});
-      const unsubAlerts = onSnapshot(collection(db, "alerts"), () => fetchStats(), () => {});
+      // Debounced real-time Firestore sync to prevent parallel query stampedes
+      const debouncedFetch = () => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          fetchStats();
+        }, 800);
+      };
+
+      const unsubProducts = onSnapshot(collection(db, "partner_products"), debouncedFetch, () => {});
+      const unsubOrders = onSnapshot(collection(db, "partner_orders"), debouncedFetch, () => {});
+      const unsubAlerts = onSnapshot(collection(db, "alerts"), debouncedFetch, () => {});
 
       return () => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         unsubProducts();
         unsubOrders();
         unsubAlerts();
@@ -157,10 +179,14 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
+      // 0ms instant display of local inventory count
+      const cachedProds = getCachedPartnerProducts('all', true);
+      setStats(prev => ({ ...prev, inventoryCount: cachedProds.length }));
+
       const [alertsSnap, blogSnap, prods, usersSnap, ordersSnap] = await Promise.all([
         getDocs(collection(db, "alerts")).catch(() => ({ size: 0 })),
         getDocs(collection(db, "blog")).catch(() => ({ size: 0 })),
-        getPartnerProducts('all', true).catch(() => []),
+        getPartnerProducts('all', true).catch(() => cachedProds),
         getDocs(collection(db, "users")).catch(() => ({ size: 0 })),
         getDocs(collection(db, "partner_orders")).catch(() => ({ size: 0, docs: [] }))
       ]);
@@ -181,7 +207,7 @@ export default function AdminDashboard() {
 
       const totalUsers = (usersSnap as any).size > 0 ? (usersSnap as any).size : 2;
       const totalAlerts = (alertsSnap as any).size || 0;
-      const totalSkus = Array.isArray(prods) ? prods.length : 0;
+      const totalSkus = Array.isArray(prods) ? prods.length : cachedProds.length;
 
       setStats({
         users: totalUsers,
@@ -768,18 +794,26 @@ function QuickActionButton({
    CORE COMPONENT: INTEGRATED INVENTORY CONTROL PANEL
    ========================================================================= */
 function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal: () => void; onStatsUpdate: () => void }) {
-  const [products, setProducts] = useState<PartnerProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<PartnerProduct[]>(() => getCachedPartnerProducts('all', true));
+  const [loading, setLoading] = useState(() => products.length === 0);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
-    const list = await getPartnerProducts('all', true);
-    setProducts(list);
-    setLoading(false);
+  const loadData = async (force: boolean = false) => {
+    if (products.length === 0) setLoading(true);
+    setIsSyncing(true);
+    try {
+      const list = await getPartnerProducts('all', true, force);
+      setProducts(list);
+    } catch (err) {
+      console.warn('Inventory load notice:', err);
+    } finally {
+      setLoading(false);
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {
@@ -937,10 +971,11 @@ function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal
           <option value="Home & Kitchen">Home &amp; Kitchen</option>
         </select>
         <button
-          onClick={loadData}
-          style={{ padding: '12px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+          onClick={() => loadData(true)}
+          disabled={isSyncing}
+          style={{ padding: '12px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.06)', border: isSyncing ? '1px solid #ffd700' : '1px solid rgba(255,255,255,0.15)', color: isSyncing ? '#ffd700' : 'white', fontWeight: 800, cursor: isSyncing ? 'wait' : 'pointer' }}
         >
-          🔄 Refresh
+          {isSyncing ? '⚡ Syncing...' : '🔄 Refresh'}
         </button>
       </div>
 
@@ -1198,7 +1233,7 @@ function AdminCompetitionManager({
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [activeComp, setActiveComp] = useState<Competition | undefined>(undefined);
   const [activeSubmissions, setActiveSubmissions] = useState<CompetitionSubmission[]>([]);
-  const [catalogProducts, setCatalogProducts] = useState<PartnerProduct[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<PartnerProduct[]>(() => getCachedPartnerProducts('all', true));
   const [feedback, setFeedback] = useState<string | null>(null);
 
   // Form State
@@ -1210,7 +1245,12 @@ function AdminCompetitionManager({
   const [newRetailer, setNewRetailer] = useState("Amazon India");
   const [newPrize, setNewPrize] = useState("₹5,000 Amazon Voucher + BuyWise Home Spotlight");
   const [newStatus, setNewStatus] = useState<string>("LIVE");
+  const [newRules, setNewRules] = useState("1. 100% Free Entry - No purchase necessary to enter or vote.\n2. One look submission per participant per week.\n3. Entrants must be 18 years or older.\n4. Submissions must feature this week's challenge item.\n5. Anti-fraud vote monitoring: Only 1 verified vote per user.");
+  const [newEligibility, setNewEligibility] = useState("All verified BuyWise registered shoppers in India (18+ only)");
+  const [newTerms, setNewTerms] = useState("Participants retain copyright of their photos and grant BuyWise AI a non-exclusive license to display submitted try-on looks for community voting and winner recognition. Explicit consent can be revoked at any time. Winners are verified by administration and announced every Sunday.");
   const [selectedInventorySku, setSelectedInventorySku] = useState("");
+  const [showRulesPreviewModal, setShowRulesPreviewModal] = useState(false);
+  const [selectedRulesComp, setSelectedRulesComp] = useState<Competition | null>(null);
 
   const refreshData = async () => {
     const comps = getCompetitions();
@@ -1333,7 +1373,7 @@ function AdminCompetitionManager({
 
     const fallbackImg = newProductImg || "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80";
 
-    const created = adminCreateCompetition({
+    const created = await adminCreateCompetitionInDb({
       title: newTitle,
       description: newDesc || "Try on this week's featured fashion product and submit your entry to win!",
       featuredProductTitle: newProductTitle,
@@ -1341,6 +1381,8 @@ function AdminCompetitionManager({
       featuredProductPrice: newPrice,
       retailer: newRetailer,
       prizeDescription: newPrize,
+      rules: newRules,
+      eligibility: newEligibility,
       status: (newStatus as any) || 'LIVE'
     });
 
@@ -1516,6 +1558,47 @@ function AdminCompetitionManager({
             <input type="text" value={newPrize} onChange={e => setNewPrize(e.target.value)} placeholder="e.g. ₹5,000 Shopping Voucher + Featured Banner on BuyWise Home Screen" style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontSize: '13px' }} />
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 800, color: '#ffd700', display: 'block', marginBottom: '4px' }}>
+                📜 Challenge Rules &amp; Regulations
+              </label>
+              <textarea
+                value={newRules}
+                onChange={e => setNewRules(e.target.value)}
+                rows={4}
+                placeholder="Enter challenge rules..."
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255, 215, 0, 0.3)', color: 'white', fontSize: '12.5px', lineHeight: 1.4, resize: 'vertical' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 800, color: '#00ff88', display: 'block', marginBottom: '4px' }}>
+                ⚖️ Challenge Terms &amp; Conditions / Consent
+              </label>
+              <textarea
+                value={newTerms}
+                onChange={e => setNewTerms(e.target.value)}
+                rows={4}
+                placeholder="Enter terms and consent details..."
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(0, 255, 136, 0.3)', color: 'white', fontSize: '12.5px', lineHeight: 1.4, resize: 'vertical' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 800, color: 'rgba(255,255,255,0.8)', display: 'block', marginBottom: '4px' }}>
+              👤 Eligibility Criteria
+            </label>
+            <input
+              type="text"
+              value={newEligibility}
+              onChange={e => setNewEligibility(e.target.value)}
+              placeholder="e.g. All verified BuyWise shoppers aged 18+ in India"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontSize: '13px' }}
+            />
+          </div>
+
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" onClick={() => setShowCreateForm(false)} style={{ padding: '12px 20px', borderRadius: '14px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 800 }}>
               Cancel
@@ -1550,14 +1633,40 @@ function AdminCompetitionManager({
               </div>
             </div>
 
-            <div style={{ padding: '14px 20px', borderRadius: '14px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', minWidth: '200px' }}>
-              <div style={{ fontSize: '11px', color: '#ffd700', fontWeight: 800 }}>🏆 CURRENT LEADER</div>
-              <div style={{ fontSize: '15px', fontWeight: 900, color: 'white', marginTop: '2px' }}>
-                {leadingSubmission ? leadingSubmission.userName : 'No submissions yet'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ padding: '12px 18px', borderRadius: '14px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', minWidth: '190px' }}>
+                <div style={{ fontSize: '10.5px', color: '#ffd700', fontWeight: 800 }}>🏆 CURRENT LEADER</div>
+                <div style={{ fontSize: '14px', fontWeight: 900, color: 'white', marginTop: '2px' }}>
+                  {leadingSubmission ? leadingSubmission.userName : 'No submissions yet'}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#00ff88', marginTop: '2px' }}>
+                  {leadingSubmission ? `❤️ ${leadingSubmission.voteCount} community votes` : 'Awaiting entries'}
+                </div>
               </div>
-              <div style={{ fontSize: '12px', color: '#00ff88', marginTop: '2px' }}>
-                {leadingSubmission ? `❤️ ${leadingSubmission.voteCount} community votes` : 'Awaiting entries'}
-              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRulesComp(activeComp);
+                  setShowRulesPreviewModal(true);
+                }}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 215, 0, 0.15)',
+                  border: '1px solid rgba(255, 215, 0, 0.4)',
+                  color: '#ffd700',
+                  fontWeight: 900,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>📜</span> Rules &amp; Regulations / Terms
+              </button>
             </div>
           </div>
         </div>
@@ -1753,6 +1862,13 @@ function AdminCompetitionManager({
           </div>
         </div>
       )}
+
+      {/* Rules and Regulations / Terms & Conditions Modal */}
+      <RulesAndRegulationsModal
+        isOpen={showRulesPreviewModal}
+        onClose={() => setShowRulesPreviewModal(false)}
+        competition={selectedRulesComp || activeComp}
+      />
     </div>
   );
 }
@@ -1992,7 +2108,7 @@ function AdminMerchandisingPanel() {
 }
 
 function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) {
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const [partners, setPartners] = useState<Partner[]>(() => getCachedPartners());
 
   useEffect(() => {
     getPartners().then(setPartners);
@@ -2080,7 +2196,7 @@ function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) 
 }
 
 function AdminFulfillmentPanel() {
-  const [orders, setOrders] = useState<PartnerOrder[]>([]);
+  const [orders, setOrders] = useState<PartnerOrder[]>(() => getCachedPartnerOrders());
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
@@ -2152,7 +2268,7 @@ function AdminFulfillmentPanel() {
 }
 
 function AdminCouponsPanel() {
-  const [coupons, setCoupons] = useState<BuyWiseCoupon[]>([]);
+  const [coupons, setCoupons] = useState<BuyWiseCoupon[]>(() => getCachedCoupons('ALL'));
 
   useEffect(() => {
     getCoupons('ALL').then(setCoupons);
