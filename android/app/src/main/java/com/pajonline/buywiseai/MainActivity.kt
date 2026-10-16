@@ -108,18 +108,18 @@ class MainActivity : ComponentActivity() {
                 val authState by authViewModel.authState.collectAsState()
 
                 val isLoggedIn = authState is AuthState.Authenticated
-                val hasCompletedOnboarding = prefs.getBoolean("has_completed_buywise_onboarding", false)
+                val hasCompletedOnboarding = prefs.getBoolean("has_completed_buywise_onboarding", true)
 
                 var isSplashFinished by remember { mutableStateOf(false) }
-                var showProductGuidePosters by remember(isLoggedIn, hasCompletedOnboarding) {
-                    mutableStateOf(!isLoggedIn && !hasCompletedOnboarding)
+                var showProductGuidePosters by remember {
+                    mutableStateOf(false)
                 }
 
                 LaunchedEffect(Unit) {
                     LanguageManager.init(context)
                     // Check for Google Play In-App Updates with cooldown control
                     com.pajonline.buywiseai.core.update.InAppUpdateManager.getInstance(context).checkForUpdate()
-                    delay(2000) // 2.0 seconds high-impact animated splash presentation
+                    delay(1000) // Fast animated splash presentation
                     isSplashFinished = true
                 }
 
@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
                 } else if (showProductGuidePosters && !isLoggedIn) {
                     OnboardingScreen(
                         onOnboardingCompleted = {
+                            prefs.edit().putBoolean("has_completed_buywise_onboarding", true).apply()
                             showProductGuidePosters = false
                         }
                     )

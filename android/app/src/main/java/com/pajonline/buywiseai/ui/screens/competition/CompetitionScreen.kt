@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,12 +42,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.pajonline.buywiseai.data.i18n.tr
 import com.pajonline.buywiseai.data.repository.CompetitionRepository
 import com.pajonline.buywiseai.domain.model.CompetitionSubmission
@@ -68,6 +72,7 @@ fun CompetitionScreen(
     }
 
     var showSubmitDialog by remember { mutableStateOf(false) }
+    var showRulesDialog by remember { mutableStateOf(false) }
     var voterId by remember { mutableStateOf("device_user_926dbc44") }
 
     Surface(
@@ -123,58 +128,123 @@ fun CompetitionScreen(
                 // ACTIVE COMPETITION CARD
                 if (activeComp != null) {
                     item {
+                        val cleanShortTitle = remember(activeComp.title) {
+                            activeComp.title.substringBefore("|")
+                                .replace("Weekly BuyWise Fashion Challenge: ", "")
+                                .replace("Weekly BuyWise Fashion Challenge:", "")
+                                .trim()
+                        }
+                        val productImg = remember(activeComp.featuredProductImage) {
+                            if (activeComp.featuredProductImage.isNotBlank() && !activeComp.featuredProductImage.contains("unsplash")) {
+                                activeComp.featuredProductImage
+                            } else {
+                                "https://buywiseai.pajonline.co.in/kamarbandh.png"
+                            }
+                        }
+
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
                             shape = RoundedCornerShape(22.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.45f))
                         ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text("STATUS: ${activeComp.status}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BuyWiseEmerald)
                                     Text("🆓 Free Entry • 18+ Only", fontSize = 11.sp, color = BuyWiseCyan, fontWeight = FontWeight.Bold)
                                 }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(activeComp.title, fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Featured: ${activeComp.featuredProductTitle} (₹${activeComp.featuredProductPrice})", fontSize = 12.sp, color = Color.LightGray)
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // PRODUCT IMAGE + SHORT TITLE (Features description hidden as requested)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(Color(0xFF261D3D))
+                                            .border(1.dp, BuyWiseGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                                    ) {
+                                        AsyncImage(
+                                            model = productImg,
+                                            contentDescription = cleanShortTitle,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = cleanShortTitle,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.White,
+                                            maxLines = 2
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "👗 Verified ${activeComp.retailer} • ₹${activeComp.featuredProductPrice}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = BuyWiseCyan
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
 
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(Color(0xFF1E1B2E), RoundedCornerShape(14.dp))
-                                        .padding(12.dp)
+                                        .background(Color(0xFF1E1B2E), RoundedCornerShape(12.dp))
+                                        .padding(10.dp)
                                 ) {
-                                    Text("🎁 Prize: ${activeComp.prizeDescription}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BuyWiseGold)
+                                    Text("🎁 Prize: ${activeComp.prizeDescription}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BuyWiseGold)
                                 }
 
                                 Spacer(modifier = Modifier.height(14.dp))
 
+                                // BUTTON LINE: TRY PRODUCT NOW, ENTER NOW, RULE TO PARTICIPATE
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Button(
                                         onClick = onNavigateToVto,
                                         modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
-                                        shape = RoundedCornerShape(14.dp)
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                     ) {
-                                        Text("✨ Try Product", color = Color.Black, fontWeight = FontWeight.Black)
+                                        Text("👗 Try Product Now", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 10.sp)
                                     }
 
                                     Button(
                                         onClick = { showSubmitDialog = true },
                                         modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B2E)),
-                                        shape = RoundedCornerShape(14.dp)
+                                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                     ) {
-                                        Text("🏆 Enter Look", color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text("🏆 Enter Now", color = Color.White, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                    }
+
+                                    Button(
+                                        onClick = { showRulesDialog = true },
+                                        modifier = Modifier.weight(1.1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B2E)),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                    ) {
+                                        Text("📜 Rule to Participate", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
                             }
@@ -239,6 +309,35 @@ fun CompetitionScreen(
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
                 showSubmitDialog = false
+            }
+        )
+    }
+
+    if (showRulesDialog && activeComp != null) {
+        AlertDialog(
+            onDismissRequest = { showRulesDialog = false },
+            containerColor = Color(0xFF141026),
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text("📜 Challenge Rules & Participation", color = BuyWiseGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("1. Eligibility: Open to all verified BuyWise registered shoppers (18+ in India).", color = Color.White, fontSize = 12.sp)
+                    Text("2. How to Participate: Try on the featured outfit in the AI Trial Room and submit your entry look.", color = Color.LightGray, fontSize = 12.sp)
+                    Text("3. Entry Limit: Exactly 1 look submission per user per weekly challenge.", color = Color.LightGray, fontSize = 12.sp)
+                    Text("4. Fair Community Voting: Transparent voting with anti-fraud voter verification.", color = Color.LightGray, fontSize = 12.sp)
+                    Text("5. Rewards: Top-voted winner receives ₹5,000 Voucher / Free Outfit + BuyWise Spotlight!", color = BuyWiseEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showRulesDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Understood", color = Color.Black, fontWeight = FontWeight.Black)
+                }
             }
         )
     }

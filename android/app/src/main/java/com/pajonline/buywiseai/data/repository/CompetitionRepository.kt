@@ -14,11 +14,11 @@ object CompetitionRepository {
     private val initialCompetitions = listOf(
         Competition(
             id = "comp-1792144504194",
-            title = "Weekly BuyWise Fashion Challenge: Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh/Waist Band for Chaniya Choli & Garba Dress",
-            description = "Try on this week's featured fashion product and submit your entry to win!",
+            title = "Weekly BuyWise Fashion Challenge: Gujarati Navratri Kamarbandh",
+            description = "Try on this week's featured Navratri Waist Belt & Kamarbandh and submit your look!",
             featuredProductId = "prod-1792144504194",
-            featuredProductTitle = "Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh/Waist Band for Chaniya Choli & Garba Dress",
-            featuredProductImage = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+            featuredProductTitle = "Gujarati Traditional Navratri Waist Belt (Kamarbandh)",
+            featuredProductImage = "https://buywiseai.pajonline.co.in/kamarbandh.png",
             featuredProductPrice = 499,
             retailer = "Amazon India",
             startDate = "2026-10-16T09:55:04.194Z",
@@ -140,13 +140,17 @@ object CompetitionRepository {
                             is String -> priceNum.toIntOrNull() ?: 0
                             else -> 0
                         }
+                        val rawTitle = doc.getString("title") ?: ""
+                        val cleanTitle = if (rawTitle.contains("|")) rawTitle.substringBefore("|").trim() else rawTitle
+                        val rawImg = doc.getString("featuredProductImage")
+                        val finalImg = if (!rawImg.isNullOrBlank() && !rawImg.contains("unsplash")) rawImg else "https://buywiseai.pajonline.co.in/kamarbandh.png"
                         Competition(
                             id = doc.id,
-                            title = doc.getString("title") ?: "",
+                            title = cleanTitle,
                             description = doc.getString("description") ?: "",
                             featuredProductId = doc.getString("featuredProductId") ?: "",
                             featuredProductTitle = doc.getString("featuredProductTitle") ?: "",
-                            featuredProductImage = doc.getString("featuredProductImage") ?: "",
+                            featuredProductImage = finalImg,
                             featuredProductPrice = price,
                             retailer = doc.getString("retailer") ?: "Amazon India",
                             startDate = doc.getString("startDate") ?: "",
