@@ -13,3 +13,6 @@ env:
     value: "https://ashupajonline--buywise-vto-engine-buywisevtoengine-generate.us-east.modal.run"
   - variable: MODAL_ENABLED
     value: "true"
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyBHOQ7XP-wLFOfLFxMx3l-iXCsR46Prqow"
+
