@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBHOQ7XP-wLFOfLFxMx3l-iXCsR46Prqow",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "build-fallback-api-key",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "pajonline-shopping.firebaseapp.com",
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://pajonline-shopping-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "pajonline-shopping",
