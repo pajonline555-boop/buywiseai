@@ -510,6 +510,176 @@ export const AUTHORITATIVE_FAQ_CATALOG: AuthoritativeFaqItem[] = [
     }
   },
 
+  // 8B. SHOPPING, BUYING, PAYMENTS & CANCELLATIONS
+  {
+    id: 'buy-1',
+    intent: 'BUYWISE_STORE',
+    category: 'ORDERS',
+    keywords: ['how to buy', 'buy product', 'purchase item', 'buy kaise karein', 'shopping kaise karein', 'order kaise karein'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "How do I buy a product on BuyWise?",
+      hi: "BuyWise पर कोई उत्पाद कैसे खरीदें?",
+      hinglish: "BuyWise par product kaise buy karein?"
+    },
+    answer: {
+      en: "To buy an item, search or compare products in SmartCompare. Tap 'Buy Now' or 'View Deal' to purchase directly from verified partners (Amazon, Flipkart, Myntra, etc.) with automatic coupon savings, or use direct BuyWise Partner Checkout where available.",
+      hi: "कोई उत्पाद खरीदने के लिए, SmartCompare में खोजें और 'Buy Now' या 'View Deal' दबाएं। यह आपको स्वचालित कूपन बचत के साथ सत्यापित पार्टनर स्टोर पर ले जाता है, या उपलब्ध होने पर सीधे BuyWise चेकआउट का उपयोग करें।",
+      hinglish: "Product khareedne ke liye SmartCompare mein 'Buy Now' ya 'View Deal' tap karein. Yeh aapko best verified store (Amazon, Flipkart, etc.) par le jata hai best active discount ke saath, ya direct BuyWise checkout use karein."
+    }
+  },
+  {
+    id: 'pay-1',
+    intent: 'BUYWISE_STORE',
+    category: 'ORDERS',
+    keywords: ['payment methods', 'upi', 'cod', 'cash on delivery', 'credit card', 'payment options', 'payment kaise karein'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "What payment methods are supported on BuyWise?",
+      hi: "BuyWise पर कौन से भुगतान विकल्प समर्थित हैं?",
+      hinglish: "BuyWise par payment ke kaunse options hain?"
+    },
+    answer: {
+      en: "BuyWise supports all major Indian payment methods through secure 256-bit encrypted checkout: UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Cards (Visa, Mastercard, RuPay), NetBanking (50+ banks), and Cash on Delivery (COD) for eligible partner items.",
+      hi: "BuyWise सभी प्रमुख भारतीय भुगतान विधियों का समर्थन करता है: UPI (Google Pay, PhonePe, Paytm, BHIM), क्रेडिट/डेबिट कार्ड (Visa, Mastercard, RuPay), नेटबैंकिंग (50+ बैंक), और पात्र वस्तुओं पर कैश ऑन डिलीवरी (COD)।",
+      hinglish: "BuyWise par sabhi major Indian payment options supported hain: UPI (Google Pay, PhonePe, Paytm), Cards (Visa, RuPay, Mastercard), NetBanking, aur eligible orders par Cash on Delivery (COD)."
+    }
+  },
+  {
+    id: 'can-1',
+    intent: 'ORDER',
+    category: 'ORDERS',
+    keywords: ['cancel order', 'how to cancel', 'order cancel kaise karein', 'cancellation policy'],
+    requiresLiveBackendData: true,
+    isAuthoritative: true,
+    question: {
+      en: "How do I cancel an order?",
+      hi: "मैं अपना ऑर्डर कैसे रद्द कर सकता हूँ?",
+      hinglish: "Mera order cancel kaise karun?"
+    },
+    answer: {
+      en: "You can cancel your order directly from Profile > Orders before it has been dispatched/shipped. Once cancelled, an instant refund is automatically initiated to your original payment method.",
+      hi: "आप डिस्पैच होने से पहले Profile > Orders से सीधे अपना ऑर्डर रद्द कर सकते हैं। रद्द होते ही आपका रिफंड स्वचालित रूप से आपके मूल भुगतान स्रोत में भेज दिया जाता है।",
+      hinglish: "Aap dispatch se pehle Profile > Orders section se directly apna order cancel kar sakte hain. Cancel hone par automatic instant refund initiate ho jata hai."
+    }
+  },
+  {
+    id: 'ref-2',
+    intent: 'REFUND',
+    category: 'ORDERS',
+    keywords: ['refund status', 'when will i get refund', 'refund time', 'paisa kab wapas aayega', 'refund kitne din me aata hai'],
+    requiresLiveBackendData: true,
+    isAuthoritative: true,
+    question: {
+      en: "When will I get my refund?",
+      hi: "मुझे मेरा रिफंड कब मिलेगा?",
+      hinglish: "Mera refund kab tak aayega?"
+    },
+    answer: {
+      en: "Refunds for cancelled orders or approved returns are processed immediately: UPI refunds reflect within 2 to 24 hours, while NetBanking and Card refunds typically take 3 to 5 business days depending on your bank.",
+      hi: "रद्द किए गए ऑर्डर या स्वीकृत रिटर्न के लिए रिफंड तुरंत संसाधित किए जाते हैं: UPI रिफंड 2 से 24 घंटों में और कार्ड/नेटबैंकिंग रिफंड आपके बैंक के अनुसार 3 से 5 व्यावसायिक दिनों में दिखाई देते हैं।",
+      hinglish: "Cancelled orders ya approved returns ka refund immediately process hota hai: UPI se 2-24 hours mein aur Card/NetBanking se 3-5 business days mein account mein aa jata hai."
+    }
+  },
+
+  // 8C. COMPETITION RULES, AGE ELIGIBILITY & CONSENT
+  {
+    id: 'comp-10',
+    intent: 'COMPETITION_ELIGIBILITY',
+    category: 'COMPETITION',
+    keywords: ['age requirement', 'age limit', '18 plus', 'who can join challenge', 'age limit kya hai', 'bachhe participate kar sakte hain'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "What is the age requirement for the fashion challenge?",
+      hi: "फैशन चुनौती के लिए आयु आवश्यकता क्या है?",
+      hinglish: "Fashion challenge ke liye age limit kya hai?"
+    },
+    answer: {
+      en: "Participants must be 18 years of age or older to enter the Weekly BuyWise Fashion Challenge and submit styled looks. You will be required to confirm you are 18+ before submitting your entry.",
+      hi: "Weekly BuyWise Fashion Challenge में भाग लेने और अपना लुक सबमिट करने के लिए प्रतिभागियों की आयु 18 वर्ष या उससे अधिक होनी चाहिए। सबमिशन से पहले आपको 18+ की पुष्टि करनी होगी।",
+      hinglish: "Weekly Fashion Challenge mein participate karne aur styled look submit karne ke liye age 18 saal ya usse zyada honi zaroori hai. Submission se pehle 18+ confirm karna padta hai."
+    }
+  },
+  {
+    id: 'comp-11',
+    intent: 'COMPETITION_PRIVACY',
+    category: 'COMPETITION',
+    keywords: ['consent for photo', 'photo public hogi kya', 'voting consent', 'winner banner consent'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "What consent is required when submitting a challenge look?",
+      hi: "चुनौती लुक सबमिट करते समय कौन सी सहमति आवश्यक है?",
+      hinglish: "Challenge submit karte waqt kya consent required hota hai?"
+    },
+    answer: {
+      en: "When submitting to a competition, you provide explicit consent to: 1) Allow your styled look in community voting, and 2) Feature your styled look on the BuyWise Home Spotlight banner if declared winner. Your raw original camera photos remain 100% private and encrypted on your local device.",
+      hi: "प्रतियोगिता में सबमिट करते समय, आप सहमति देते हैं: 1) अपने लुक को सामुदायिक वोटिंग में दिखाने के लिए, और 2) विजेता बनने पर BuyWise होम बैनर पर फीचर करने के लिए। आपकी मूल कैमरा तस्वीरें हमेशा आपके डिवाइस पर 100% निजी रहती हैं।",
+      hinglish: "Challenge submit karte time aap do consents dete hain: 1) Community voting mein look show karna, aur 2) Winner banne par BuyWise Home banner par feature hona. Aapki original camera photo hamesha 100% private rehti hai."
+    }
+  },
+
+  // 8D. VIRTUAL TRY-ON IDENTITY & POSE PRESERVATION
+  {
+    id: 'vto-3',
+    intent: 'VTO_GENERAL',
+    category: 'VTO',
+    keywords: ['wear on my photo', 'keep my face', 'maintain pose', 'skin tone vto', 'face badal jata hai kya', 'real you fitting'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "Does 'Wear On My Photo' change my face, skin tone, or pose?",
+      hi: "क्या 'Wear On My Photo' मेरा चेहरा, त्वचा का रंग या पोज़ बदल देता है?",
+      hinglish: "Kya 'Wear On My Photo' mera face, skin tone ya pose badal deta hai?"
+    },
+    answer: {
+      en: "No! 'Wear On My Photo' uses advanced AI diffusion warping designed to 100% preserve your authentic face, skin tone, glasses, dupatta/headwear, and standing posture, fitting only the selected garment onto your own body.",
+      hi: "बिल्कुल नहीं! 'Wear On My Photo' उन्नत AI डिफ्यूजन का उपयोग करता है जो आपके असली चेहरे, त्वचा के रंग, चश्मे, दुपट्टे और पोज़ को 100% सुरक्षित रखता है और केवल चुनी हुई पोशाक को आपके शरीर पर फिट करता है।",
+      hinglish: "Bilkul nahi! 'Wear On My Photo' AI diffusion technology use karta hai jo aapka real face, skin tone, glasses, dupatta aur pose 100% authentic rakhta hai aur sirf dress aap par fit karta hai."
+    }
+  },
+  {
+    id: 'vto-4',
+    intent: 'VTO_GENERAL',
+    category: 'VTO',
+    keywords: ['runway studio', 'runway mode', 'difference wear on my photo runway'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "What is the difference between 'Wear On My Photo' and 'Runway Studio'?",
+      hi: "'Wear On My Photo' और 'Runway Studio' में क्या अंतर है?",
+      hinglish: "'Wear On My Photo' aur 'Runway Studio' mein kya difference hai?"
+    },
+    answer: {
+      en: "'Wear On My Photo' is your 100% authentic fitting room that dresses you in your real photo and posture. 'Runway Studio' showcases the outfit on a high-fashion editorial runway model with luxury lighting.",
+      hi: "'Wear On My Photo' आपका 100% प्रामाणिक ट्रायल रूम है जो आपकी वास्तविक तस्वीर और पोज़ में आपको तैयार करता है। 'Runway Studio' एक फैशन रनवे मॉडल पर आउटफिट को प्रदर्शित करता है।",
+      hinglish: "'Wear On My Photo' aapka 100% authentic trial room hai jo aapki real photo aur pose par dress fit karta hai. 'Runway Studio' luxury high-fashion model par showcase karta hai."
+    }
+  },
+
+  // 8E. SAVINGS & MONEY SAVER
+  {
+    id: 'sav-1',
+    intent: 'PRODUCT_COMPARISON',
+    category: 'SMARTCOMPARE',
+    keywords: ['how to save money', 'best price guarantee', 'paise kaise bachayein', 'lowest deal'],
+    requiresLiveBackendData: false,
+    isAuthoritative: true,
+    question: {
+      en: "How does BuyWise help me save money on shopping?",
+      hi: "BuyWise मुझे खरीदारी पर पैसे बचाने में कैसे मदद करता है?",
+      hinglish: "BuyWise shopping par paise kaise bachata hai?"
+    },
+    answer: {
+      en: "BuyWise AI continuously tracks prices across 14+ shopping platforms, uncovers instant bank and credit card discounts, verifies coupon codes daily, and alerts you the moment prices drop so you always get the lowest price.",
+      hi: "BuyWise AI 14+ शॉपिंग प्लेटफॉर्म पर वास्तविक समय की कीमतों की तुलना करता है, बैंक छूट और कूपन कोड की पुष्टि करता है, और कीमतें गिरने पर आपको तुरंत अलर्ट करता है ताकि आप हमेशा सबसे कम कीमत पर खरीदारी करें।",
+      hinglish: "BuyWise AI 14+ platforms par live price comparison karta hai, bank card discounts aur verified coupons dhundhta hai, aur price drop hote hi alert bhejta hai taaki aapko hamesha lowest price mile."
+    }
+  },
+
   // 9. PROMPT INJECTION DEFENSE
   {
     id: 'inj-1',

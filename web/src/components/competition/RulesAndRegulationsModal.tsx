@@ -170,59 +170,58 @@ export default function RulesAndRegulationsModal({
         <div style={{ padding: '24px 26px', overflowY: 'auto', flex: 1, fontSize: '13.5px', lineHeight: 1.6, color: 'rgba(255,255,255,0.88)' }}>
           {activeTab === 'RULES' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ padding: '14px', borderRadius: '16px', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.3)' }}>
-                <h4 style={{ margin: '0 0 8px 0', color: '#ffd700', fontSize: '14px', fontWeight: 900 }}>
-                  📋 Challenge Rules &amp; Participation Guidelines
+              <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.3)' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ffd700', fontSize: '15px', fontWeight: 900 }}>
+                  ⚖️ 1. Eligibility &amp; Participation Rules
                 </h4>
-                <div style={{ whiteSpace: 'pre-line', fontSize: '13px' }}>
-                  {rules}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                  <div><strong style={{ color: '#ffd700' }}>• Age Requirement:</strong> Open to all registered users aged 18 years and older.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Account Requirement:</strong> Both challenge participation and voting require a logged-in account on the BuyWise AI app.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Submission Guidelines:</strong> Upload a selfie or product photo in the Challenge section of the app. You may also use the mobile Virtual Try-On feature to create your entry.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Entry Limit:</strong> Strictly one (1) image submission is allowed per user.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Voting Limit:</strong> Voting is restricted to one (1) vote per mobile device/account.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Promotion:</strong> Participants are encouraged to share their entry links across social media platforms to appeal for votes.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Selection &amp; Announcement of Winners:</strong> Winners are determined based on the highest combined engagement—including in-app votes, BuyWise AI social media interactions, and verified purchases. Winners will be announced on the BuyWise AI app, website, YouTube channel, and official social media pages.</div>
+                  <div><strong style={{ color: '#ffd700' }}>• Management Discretion:</strong> Prizes, challenge tiers, and structure may be increased, decreased, or modified at the sole discretion of BuyWise AI management.</div>
                 </div>
               </div>
 
-              <div>
-                <h4 style={{ margin: '0 0 6px 0', color: 'white', fontSize: '14px', fontWeight: 800 }}>
-                  ✨ Step-by-Step How to Compete:
+              <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(0, 255, 136, 0.08)', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#00ff88', fontSize: '15px', fontWeight: 900 }}>
+                  🎁 3. How to Claim Your Prize
                 </h4>
-                <ol style={{ paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <li><strong>Try On:</strong> Head to the VTO Room (`/try-on`) and generate your look with this week&apos;s featured item.</li>
-                  <li><strong>Submit:</strong> Click &quot;Submit to Weekly Challenge&quot; and accept explicit sharing consent.</li>
-                  <li><strong>Rally Votes:</strong> Share your look on WhatsApp and social media. Community members vote for top looks.</li>
-                  <li><strong>Win:</strong> The highest voted verified look is declared Sunday Winner and receives the grand prize!</li>
-                </ol>
-              </div>
-
-              <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(0, 255, 136, 0.08)', border: '1px solid rgba(0, 255, 136, 0.25)', fontSize: '12.5px' }}>
-                👤 <strong>Eligibility:</strong> {eligibility}
+                <p style={{ margin: '0 0 8px 0', fontSize: '12.5px', color: 'rgba(255,255,255,0.9)' }}>
+                  Winners can claim their reward through either of the following methods:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                  <div>
+                    <strong style={{ color: '#00ff88' }}>• Option 1 (Cashback Reimbursement):</strong> Purchase the featured product from our app or website and submit a 10 to 60-second try-on video. Once verified, the full product amount will be refunded directly to your bank account.
+                  </div>
+                  <div>
+                    <strong style={{ color: '#00ff88' }}>• Option 2 (Direct Delivery):</strong> Provide your shipping address privately through our official verification channel, and we will ship the prize directly to your doorstep at no cost.
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'TERMS' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h4 style={{ margin: '0 0 6px 0', color: '#00ff88', fontSize: '14px', fontWeight: 900 }}>
-                  1. Content Rights &amp; Privacy Consent
+              <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255, 140, 0, 0.08)', border: '1px solid rgba(255, 140, 0, 0.3)' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#ffaa00', fontSize: '15px', fontWeight: 900 }}>
+                  📢 4. Content Usage Disclaimer
                 </h4>
                 <p style={{ margin: 0, fontSize: '13px' }}>
-                  You retain complete intellectual property and copyright over your original photo. By submitting your Try-On look, you grant BuyWise AI a non-exclusive, revocable, royalty-free license to display your look on the BuyWise Fashion Wall, Home Banner, and social media showcase solely for competition voting and winner announcement.
+                  <strong style={{ color: '#ffaa00' }}>• Authorization &amp; Media Rights:</strong> By submitting images or videos to the BuyWise AI Challenge, you grant BuyWise AI a non-exclusive, royalty-free license to use, display, and promote your content across our official app, website, and social media platforms for legitimate marketing and promotional purposes.
                 </p>
               </div>
 
               <div>
                 <h4 style={{ margin: '0 0 6px 0', color: '#00ff88', fontSize: '14px', fontWeight: 900 }}>
-                  2. Voluntary Participation &amp; Revocation
+                  Privacy &amp; Data Rights (DPDP Act 2023)
                 </h4>
                 <p style={{ margin: 0, fontSize: '13px' }}>
-                  Submission is 100% voluntary. You may withdraw your submission at any time from your account or by contacting customer support. Upon withdrawal, your image is immediately unpublished from public voting.
-                </p>
-              </div>
-
-              <div>
-                <h4 style={{ margin: '0 0 6px 0', color: '#00ff88', fontSize: '14px', fontWeight: 900 }}>
-                  3. Age Restriction &amp; Indian Law
-                </h4>
-                <p style={{ margin: 0, fontSize: '13px' }}>
-                  Entrants must be 18 years or older. This competition complies with the Information Technology Act, 2000 and Digital Personal Data Protection Act (DPDP), 2023. No entry fee or gambling mechanics are involved.
+                  You retain complete intellectual property over your original human photo. Your submission is voluntary, and you may request removal or withdrawal of your entry at any time in accordance with Indian digital privacy laws.
                 </p>
               </div>
             </div>
@@ -230,31 +229,25 @@ export default function RulesAndRegulationsModal({
 
           {activeTab === 'VOTING' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h4 style={{ margin: '0 0 6px 0', color: '#00d4ff', fontSize: '14px', fontWeight: 900 }}>
-                  🛡️ Anti-Fraud &amp; One-Vote-Per-User Policy
+              <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255, 0, 128, 0.08)', border: '1px solid rgba(255, 0, 128, 0.3)' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#ff3388', fontSize: '15px', fontWeight: 900 }}>
+                  🛡️ 2. Safety, Conduct &amp; Anti-Fraud Guidelines
                 </h4>
-                <p style={{ margin: 0, fontSize: '13px' }}>
-                  To guarantee absolute fairness, BuyWise AI utilizes automated bot detection, IP fingerprinting, and account verification. Any entry found using automated voting, click farms, or duplicate accounts will be disqualified immediately.
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                  <div>
+                    <strong style={{ color: '#ff3388' }}>• Code of Conduct:</strong> Uploading nude, offensive, or unethical content is strictly prohibited and will result in immediate disqualification and legal action.
+                  </div>
+                  <div>
+                    <strong style={{ color: '#ff3388' }}>• Privacy Protection:</strong> Never share your mobile number, home address, or sensitive personal information publicly on our app, website, or social media comments.
+                  </div>
+                  <div>
+                    <strong style={{ color: '#ff3388' }}>• Zero Fee Policy:</strong> Claiming a prize is 100% free. Never pay money to anyone claiming to represent BuyWise AI to release or deliver your prize.
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <h4 style={{ margin: '0 0 6px 0', color: '#00d4ff', fontSize: '14px', fontWeight: 900 }}>
-                  🎁 Prize Award &amp; Winner Verification
-                </h4>
-                <p style={{ margin: 0, fontSize: '13px' }}>
-                  Winners are verified by administration every Sunday evening. The winning entrant will be notified via their registered email/phone to claim their shopping voucher or prize. Prizes are non-transferable and cannot be exchanged for cash.
-                </p>
-              </div>
-
-              <div>
-                <h4 style={{ margin: '0 0 6px 0', color: '#00d4ff', fontSize: '14px', fontWeight: 900 }}>
-                  🔒 Admin Integrity Controls
-                </h4>
-                <p style={{ margin: 0, fontSize: '13px' }}>
-                  BuyWise AI administrators reserve the right to temporarily freeze voting during active reviews and remove content that violates community standards or copyright laws.
-                </p>
+              <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(0, 212, 255, 0.08)', border: '1px solid rgba(0, 212, 255, 0.3)', fontSize: '13px' }}>
+                <strong style={{ color: '#00d4ff' }}>⚖️ Voting Verification:</strong> Strictly 1 vote per mobile device or account. All suspicious or automated votes are filtered by anti-fraud algorithms prior to Sunday winner declaration.
               </div>
             </div>
           )}

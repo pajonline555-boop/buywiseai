@@ -92,8 +92,64 @@ export default function CompetitionTermsPage() {
           gap: '28px',
         }}
       >
+        {/* OFFICIAL RULES & REGULATIONS - 4 CORE SECTIONS */}
+        <div style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 215, 0, 0.05)', border: '1.5px solid rgba(255, 215, 0, 0.4)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#ffd700', margin: 0 }}>
+            📜 Official Rules &amp; Regulations
+          </h2>
+
+          <section>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#00d4ff', marginBottom: '8px' }}>
+              1. Eligibility &amp; Participation Rules
+            </h3>
+            <ul style={{ paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
+              <li><strong>Age Requirement:</strong> Open to all registered users aged 18 years and older.</li>
+              <li><strong>Account Requirement:</strong> Both challenge participation and voting require a logged-in account on the BuyWise AI app.</li>
+              <li><strong>Submission Guidelines:</strong> Upload a selfie or product photo in the Challenge section of the app. You may also use the mobile Virtual Try-On feature to create your entry.</li>
+              <li><strong>Entry Limit:</strong> Strictly one (1) image submission is allowed per user.</li>
+              <li><strong>Voting Limit:</strong> Voting is restricted to one (1) vote per mobile device/account.</li>
+              <li><strong>Promotion:</strong> Participants are encouraged to share their entry links across social media platforms to appeal for votes.</li>
+              <li><strong>Selection &amp; Announcement of Winners:</strong> Winners are determined based on the highest combined engagement—including in-app votes, BuyWise AI social media interactions, and verified purchases. Winners will be announced on the BuyWise AI app, website, YouTube channel, and official social media pages.</li>
+              <li><strong>Management Discretion:</strong> Prizes, challenge tiers, and structure may be increased, decreased, or modified at the sole discretion of BuyWise AI management.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#ff3388', marginBottom: '8px' }}>
+              2. Safety, Conduct &amp; Anti-Fraud Guidelines
+            </h3>
+            <ul style={{ paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
+              <li><strong>Code of Conduct:</strong> Uploading nude, offensive, or unethical content is strictly prohibited and will result in immediate disqualification and legal action.</li>
+              <li><strong>Privacy Protection:</strong> Never share your mobile number, home address, or sensitive personal information publicly on our app, website, or social media comments.</li>
+              <li><strong>Zero Fee Policy:</strong> Claiming a prize is 100% free. Never pay money to anyone claiming to represent BuyWise AI to release or deliver your prize.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#00ff88', marginBottom: '8px' }}>
+              3. How to Claim Your Prize
+            </h3>
+            <p style={{ margin: '0 0 6px 0', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
+              Winners can claim their reward through either of the following methods:
+            </p>
+            <ul style={{ paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
+              <li><strong>Option 1 (Cashback Reimbursement):</strong> Purchase the featured product from our app or website and submit a 10 to 60-second try-on video. Once verified, the full product amount will be refunded directly to your bank account.</li>
+              <li><strong>Option 2 (Direct Delivery):</strong> Provide your shipping address privately through our official verification channel, and we will ship the prize directly to your doorstep at no cost.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#ffaa00', marginBottom: '8px' }}>
+              4. Content Usage Disclaimer
+            </h3>
+            <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
+              <strong>Authorization &amp; Media Rights:</strong> By submitting images or videos to the BuyWise AI Challenge, you grant BuyWise AI a non-exclusive, royalty-free license to use, display, and promote your content across our official app, website, and social media platforms for legitimate marketing and promotional purposes.
+            </p>
+          </section>
+        </div>
+
         <section>
-          <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#ffd700', marginBottom: '8px' }}>1. Organizer Identity</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#ffd700', marginBottom: '8px' }}>Organizer Identity</h2>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)' }}>
             The <strong>Weekly BuyWise Try-On Challenge</strong> (&quot;Competition&quot;) is organized and administered by BuyWise AI Technologies Private Limited (&quot;BuyWise AI&quot;, &quot;We&quot;, &quot;Us&quot;).
           </p>

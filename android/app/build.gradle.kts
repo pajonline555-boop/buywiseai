@@ -105,6 +105,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language.id)
+    implementation(libs.mlkit.face.detection)
 
     // Testing
     testImplementation(libs.junit)

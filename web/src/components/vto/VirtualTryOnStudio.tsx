@@ -318,16 +318,18 @@ function VirtualTryOnContent() {
   useEffect(() => {
     const garmentUrl = searchParams.get("garmentUrl");
     const title = searchParams.get("title");
+    const price = searchParams.get("price");
     if (garmentUrl && title) {
+      const decodedTitle = decodeURIComponent(title);
       const customProd: GarmentProduct = {
-        id: `custom_${Date.now()}`,
-        title: decodeURIComponent(title),
+        id: `challenge_${Date.now()}`,
+        title: decodedTitle,
         category: "all",
-        price: 3999,
-        store: "🟢 BuyWise Partner Direct",
-        productUrl: "/partners",
+        price: price ? parseInt(price) : 499,
+        store: "🏆 Weekly Fashion Challenge",
+        productUrl: "/competition",
         imageUrl: decodeURIComponent(garmentUrl),
-        smartValueScore: 96,
+        smartValueScore: 99,
         trustScore: 99
       };
       setActiveProduct(customProd);

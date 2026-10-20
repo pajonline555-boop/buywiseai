@@ -703,7 +703,19 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Button(
-                                    onClick = onNavigateToVto,
+                                    onClick = {
+                                        if (activeComp != null) {
+                                            com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
+                                                title = activeComp.featuredProductTitle,
+                                                imageUrl = activeComp.featuredProductImage,
+                                                price = activeComp.featuredProductPrice,
+                                                compId = activeComp.id,
+                                                retailer = activeComp.retailer,
+                                                category = "dresses"
+                                            )
+                                        }
+                                        onNavigateToVto()
+                                    },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
                                     shape = RoundedCornerShape(10.dp),
@@ -781,7 +793,16 @@ fun HomeScreen(
                 // SECTION 2: Exclusive Gen G Store Showcase
                 GenGStoreShowcase(
                     onViewAllClick = { onNavigateToSearch("Gen-G Store") },
-                    onTryOnClick = { prod -> onNavigateToVto() },
+                    onTryOnClick = { prod ->
+                        val parsedPrice = prod.sellingPrice.filter { it.isDigit() }.toIntOrNull() ?: 499
+                        com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
+                            title = prod.title,
+                            imageUrl = prod.imageUrl,
+                            price = parsedPrice,
+                            retailer = if (prod.retailer.isNotBlank()) prod.retailer else "Gen-G Store"
+                        )
+                        onNavigateToVto()
+                    },
                     onBuyNowClick = { prod ->
                         val rawUrl = prod.productUrl.ifEmpty { "https://www.amazon.in/s?k=${Uri.encode(prod.title)}" }
                         val affiliateUrl = if (rawUrl.contains("tag=")) rawUrl
@@ -888,31 +909,8 @@ fun HomeScreen(
     }
 
     if (showRulesDialog && activeComp != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showRulesDialog = false },
-            containerColor = Color(0xFF141026),
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Text("📜 Challenge Rules & Participation", color = BuyWiseGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("1. Eligibility: Open to all verified BuyWise registered shoppers (18+ in India).", color = Color.White, fontSize = 12.sp)
-                    Text("2. How to Participate: Try on the featured outfit in the AI Trial Room and submit your entry look.", color = Color.LightGray, fontSize = 12.sp)
-                    Text("3. Entry Limit: Exactly 1 look submission per user per weekly challenge.", color = Color.LightGray, fontSize = 12.sp)
-                    Text("4. Fair Community Voting: Transparent voting with anti-fraud voter verification.", color = Color.LightGray, fontSize = 12.sp)
-                    Text("5. Rewards: Top-voted winner receives ₹5,000 Voucher / Free Outfit + BuyWise Spotlight!", color = BuyWiseEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showRulesDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Understood", color = Color.Black, fontWeight = FontWeight.Black)
-                }
-            }
+        com.pajonline.buywiseai.ui.components.ChallengeRulesDialog(
+            onDismissRequest = { showRulesDialog = false }
         )
     }
 }

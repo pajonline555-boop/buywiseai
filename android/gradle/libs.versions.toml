@@ -22,6 +22,7 @@ playAppUpdate = "2.1.0"
 mlkitText = "16.0.1"
 mlkitTranslate = "17.0.3"
 mlkitLanguageId = "17.0.6"
+mlkitFace = "16.1.7"
 playBilling = "8.0.0"
 
 [libraries]
@@ -59,6 +60,7 @@ play-app-update = { group = "com.google.android.play", name = "app-update-ktx", 
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitText" }
 mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkitTranslate" }
 mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "mlkitLanguageId" }
+mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkitFace" }
 play-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "playBilling" }
 
 [plugins]

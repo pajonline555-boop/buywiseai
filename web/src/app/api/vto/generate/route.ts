@@ -1,197 +1,132 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { vtoProviderRouter } from "@/lib/vto/providers/VtoProviderRouter";
-import { vtoBudgetGovernor } from "@/lib/vto/vtoBudgetGovernor";
-import { garmentPreparationPipeline } from "@/lib/vto/garmentPreparation";
-import { validateGeneratedImage } from "@/lib/vto/vtoQualityGate";
-import { reserveVtoCredit, refundVtoCredit } from "@/lib/vto/vtoEntitlementService";
-import axios from 'axios';
+import axios from "axios";
 
 async function fetchAsBase64(url: string): Promise<string | undefined> {
   if (url.startsWith("data:")) return url;
   try {
-    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 10000 });
+    const res = await axios.get(url, { responseType: "arraybuffer", timeout: 15000 });
     const buffer = Buffer.from(res.data);
-    const base64 = buffer.toString("base64");
     const mime = res.headers["content-type"] || "image/jpeg";
-    return `data:${mime};base64,${base64}`;
+    return `data:${mime};base64,${buffer.toString("base64")}`;
   } catch (err) {
-    console.warn("[VTO API Route fetchAsBase64 Note]:", err);
+    console.warn("[VTO Route fetchAsBase64 Warn]:", err);
   }
   return undefined;
 }
 
 export async function POST(req: Request) {
-  let reservedUserId: string | null = null;
-  let reservationId: string | null = null;
-  let budgetReserved = false;
-
   try {
     const body = await req.json();
-    const { userPhoto, product, drapeStyle, userId } = body;
 
-    if (!userPhoto || !userPhoto.url) {
-      return NextResponse.json({
-        success: false,
-        code: "INVALID_USER_PHOTO",
-        message: "Missing user photo for Virtual Try-On."
-      }, { status: 400 });
-    }
+    // 1. Resolve User Image & Garment Image from any supported payload format
+    let userImageBase64 = body.userImageBase64 || body.person_image_url;
+    let garmentImageUrl = body.garmentImageUrl || body.garment_image_url;
+    const category = body.category || "dresses";
 
-    if (!product || !product.id || !product.title || !product.imageUrl) {
-      return NextResponse.json({
-        success: false,
-        code: "INVALID_PRODUCT_DATA",
-        message: "Missing selected product image and details."
-      }, { status: 400 });
-    }
-
-    const targetUserId = userId || "guest_demo_user";
-
-    // Step 0A: Atomic Entitlement Check
-    const reservation = reserveVtoCredit(targetUserId);
-    if (!reservation.success) {
-      return NextResponse.json({
-        success: false,
-        code: "ENTITLEMENT_EXHAUSTED",
-        message: reservation.reason || "You've used your free Try-Ons for now. 🎉",
-        remainingCredits: reservation.remainingCredits
-      }, { status: 402 });
-    }
-
-    reservedUserId = targetUserId;
-    reservationId = reservation.reservationId || null;
-
-    // Step 0B: Financial & Budget Governor Check
-    const budgetCheck = vtoBudgetGovernor.checkAndReserveSlot(targetUserId);
-    if (!budgetCheck.allowed) {
-      // Refund credit entitlement if budget governor denies request
-      if (reservedUserId && reservationId) {
-        refundVtoCredit(reservedUserId, reservationId);
+    if (!userImageBase64 && body.userPhoto) {
+      const url = typeof body.userPhoto === "string" ? body.userPhoto : body.userPhoto?.url;
+      if (url) {
+        userImageBase64 = url.startsWith("data:") ? url : await fetchAsBase64(url);
       }
-      return NextResponse.json({
-        success: false,
-        code: budgetCheck.code || "BUDGET_LIMIT_REACHED",
-        message: budgetCheck.message || "Free Try-On limit reached. Please try again later.",
-        userMonthlyRemaining: budgetCheck.userMonthlyRemaining,
-        userDailyRemaining: budgetCheck.userDailyRemaining,
-        globalDailyRemaining: budgetCheck.globalDailyRemaining
-      }, { status: 429 });
     }
 
-    budgetReserved = true;
+    if (!garmentImageUrl && body.product) {
+      garmentImageUrl = body.product?.imageUrl || body.product?.primaryImage || body.product?.image;
+    }
 
-    // Step 1: Garment Preparation Pipeline
-    const preparedGarment = await garmentPreparationPipeline.prepareGarmentImage(
-      product.id,
-      product.imageUrl,
-      product.category || "sarees_ethnic",
-      product.title
-    );
+    if (!userImageBase64 || !garmentImageUrl) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please provide both a user photo and a garment image.",
+        },
+        { status: 400 }
+      );
+    }
 
-    // Step 2: Fetch Base64 representations
-    const userPhotoBase64 = userPhoto.url.startsWith("data:") 
-      ? userPhoto.url 
-      : await fetchAsBase64(userPhoto.url);
+    // 2. Execute VTO Generation via Canonical Provider Router
+    const { vtoProviderRouter } = await import("@/lib/vto/providers/VtoProviderRouter");
+    const { validateGeneratedImage } = await import("@/lib/vto/vtoQualityGate");
 
-    const garmentBase64 = product.imageUrl.startsWith("data:")
-      ? product.imageUrl
-      : await fetchAsBase64(product.imageUrl);
+    const requestId = `vto_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const productTitle = body.title || body.product?.title || body.product?.name || "garment";
 
-    // Step 3: Execute VTO Provider Router Pipeline
-    const requestId = `vto_req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const routerResult = await vtoProviderRouter.generate({
+    console.log(`[VTO Route]: Delegating requestId ${requestId} to VtoProviderRouter...`);
+
+    const result = await vtoProviderRouter.generate({
       requestId,
-      userId: targetUserId,
-      personImage: userPhotoBase64 || userPhoto.url,
-      garmentImage: garmentBase64 || product.imageUrl,
-      garmentType: product.category || "sarees_ethnic",
-      productTitle: product.title,
-      productId: product.id,
-      storeName: product.store || "Retailer Store",
-      requestedStyle: drapeStyle || product.drapeStyle
+      userId: body.userId || "guest_user",
+      personImage: userImageBase64,
+      garmentImage: garmentImageUrl,
+      garmentType: category,
+      productTitle,
+      productId: body.garmentSkuId || body.product?.id,
+      preserveIdentity: true,
+      preserveBackground: true,
     });
 
-    // Step 4: Provider Failure Handling
-    if (!routerResult.success || !routerResult.image) {
-      console.log(`[VTO API Route]: Provider Router execution returned FAILED. Error: ${routerResult.failureMessage}`);
-      
-      if (budgetReserved && reservedUserId) {
-        vtoBudgetGovernor.releaseSlot(reservedUserId);
-      }
-      if (reservedUserId && reservationId) {
-        refundVtoCredit(reservedUserId, reservationId);
-      }
-
-      return NextResponse.json({
-        success: false,
-        code: routerResult.failureCode || "VTO_GENERATION_FAILED",
-        message: "Virtual Try-On is temporarily unavailable. Your credit was not consumed.",
-        provider: routerResult.provider
-      }, { status: 502 });
+    if (!result.success || !result.image) {
+      console.warn(`[VTO Route Failure]: Provider ${result.provider} failed: ${result.failureMessage}`);
+      return NextResponse.json(
+        {
+          success: false,
+          code: result.failureCode || "VTO_GENERATION_FAILED",
+          message: result.failureMessage || "AI try-on generation failed. Please try again in a few moments.",
+          provider: result.provider,
+          fallbackUsed: result.fallbackUsed || false,
+          canPublishToCommunity: false,
+        },
+        { status: 502 }
+      );
     }
 
-    // Step 5: Quality Gate Validation
-    const validation = validateGeneratedImage(routerResult.image, userPhotoBase64, garmentBase64);
+    // 3. Enforce Perceptual Quality Gate
+    const qualityReport = validateGeneratedImage(result.image, userImageBase64, garmentImageUrl);
 
-    if (!validation.isValid) {
-      console.warn(`[VTO API Route]: Quality Gate rejected generation (${validation.code}: ${validation.message}). Refunding credit...`);
-      
-      if (budgetReserved && reservedUserId) {
-        vtoBudgetGovernor.releaseSlot(reservedUserId);
-      }
-      if (reservedUserId && reservationId) {
-        refundVtoCredit(reservedUserId, reservationId);
-      }
-
-      return NextResponse.json({
-        success: false,
-        code: validation.code || "QUALITY_GATE_FAILED",
-        message: "Virtual Try-On result did not meet quality standards. Your credit was refunded.",
-        validation
-      }, { status: 422 });
+    if (!qualityReport.isValid) {
+      console.warn(`[VTO Quality Gate Rejection]: ${qualityReport.code} - ${qualityReport.message}`);
+      return NextResponse.json(
+        {
+          success: false,
+          code: qualityReport.code,
+          message: `Quality check failed: ${qualityReport.message}. Please select a clearer photo.`,
+          provider: result.provider,
+          canPublishToCommunity: false,
+        },
+        { status: 422 }
+      );
     }
-
-    // SUCCESS: Commit budget slot
-    vtoBudgetGovernor.commitSlot(targetUserId, routerResult.estimatedCost);
 
     return NextResponse.json({
       success: true,
+      imageBase64: result.image,
+      imageUrl: result.image,
+      resultImage: result.image,
+      provider: result.provider,
+      modelUsed: result.model,
+      modeUsed: result.model,
+      generationTimeMs: result.generationTimeMs,
+      estimatedCost: result.estimatedCost,
+      fallbackUsed: result.fallbackUsed || false,
+      canPublishToCommunity: qualityReport.canPublishToCommunity,
       job: {
-        jobId: routerResult.requestId,
         status: "COMPLETED",
-        userPhotoUrl: userPhoto.url,
-        productId: product.id,
-        productTitle: product.title,
-        productStore: product.store || "Retailer Store",
-        productPrice: product.price || 0,
-        resultImageUrl: routerResult.image,
-        providerId: routerResult.provider,
-        model: routerResult.model,
-        licenseStatus: routerResult.licenseStatus,
-        fallbackUsed: routerResult.fallbackUsed || false,
-        estimatedCost: routerResult.estimatedCost
+        resultImageUrl: result.image,
+        provider: result.provider,
+        mode: result.model,
       },
-      preparedGarment,
-      validation,
-      providerConfigured: true,
-      budgetRemaining: {
-        userMonthlyRemaining: budgetCheck.userMonthlyRemaining,
-        userDailyRemaining: budgetCheck.userDailyRemaining
-      }
     });
-
-  } catch (error: any) {
-    if (budgetReserved && reservedUserId) {
-      vtoBudgetGovernor.releaseSlot(reservedUserId);
-    }
-    if (reservedUserId && reservationId) {
-      refundVtoCredit(reservedUserId, reservationId);
-    }
-    return NextResponse.json({
-      success: false,
-      code: "VTO_SYSTEM_ERROR",
-      message: "Virtual Try-On is temporarily unavailable. Your credit was not consumed."
-    }, { status: 500 });
+  } catch (err: any) {
+    console.error("[VTO Route Exception]:", err?.message || err);
+    return NextResponse.json(
+      {
+        success: false,
+        code: "INTERNAL_ERROR",
+        message: "AI Fitting Room encountered an unexpected error. Please retry.",
+        canPublishToCommunity: false,
+      },
+      { status: 500 }
+    );
   }
 }

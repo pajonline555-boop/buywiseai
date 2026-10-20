@@ -1,0 +1,15 @@
+# Settings for Firebase App Hosting
+runConfig:
+  minInstances: 0       # Scale to zero when idle ($0 idle compute cost)
+  maxInstances: 5       # Prevent unexpected runaway spikes
+  concurrency: 80       # Concurrent requests per container instance
+  cpu: 1                # 1 vCPU
+  memoryMiB: 1024       # 1024 MB RAM
+
+env:
+  - variable: NODE_ENV
+    value: "production"
+  - variable: MODAL_VTO_URL
+    value: "https://ashupajonline--buywise-vto-engine-buywisevtoengine-generate.us-east.modal.run"
+  - variable: MODAL_ENABLED
+    value: "true"

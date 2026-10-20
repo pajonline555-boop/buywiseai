@@ -29,14 +29,34 @@ data class ScrapeProductRequest(
     val url: String
 )
 
+data class VtoPhotoPayload(
+    val url: String
+)
+
+data class VtoProductPayload(
+    val id: String,
+    val title: String,
+    val imageUrl: String,
+    val price: Double? = null,
+    val category: String? = null,
+    val store: String? = null
+)
+
 data class VtoGenerateRequest(
-    val userPhoto: String,
-    val product: Product
+    val userPhoto: VtoPhotoPayload,
+    val product: VtoProductPayload,
+    val userId: String = "android_user"
+)
+
+data class VtoJobDetails(
+    val jobId: String? = null,
+    val resultImageUrl: String? = null
 )
 
 data class VtoGenerateResponse(
     val success: Boolean,
     val resultImage: String? = null,
+    val job: VtoJobDetails? = null,
     val message: String? = null
 )
 

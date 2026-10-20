@@ -145,8 +145,44 @@ object MayaKnowledgeEngine {
             return Pair(ans, "VTO")
         }
 
-        // 5. Orders, Shipping & Returns
-        if (q.contains("return") || q.contains("refund")) {
+        // 5. Orders, Buying, Payments & Cancellations
+        if (q.contains("how to buy") || q.contains("buy kaise") || q.contains("shopping kaise") || q.contains("kharide")) {
+            val ans = when (lang) {
+                "hi" -> "कोई उत्पाद खरीदने के लिए, SmartCompare में उत्पाद खोजें और 'Buy Now' या 'View Deal' दबाएं। यह आपको सर्वोत्तम कूपन बचत के साथ सत्यापित पार्टनर स्टोर (Amazon, Flipkart आदि) पर ले जाता है।"
+                "hinglish" -> "Product khareedne ke liye SmartCompare mein 'Buy Now' ya 'View Deal' tap karein. Yeh aapko best verified store (Amazon, Flipkart, Myntra) par direct deal aur active coupons ke saath le jata hai."
+                else -> "To buy an item, search or compare in SmartCompare. Tap 'Buy Now' or 'View Deal' to purchase directly from verified partners (Amazon, Flipkart, Myntra, etc.) with automatic coupon savings."
+            }
+            return Pair(ans, "BUYING")
+        }
+
+        if (q.contains("payment") || q.contains("upi") || q.contains("cod") || q.contains("cash on delivery") || q.contains("card")) {
+            val ans = when (lang) {
+                "hi" -> "BuyWise सभी प्रमुख भारतीय भुगतान विधियों का समर्थन करता है: UPI (Google Pay, PhonePe, Paytm, BHIM), क्रेडिट/डेबिट कार्ड (Visa, Mastercard, RuPay), नेटबैंकिंग, और पात्र वस्तुओं पर कैश ऑन डिलीवरी (COD)।"
+                "hinglish" -> "BuyWise par sabhi major Indian payment options supported hain: UPI (Google Pay, PhonePe, Paytm), Cards (Visa, RuPay, Mastercard), NetBanking, aur eligible orders par Cash on Delivery (COD)."
+                else -> "BuyWise supports all major Indian payment methods through secure 256-bit encrypted checkout: UPI (Google Pay, PhonePe, Paytm), Cards (Visa, RuPay, Mastercard), NetBanking, and Cash on Delivery (COD) for eligible items."
+            }
+            return Pair(ans, "PAYMENT")
+        }
+
+        if (q.contains("cancel") || q.contains("cancel order")) {
+            val ans = when (lang) {
+                "hi" -> "आप डिस्पैच होने से पहले Profile > Orders से सीधे अपना ऑर्डर रद्द कर सकते हैं। रद्द होते ही आपका रिफंड स्वचालित रूप से आपके मूल भुगतान स्रोत में भेज दिया जाता है।"
+                "hinglish" -> "Aap dispatch se pehle Profile > Orders section se directly apna order cancel kar sakte hain. Cancel hone par automatic instant refund initiate ho jata hai."
+                else -> "You can cancel your order directly from Profile > Orders before it has been dispatched. Once cancelled, an instant refund is automatically initiated to your original payment method."
+            }
+            return Pair(ans, "ORDERS")
+        }
+
+        if (q.contains("refund") || q.contains("paisa wapas") || q.contains("refund kab")) {
+            val ans = when (lang) {
+                "hi" -> "रद्द किए गए ऑर्डर या स्वीकृत रिटर्न के लिए रिफंड तुरंत संसाधित किए जाते हैं: UPI रिफंड 2 से 24 घंटों में और कार्ड/नेटबैंकिंग रिफंड 3 से 5 व्यावसायिक दिनों में आपके बैंक खाते में जमा होते हैं।"
+                "hinglish" -> "Cancelled orders ya approved returns ka refund immediately process hota hai: UPI se 2-24 hours mein aur Card/NetBanking se 3-5 business days mein account mein credit ho jata hai."
+                else -> "Refunds for cancelled orders or approved returns are processed immediately: UPI refunds reflect within 2 to 24 hours, while NetBanking and Card refunds typically take 3 to 5 business days."
+            }
+            return Pair(ans, "ORDERS")
+        }
+
+        if (q.contains("return")) {
             val ans = when (lang) {
                 "hi" -> "रिटर्न प्रक्रिया: REQUESTED → APPROVED → RECEIVED → INSPECTED → RESTOCKED। अपने ऑर्डर विवरण पृष्ठ से रिटर्न का अनुरोध करें।"
                 "hinglish" -> "Return flow: REQUESTED → APPROVED → RECEIVED → INSPECTED → RESTOCKED. Order details page se return request karein."
@@ -162,6 +198,35 @@ object MayaKnowledgeEngine {
                 else -> "Open your BuyWise Profile and navigate to the Orders section to view live tracking status."
             }
             return Pair(ans, "ORDERS")
+        }
+
+        // 5B. Age & Consent for Challenges
+        if (q.contains("age limit") || q.contains("age requirement") || q.contains("18 plus") || q.contains("who can join")) {
+            val ans = when (lang) {
+                "hi" -> "Weekly BuyWise Fashion Challenge में भाग लेने के लिए प्रतिभागियों की आयु 18 वर्ष या उससे अधिक होनी चाहिए। सबमिशन से पहले आपको 18+ की पुष्टि करनी होगी।"
+                "hinglish" -> "Weekly Fashion Challenge mein participate karne aur styled look submit karne ke liye age 18 saal ya usse zyada honi zaroori hai. Submission se pehle 18+ confirm karna padta hai."
+                else -> "Participants must be 18 years of age or older to enter the Weekly BuyWise Fashion Challenge and submit styled looks. You must confirm you are 18+ before submitting."
+            }
+            return Pair(ans, "COMPETITION")
+        }
+
+        if (q.contains("consent") || q.contains("photo public") || q.contains("rules")) {
+            val ans = when (lang) {
+                "hi" -> "प्रतियोगिता में सबमिट करते समय, आप सहमति देते हैं: 1) अपने लुक को सामुदायिक वोटिंग में दिखाने के लिए, और 2) विजेता बनने पर BuyWise होम बैनर पर फीचर करने के लिए। आपकी मूल कैमरा तस्वीरें हमेशा आपके डिवाइस पर 100% निजी रहती हैं।"
+                "hinglish" -> "Challenge submit karte time aap consents dete hain: 1) Community voting mein look show karna, aur 2) Winner banne par BuyWise Home banner par feature hona. Aapki original camera photo hamesha 100% private rehti hai."
+                else -> "When submitting to a competition, you provide consent to: 1) Allow your styled look in community voting, and 2) Feature your styled look on the BuyWise Home banner if declared winner. Your raw camera photos remain 100% private."
+            }
+            return Pair(ans, "COMPETITION")
+        }
+
+        // 5C. VTO Identity & Pose Preservation
+        if (q.contains("wear on my photo") || q.contains("face badal") || q.contains("pose") || q.contains("skin tone")) {
+            val ans = when (lang) {
+                "hi" -> "बिल्कुल नहीं! 'Wear On My Photo' उन्नत AI डिफ्यूजन का उपयोग करता है जो आपके असली चेहरे, त्वचा के रंग, चश्मे, दुपट्टे और पोज़ को 100% सुरक्षित रखता है और केवल चुनी हुई पोशाक को आपके शरीर पर फिट करता है।"
+                "hinglish" -> "Bilkul nahi! 'Wear On My Photo' AI diffusion technology use karta hai jo aapka real face, skin tone, glasses, dupatta aur pose 100% authentic rakhta hai aur sirf dress aap par fit karta hai."
+                else -> "No! 'Wear On My Photo' uses advanced AI diffusion warping designed to 100% preserve your authentic face, skin tone, glasses, dupatta/headwear, and standing posture, fitting only the selected garment onto your own body."
+            }
+            return Pair(ans, "VTO")
         }
 
         // 6. Prime Entitlement (Authoritative Factual Features & Pricing)

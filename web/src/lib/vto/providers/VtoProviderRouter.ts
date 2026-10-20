@@ -6,6 +6,8 @@ import {
   VtoLicenseStatus, 
   VtoProviderCapabilities 
 } from "./VtoProviderTypes";
+import { modalVtoProvider } from "./ModalVtoProvider";
+import { fashnVtoProvider } from "./FashnVtoProvider";
 import { runPodVtoProvider } from "./RunPodVtoProvider";
 import { falVtoProvider } from "./FalVtoProvider";
 import { huggingFaceVtoProvider } from "../huggingface-vto";
@@ -23,6 +25,8 @@ export class VtoProviderRouter implements IVtoProvider {
   public name = "BuyWise Canonical VTO Provider Router";
 
   private providers: IVtoProvider[] = [
+    fashnVtoProvider,
+    modalVtoProvider,
     runPodVtoProvider,
     falVtoProvider,
     huggingFaceVtoProvider
@@ -50,7 +54,7 @@ export class VtoProviderRouter implements IVtoProvider {
   }
 
   public getCapabilities(): VtoProviderCapabilities {
-    const primary = this.selectPrimaryProvider() || runPodVtoProvider;
+    const primary = this.selectPrimaryProvider() || modalVtoProvider;
     return primary.getCapabilities();
   }
 
@@ -81,8 +85,32 @@ export class VtoProviderRouter implements IVtoProvider {
 
   public selectPrimaryProvider(): IVtoProvider | null {
     const isProduction = process.env.NODE_ENV === "production";
-    const primaryConfigured = runPodVtoProvider.isConfigured();
+    const explicitPrimary = process.env.VTO_PRIMARY_PROVIDER;
 
+    // Explicit primary provider override
+    if (explicitPrimary === "fashn-vto" && fashnVtoProvider.isConfigured()) {
+      return fashnVtoProvider;
+    }
+    if (explicitPrimary === "fal-vto" && falVtoProvider.isConfigured()) {
+      return falVtoProvider;
+    }
+
+    // Priority 1: FASHN.ai Commercial Engine if configured (Gold standard for complex ethnic & multi-garment try-on)
+    if (fashnVtoProvider.isConfigured()) {
+      return fashnVtoProvider;
+    }
+
+    // Priority 2: Modal Serverless GPU Engine (Zero-cost free credit tier, fast L4)
+    if (modalVtoProvider.isConfigured()) {
+      if (isProduction && modalVtoProvider.getLicenseStatus() !== "COMMERCIAL_LICENSED") {
+        console.warn("[VTO Router Warning]: Modal provider blocked in production (license not commercial).");
+      } else {
+        return modalVtoProvider;
+      }
+    }
+
+    // Priority 3: RunPod Dedicated Serverless
+    const primaryConfigured = runPodVtoProvider.isConfigured();
     if (primaryConfigured) {
       if (isProduction && runPodVtoProvider.getLicenseStatus() !== "COMMERCIAL_LICENSED") {
         console.warn("[VTO Router Warning]: RunPod primary provider is blocked in production due to non-commercial license status.");
@@ -91,7 +119,7 @@ export class VtoProviderRouter implements IVtoProvider {
       }
     }
 
-    // Fallback selection if RunPod is unconfigured
+    // Priority 4: fal.ai Commercial Fallback
     if (falVtoProvider.isConfigured()) {
       if (isProduction && falVtoProvider.getLicenseStatus() !== "COMMERCIAL_LICENSED") {
         console.warn("[VTO Router Warning]: fal.ai fallback provider is blocked in production due to non-commercial license status.");
@@ -110,6 +138,19 @@ export class VtoProviderRouter implements IVtoProvider {
 
   public selectFallbackProvider(primaryId: string): IVtoProvider | null {
     const isProduction = process.env.NODE_ENV === "production";
+
+    if (primaryId === fashnVtoProvider.id) {
+      if (modalVtoProvider.isConfigured()) return modalVtoProvider;
+      if (falVtoProvider.isConfigured()) return falVtoProvider;
+      if (!isProduction && huggingFaceVtoProvider.isConfigured()) return huggingFaceVtoProvider;
+    }
+
+    if (primaryId === modalVtoProvider.id) {
+      if (fashnVtoProvider.isConfigured()) return fashnVtoProvider;
+      if (runPodVtoProvider.isConfigured()) return runPodVtoProvider;
+      if (falVtoProvider.isConfigured()) return falVtoProvider;
+      if (!isProduction && huggingFaceVtoProvider.isConfigured()) return huggingFaceVtoProvider;
+    }
 
     if (primaryId === runPodVtoProvider.id && falVtoProvider.isConfigured()) {
       if (isProduction && falVtoProvider.getLicenseStatus() !== "COMMERCIAL_LICENSED") {

@@ -314,7 +314,7 @@ export default function CompetitionPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
-            <Link href="/try-on" style={{ textDecoration: 'none' }}>
+            <Link href={`/try-on?garmentUrl=${encodeURIComponent(competition.featuredProductImage)}&title=${encodeURIComponent(competition.featuredProductTitle)}&price=${competition.featuredProductPrice}`} style={{ textDecoration: 'none' }}>
               <button
                 style={{
                   padding: '12px 24px',

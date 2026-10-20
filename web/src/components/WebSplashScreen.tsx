@@ -3,18 +3,34 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function WebSplashScreen() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    // Show Web Splash Screen for 1.6 seconds, then fade out smoothly
+    // Check if user has already seen splash in this session
+    try {
+      if (typeof window !== "undefined") {
+        const hasSeen = sessionStorage.getItem("buywise_web_splash_shown");
+        if (hasSeen) {
+          setShowSplash(false);
+          return;
+        }
+        sessionStorage.setItem("buywise_web_splash_shown", "1");
+        setShowSplash(true);
+      }
+    } catch (e) {
+      // If sessionStorage restricted, do not block
+      setShowSplash(false);
+      return;
+    }
+
     const timer1 = setTimeout(() => {
       setFadeOut(true);
-    }, 1600);
+    }, 700);
 
     const timer2 = setTimeout(() => {
       setShowSplash(false);
-    }, 2000);
+    }, 1000);
 
     return () => {
       clearTimeout(timer1);

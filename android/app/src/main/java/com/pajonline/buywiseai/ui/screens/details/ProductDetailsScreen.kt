@@ -297,7 +297,17 @@ fun ProductDetailsScreen(
             if (isWearable) {
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
-                    onClick = onNavigateToVto,
+                    onClick = {
+                        if (offer != null) {
+                            com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
+                                title = offer.title,
+                                imageUrl = offer.imageUrl,
+                                price = offer.price,
+                                retailer = offer.store
+                            )
+                        }
+                        onNavigateToVto()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp)
                 ) {

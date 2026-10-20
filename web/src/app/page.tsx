@@ -343,9 +343,9 @@ export default function Home() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <Link href="/try-on" style={{ flex: 1, textDecoration: 'none' }}>
+                  <Link href={`/try-on?garmentUrl=${encodeURIComponent(activeComp.featuredProductImage)}&title=${encodeURIComponent(activeComp.featuredProductTitle)}&price=${activeComp.featuredProductPrice}`} style={{ flex: 1, textDecoration: 'none' }}>
                     <button style={{ width: '100%', padding: '12px', borderRadius: '16px', background: 'linear-gradient(135deg, #ffd700, #ff8c00)', color: '#000', fontWeight: 900, fontSize: '13px', border: 'none', cursor: 'pointer' }}>
-                      ✨ Try Product
+                      ✨ Try Product Now
                     </button>
                   </Link>
                   <Link href="/competition" style={{ flex: 1, textDecoration: 'none' }}>

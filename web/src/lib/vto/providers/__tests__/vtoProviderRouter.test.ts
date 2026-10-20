@@ -35,14 +35,14 @@ export async function runVtoRouterSelfTest() {
 
   // Test 4: Provider enumeration
   const statuses = router.getAllProvidersStatus();
-  if (statuses.length < 3) {
-    throw new Error("TEST 4 FAILED: Provider status count under 3.");
+  if (statuses.length < 4) {
+    throw new Error("TEST 4 FAILED: Provider status count under 4.");
   }
   const ids = statuses.map(s => s.id);
-  if (!ids.includes("runpod-vto") || !ids.includes("fal-vto") || !ids.includes("huggingface-vto")) {
+  if (!ids.includes("modal-vto") || !ids.includes("runpod-vto") || !ids.includes("fal-vto") || !ids.includes("huggingface-vto")) {
     throw new Error("TEST 4 FAILED: Missing standard adapters.");
   }
-  console.log("✓ TEST 4 PASSED: Provider enumeration");
+  console.log("✓ TEST 4 PASSED: Provider enumeration (modal, runpod, fal, huggingface)");
 
   console.log("[VTO Router Self-Test Suite ALL PASSED SUCCESSFULLY!]");
   return true;

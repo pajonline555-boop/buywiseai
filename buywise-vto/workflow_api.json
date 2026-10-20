@@ -1,0 +1,73 @@
+{
+  "10": {
+    "inputs": {
+      "image": "person.webp",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Person Image"
+    }
+  },
+  "11": {
+    "inputs": {
+      "image": "garment.webp",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Garment Image"
+    }
+  },
+  "12": {
+    "inputs": {
+      "cloth_type": "overall",
+      "image": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "CatVTON_AutoMasker",
+    "_meta": {
+      "title": "CatVTON AutoMasker"
+    }
+  },
+  "13": {
+    "inputs": {
+      "image": [
+        "10",
+        0
+      ],
+      "mask": [
+        "12",
+        0
+      ],
+      "refer_image": [
+        "11",
+        0
+      ],
+      "mask_grow": 25,
+      "mixed_precision": "fp16",
+      "seed": 42,
+      "steps": 25,
+      "cfg": 2.5
+    },
+    "class_type": "CatVTONWrapper",
+    "_meta": {
+      "title": "CatVTON Wrapper"
+    }
+  },
+  "14": {
+    "inputs": {
+      "filename_prefix": "BuyWise_VTO",
+      "images": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Output Image"
+    }
+  }
+}

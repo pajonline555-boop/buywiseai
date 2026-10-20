@@ -110,17 +110,23 @@ class MainActivity : ComponentActivity() {
                 val isLoggedIn = authState is AuthState.Authenticated
                 val hasCompletedOnboarding = prefs.getBoolean("has_completed_buywise_onboarding", true)
 
-                var isSplashFinished by remember { mutableStateOf(false) }
+                var isSplashFinished by remember { mutableStateOf(true) }
                 var showProductGuidePosters by remember {
                     mutableStateOf(false)
                 }
 
                 LaunchedEffect(Unit) {
-                    LanguageManager.init(context)
-                    // Check for Google Play In-App Updates with cooldown control
-                    com.pajonline.buywiseai.core.update.InAppUpdateManager.getInstance(context).checkForUpdate()
-                    delay(1000) // Fast animated splash presentation
-                    isSplashFinished = true
+                    try {
+                        LanguageManager.init(context)
+                    } catch (e: Throwable) {
+                        android.util.Log.w("MainActivity", "LanguageManager init note", e)
+                    }
+                    try {
+                        // Check for Google Play In-App Updates safely in background
+                        com.pajonline.buywiseai.core.update.InAppUpdateManager.getInstance(context).checkForUpdate()
+                    } catch (e: Throwable) {
+                        android.util.Log.w("MainActivity", "InAppUpdateManager note", e)
+                    }
                 }
 
                 if (!isSplashFinished) {
@@ -142,18 +148,21 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
 
-                    // Double-tap Back Press Handler to exit app safely with confirmation
+                    // Persist active route across configuration/camera/picker changes
+                    LaunchedEffect(currentRoute) {
+                        if (currentRoute != null && currentRoute != "splash") {
+                            prefs.edit().putString("saved_active_route", currentRoute).apply()
+                        }
+                    }
+
+                    // Double-tap Back Press Handler to prevent unwanted jumps back to Home screen
                     BackHandler(enabled = !showAiSheet) {
-                        if (currentRoute == "home" || currentRoute == null) {
-                            val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastBackPressedTime < 2500) {
-                                showExitAppDialog = true
-                            } else {
-                                lastBackPressedTime = currentTime
-                                Toast.makeText(context, "Press BACK again to exit BuyWise AI", Toast.LENGTH_SHORT).show()
-                            }
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastBackPressedTime < 2500) {
+                            showExitAppDialog = true
                         } else {
-                            navController.popBackStack()
+                            lastBackPressedTime = currentTime
+                            Toast.makeText(context, "Press BACK again to exit BuyWise AI", Toast.LENGTH_SHORT).show()
                         }
                     }
 
