@@ -2,7 +2,8 @@
 const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
 
 const nextConfig = {
-  ...(isStaticExport ? { output: "export", trailingSlash: true } : {}),
+  output: isStaticExport ? "export" : "standalone",
+  ...(isStaticExport ? { trailingSlash: true } : {}),
   images: {
     unoptimized: true,
     remotePatterns: [
