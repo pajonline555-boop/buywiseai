@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.AsyncImage
 import com.pajonline.buywiseai.data.i18n.tr
@@ -100,7 +101,15 @@ fun BuyWiseBottomBar(navController: NavController) {
                         Icon(screen.icon, contentDescription = labelText)
                     }
                 },
-                label = { Text(labelText) },
+                label = {
+                    Text(
+                        text = labelText,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        fontSize = 11.sp
+                    )
+                },
                 selected = isSelected,
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = BuyWiseCyan,
@@ -110,9 +119,16 @@ fun BuyWiseBottomBar(navController: NavController) {
                     unselectedTextColor = Color.Gray
                 ),
                 onClick = {
-                    if (currentRoute != screen.route) {
+                    if (screen.route == Screen.Home.route) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
+                        }
+                    } else if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId) {
+                            popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
                             launchSingleTop = true

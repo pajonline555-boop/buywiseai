@@ -14,6 +14,11 @@ import {
   limit,
   runTransaction
 } from 'firebase/firestore';
+import {
+  notifyVoteReceived,
+  notifyEntryApproved,
+  notifyEntryRejected
+} from '../notifications/competitionNotificationDispatcher';
 
 export type CompetitionStatus =
   | 'DRAFT'
@@ -101,6 +106,9 @@ export interface CompetitionSubmission {
   publicationConsentAgreed: boolean;
   moderatedBy?: string;
   rejectionReason?: string;
+  submissionType?: string;
+  userPhone?: string;
+  linkedMobile?: string;
   environment?: string;
   isTest?: boolean;
 }
@@ -120,7 +128,11 @@ export function isTestRecord(item?: { id?: string; environment?: string; isTest?
     item.id.includes('comp_test_phase8_2') ||
     item.id.includes('sub_test_phase8_2') ||
     item.id.includes('win_test_phase8_2') ||
-    item.id.startsWith('test_')
+    item.id.startsWith('test_') ||
+    item.id.startsWith('sub-live-') ||
+    item.id.startsWith('sub-37-') ||
+    item.id === 'sub-36-winner' ||
+    item.id.startsWith('comp-week-')
   )) {
     return true;
   }
@@ -156,109 +168,9 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     votesFrozen: false,
     environment: 'PRODUCTION'
   },
-  {
-    id: 'comp-week-37-2026',
-    title: 'Weekly BuyWise Fashion Challenge: Royal Kanjivaram Silk Saree',
-    description: 'Try on this week\'s featured Kanjivaram Silk Saree, submit your look, and compete for the top community vote!',
-    featuredProductId: 'prod-kanjivaram-silk-1',
-    featuredProductTitle: 'Authentic Banarasi Kanjivaram Silk Saree in Crimson Gold',
-    featuredProductImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    featuredProductPrice: 4999,
-    retailer: 'Amazon India',
-    startDate: '2026-09-07T00:00:00Z',
-    submissionCloseDate: '2026-09-12T23:59:59Z',
-    votingStartDate: '2026-09-07T00:00:00Z',
-    votingCloseDate: '2026-09-13T18:00:00Z',
-    winnerAnnouncementDate: '2026-09-13T20:00:00Z',
-    endDate: '2026-09-12T23:59:59Z',
-    votingEndDate: '2026-09-13T18:00:00Z',
-    status: 'VOTING_CLOSED',
-    prizeDescription: '₹5,000 Shopping Voucher + Featured Banner on BuyWise Home Screen',
-    eligibility: 'All verified BuyWise registered shoppers in India',
-    rules: 'One Try-On submission per user per week. Explicit consent required.',
-    termsVersion: '1.0',
-    createdBy: 'pajonline555@gmail.com',
-    createdAt: '2026-09-07T00:00:00Z',
-    updatedAt: '2026-09-07T00:00:00Z',
-    votesFrozen: false,
-    environment: 'PRODUCTION'
-  },
-  {
-    id: 'comp-week-36-2026',
-    title: 'Weekly BuyWise Fashion Challenge: Designer Anarkali Suit',
-    description: 'Previous week\'s challenge featuring luxury embroidered Anarkali suits.',
-    featuredProductId: 'prod-anarkali-suit-2',
-    featuredProductTitle: 'Emerald Green Hand-Embroidered Anarkali Set',
-    featuredProductImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    featuredProductPrice: 3850,
-    retailer: 'Myntra',
-    startDate: '2026-08-31T00:00:00Z',
-    submissionCloseDate: '2026-09-05T23:59:59Z',
-    votingStartDate: '2026-08-31T00:00:00Z',
-    votingCloseDate: '2026-09-06T18:00:00Z',
-    winnerAnnouncementDate: '2026-09-06T20:00:00Z',
-    endDate: '2026-09-05T23:59:59Z',
-    votingEndDate: '2026-09-06T18:00:00Z',
-    status: 'WINNER_DECLARED',
-    prizeDescription: '₹5,000 Shopping Voucher',
-    eligibility: 'All registered shoppers',
-    rules: 'One entry per user',
-    termsVersion: '1.0',
-    createdBy: 'pajonline555@gmail.com',
-    createdAt: '2026-08-31T00:00:00Z',
-    updatedAt: '2026-09-06T20:00:00Z',
-    votesFrozen: true,
-    environment: 'PRODUCTION'
-  },
 ];
 
-export const INITIAL_SUBMISSIONS: CompetitionSubmission[] = [
-  {
-    id: 'sub-37-1',
-    competitionId: 'comp-week-37-2026',
-    userId: 'user-priya-sharma',
-    userName: 'Priya Sharma',
-    userPhotoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-    vtoResultImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    submittedAt: '2026-09-08T14:20:00Z',
-    status: 'APPROVED',
-    voteCount: 142,
-    shareCount: 28,
-    consentAgreed: true,
-    publicationConsentAgreed: true,
-    environment: 'PRODUCTION'
-  },
-  {
-    id: 'sub-37-2',
-    competitionId: 'comp-week-37-2026',
-    userId: 'user-ananya-roy',
-    userName: 'Ananya Roy',
-    userPhotoUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
-    vtoResultImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    submittedAt: '2026-09-08T16:45:00Z',
-    status: 'APPROVED',
-    voteCount: 118,
-    shareCount: 19,
-    consentAgreed: true,
-    publicationConsentAgreed: true,
-    environment: 'PRODUCTION'
-  },
-  {
-    id: 'sub-36-winner',
-    competitionId: 'comp-week-36-2026',
-    userId: 'user-sneha-reddy',
-    userName: 'Sneha Reddy',
-    userPhotoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-    vtoResultImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    submittedAt: '2026-09-02T11:00:00Z',
-    status: 'WINNER',
-    voteCount: 1284,
-    shareCount: 310,
-    consentAgreed: true,
-    publicationConsentAgreed: true,
-    environment: 'PRODUCTION'
-  },
-];
+export const INITIAL_SUBMISSIONS: CompetitionSubmission[] = [];
 
 export const INITIAL_VOTES: CompetitionVote[] = [];
 
@@ -392,6 +304,16 @@ export function castVote(competitionId: string, submissionId: string, voterId: s
   if (target) {
     target.voteCount += 1;
     saveSubmissions(submissions);
+
+    const fallbackMobile = (typeof window !== 'undefined' ? localStorage.getItem('buywise_user_phone') : null) || '+91 98765 43210';
+    const targetMobile = target.linkedMobile || target.userPhone || fallbackMobile;
+    notifyVoteReceived({
+      submissionId,
+      userId: target.userId,
+      userName: target.userName,
+      newVoteCount: target.voteCount,
+      linkedMobile: targetMobile
+    }).catch(() => {});
   }
 
   return { success: true, message: '🎉 Your vote has been successfully cast!' };
@@ -403,7 +325,8 @@ export function submitToCompetition(
   userName: string,
   userPhotoUrl: string,
   vtoResultImage: string,
-  caption?: string
+  caption?: string,
+  userPhone?: string
 ): { success: boolean; submission?: CompetitionSubmission; message: string } {
   const submissions = getSubmissions();
   const existing = submissions.find(s => s.competitionId === competitionId && s.userId === userId && s.status !== 'REJECTED');
@@ -411,6 +334,7 @@ export function submitToCompetition(
     return { success: false, message: 'You have already submitted an entry for this week\'s competition!' };
   }
 
+  const activeMobile = userPhone || (typeof window !== 'undefined' ? localStorage.getItem('buywise_user_phone') : null) || '+91 98765 43210';
   const newSubmission: CompetitionSubmission = {
     id: `sub-${Date.now()}`,
     competitionId,
@@ -424,6 +348,8 @@ export function submitToCompetition(
     shareCount: 0,
     consentAgreed: true,
     publicationConsentAgreed: true,
+    userPhone: activeMobile,
+    linkedMobile: activeMobile
   };
 
   submissions.unshift(newSubmission);
@@ -570,7 +496,74 @@ export function adminModerateSubmission(submissionId: string, status: Submission
       if (rejectionReason) updateData.rejectionReason = rejectionReason;
       setDoc(doc(db, 'competition_submissions', submissionId), updateData, { merge: true }).catch(() => {});
     }
+
+    const fallbackMobile = (typeof window !== 'undefined' ? localStorage.getItem('buywise_user_phone') : null) || '+91 98765 43210';
+    const targetMobile = target.linkedMobile || target.userPhone || fallbackMobile;
+
+    if (status === 'APPROVED') {
+      notifyEntryApproved({
+        submissionId,
+        userId: target.userId,
+        userName: target.userName,
+        linkedMobile: targetMobile
+      }).catch(() => {});
+    } else if (status === 'REJECTED') {
+      notifyEntryRejected({
+        submissionId,
+        userId: target.userId,
+        userName: target.userName,
+        reason: rejectionReason,
+        linkedMobile: targetMobile
+      }).catch(() => {});
+    }
   }
+}
+
+export interface BulkModerationResult {
+  totalProcessed: number;
+  approvedCount: number;
+  rejectedCount: number;
+  details: string[];
+}
+
+export function adminBulkAutoApproveSubmissions(competitionId?: string): BulkModerationResult {
+  const submissions = getSubmissions();
+  const candidates = submissions.filter(s => (!competitionId || s.competitionId === competitionId) && s.status !== 'WINNER');
+
+  const forbidden = [
+    'nude', 'nudity', 'nsfw', 'porn', 'naked', 'sex', 'boob', 'bra_only', 'explicit',
+    'bikini_top_only', 'inappropriate', 'vulgar', 'abuse', 'hate', 'violence'
+  ];
+
+  let approved = 0;
+  let rejected = 0;
+  const logs: string[] = [];
+
+  for (const sub of candidates) {
+    const textToCheck = `${sub.userName} ${sub.vtoResultImage} ${sub.submissionType || ''}`.toLowerCase();
+    const hasViolation = forbidden.some(term => textToCheck.includes(term));
+    const isCorrupted = !sub.vtoResultImage || sub.vtoResultImage.length < 5;
+
+    if (hasViolation || isCorrupted) {
+      const reason = hasViolation
+        ? 'Flagged for potential nudity or inappropriate content violation'
+        : 'Invalid or corrupted image source';
+      adminModerateSubmission(sub.id, 'REJECTED', reason);
+      rejected++;
+      logs.push(`❌ ${sub.userName}: ${reason}`);
+    } else {
+      adminModerateSubmission(sub.id, 'APPROVED');
+      approved++;
+      logs.push(`✅ ${sub.userName}: Passed safety & nudity check (Approved)`);
+    }
+  }
+
+  return {
+    totalProcessed: candidates.length,
+    approvedCount: approved,
+    rejectedCount: rejected,
+    details: logs
+  };
 }
 
 // ----------------------------------------------------
@@ -697,13 +690,29 @@ export async function castVoteInDb(
     });
 
     const subRef = doc(db, 'competition_submissions', submissionId);
+    let targetSubData: any = null;
+    let updatedVoteCount = 1;
     await runTransaction(db, async (transaction) => {
       const sDoc = await transaction.get(subRef);
       if (sDoc.exists()) {
-        const currentVotes = sDoc.data().voteCount || 0;
-        transaction.update(subRef, { voteCount: currentVotes + 1 });
+        targetSubData = sDoc.data();
+        const currentVotes = targetSubData.voteCount || 0;
+        updatedVoteCount = currentVotes + 1;
+        transaction.update(subRef, { voteCount: updatedVoteCount });
       }
     });
+
+    if (targetSubData) {
+      const fallbackMobile = (typeof window !== 'undefined' ? localStorage.getItem('buywise_user_phone') : null) || '+91 98765 43210';
+      const targetMobile = targetSubData.linkedMobile || targetSubData.userPhone || fallbackMobile;
+      notifyVoteReceived({
+        submissionId,
+        userId: targetSubData.userId,
+        userName: targetSubData.userName,
+        newVoteCount: updatedVoteCount,
+        linkedMobile: targetMobile
+      }).catch(() => {});
+    }
 
     return { success: true, message: '🎉 Vote transactionally recorded!' };
   } catch (err: any) {

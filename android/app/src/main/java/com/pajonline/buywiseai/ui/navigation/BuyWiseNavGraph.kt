@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -47,16 +48,54 @@ fun BuyWiseNavGraph(
             )
         }
         composable(Screen.Search.route) {
+            val context = androidx.compose.ui.platform.LocalContext.current
             SearchScreen(
                 viewModel = compareViewModel,
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                },
                 onOfferSelect = { offer ->
-                    navController.navigate("details")
+                    try {
+                        val targetUrl = if (offer.url.startsWith("http")) {
+                            offer.url
+                        } else {
+                            com.pajonline.buywiseai.data.repository.SmartMarketIntelligence.buildDirectStoreUrl(offer.store, offer.title)
+                        }
+                        val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(browserIntent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             )
         }
         composable(Screen.Competition.route) {
             CompetitionScreen(
-                onNavigateToVto = { navController.navigate(Screen.Vto.route) }
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onNavigateToVto = { navController.navigate(Screen.Vto.route) },
+                onNavigateToWeb = { title, url ->
+                    try {
+                        val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                        val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
+                        navController.navigate("web_viewer/$encodedTitle/$encodedUrl")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             )
         }
         composable("details") {
@@ -75,7 +114,16 @@ fun BuyWiseNavGraph(
             )
         }
         composable(Screen.Vto.route) {
-            VtoScreen()
+            VtoScreen(
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
         }
         composable(Screen.Prime.route) {
             com.pajonline.buywiseai.ui.screens.prime.PrimeMembershipScreen(
@@ -83,7 +131,9 @@ fun BuyWiseNavGraph(
             )
         }
         composable(Screen.Alerts.route) {
-            AlertsScreen()
+            AlertsScreen(
+                onNavigateToChallenge = { navController.navigate(Screen.Competition.route) }
+            )
         }
         composable(Screen.Admin.route) {
             com.pajonline.buywiseai.ui.screens.admin.AdminDashboardScreen(

@@ -104,7 +104,13 @@ export default function WhereToBuyTable({ product }: WhereToBuyTableProps) {
                   {/* Action Link Button */}
                   <td style={{ padding: '16px', textAlign: 'right' }}>
                     <a
-                      href={buildAffiliateUrl(item.url && item.url.startsWith('http') ? item.url : `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`, item.store)}
+                      href={
+                        item.url && item.url.startsWith('http')
+                          ? item.url
+                          : (item.store || '').toLowerCase().includes('flipkart')
+                          ? `https://www.flipkart.com/search?q=${encodeURIComponent(product.name)}`
+                          : `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ textDecoration: 'none' }}
@@ -121,7 +127,7 @@ export default function WhereToBuyTable({ product }: WhereToBuyTableProps) {
                           cursor: 'pointer'
                         }}
                       >
-                        BUY NOW ➔
+                        VIEW NOW ➔
                       </button>
                     </a>
                   </td>

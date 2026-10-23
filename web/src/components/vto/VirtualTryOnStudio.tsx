@@ -484,6 +484,7 @@ function VirtualTryOnContent() {
           product={activeProduct}
           onCompareAddToLook={handleAddToCompare}
           onOpenFitAssistant={() => setIsFitAssistantOpen(true)}
+          initialSize={searchParams.get("size")}
         />
 
         {/* Right Column: Multi-Store Discovered Products Catalog */}

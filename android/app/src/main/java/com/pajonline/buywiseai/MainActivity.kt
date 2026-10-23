@@ -28,12 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pajonline.buywiseai.core.ads.AdsManager
 import com.pajonline.buywiseai.data.repository.AuthState
 import com.pajonline.buywiseai.ui.navigation.BuyWiseBottomBar
 import com.pajonline.buywiseai.ui.navigation.BuyWiseNavGraph
+import com.pajonline.buywiseai.ui.navigation.Screen
 import com.pajonline.buywiseai.ui.screens.ai.AiAssistantBottomSheet
 import com.pajonline.buywiseai.ui.screens.onboarding.OnboardingScreen
 import com.pajonline.buywiseai.ui.screens.splash.SplashScreen
@@ -115,6 +117,16 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
 
+                val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                    contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+                ) { isGranted ->
+                    if (isGranted) {
+                        try {
+                            com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.syncDeviceToken(context)
+                        } catch (_: Throwable) {}
+                    }
+                }
+
                 LaunchedEffect(Unit) {
                     try {
                         LanguageManager.init(context)
@@ -126,6 +138,19 @@ class MainActivity : ComponentActivity() {
                         com.pajonline.buywiseai.core.update.InAppUpdateManager.getInstance(context).checkForUpdate()
                     } catch (e: Throwable) {
                         android.util.Log.w("MainActivity", "InAppUpdateManager note", e)
+                    }
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.POST_NOTIFICATIONS
+                                ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        android.util.Log.w("MainActivity", "Notification permission note", e)
                     }
                 }
 
@@ -155,14 +180,30 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Double-tap Back Press Handler to prevent unwanted jumps back to Home screen
+                    val isAtHomeScreen = currentRoute == Screen.Home.route || currentRoute == null
+
+                    // Back press handler:
+                    // If on any sub-screen (VTO, Competition, Search, Details, Profile, Admin),
+                    // pressing back pops the back stack or returns cleanly to the Home screen.
+                    // Only when already on the root Home screen does it prompt to exit the app.
                     BackHandler(enabled = !showAiSheet) {
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastBackPressedTime < 2500) {
-                            showExitAppDialog = true
+                        if (!isAtHomeScreen) {
+                            if (!navController.popBackStack()) {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
+                                }
+                            }
                         } else {
-                            lastBackPressedTime = currentTime
-                            Toast.makeText(context, "Press BACK again to exit BuyWise AI", Toast.LENGTH_SHORT).show()
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastBackPressedTime < 2500) {
+                                showExitAppDialog = true
+                            } else {
+                                lastBackPressedTime = currentTime
+                                Toast.makeText(context, "Press BACK again to exit BuyWise AI", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
 
@@ -208,6 +249,18 @@ class MainActivity : ComponentActivity() {
                     // Process App Link Deep Linking & Android Share Target on Launch
                     LaunchedEffect(currentIntent) {
                         val receivedIntent = currentIntent ?: return@LaunchedEffect
+                        val deepLinkRoute = receivedIntent.getStringExtra("deep_link_route")
+                        val searchQuery = receivedIntent.getStringExtra("search_query")
+                        if (!searchQuery.isNullOrBlank()) {
+                            compareViewModel.performSearch(searchQuery)
+                        }
+                        if (!deepLinkRoute.isNullOrBlank()) {
+                            try {
+                                navController.navigate(deepLinkRoute)
+                            } catch (_: Throwable) {}
+                            return@LaunchedEffect
+                        }
+
                         val appLinkData = receivedIntent.data
                         val action = receivedIntent.action
                         val sharedText = receivedIntent.getStringExtra(android.content.Intent.EXTRA_TEXT)

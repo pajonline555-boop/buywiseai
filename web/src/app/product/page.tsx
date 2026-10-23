@@ -39,7 +39,7 @@ function DynamicProductContent() {
         .then((data) => {
           if (data.success && data.title) {
             const storeName = data.store || 'Retail Partner';
-            const affiliateUrl = buildAffiliateUrl(urlParam, storeName);
+            const directUrl = urlParam;
             const dynamicProd: BestsellerProduct = {
               id: `dyn-${Date.now()}`,
               slug: `external-item-${Date.now()}`,
@@ -51,7 +51,7 @@ function DynamicProductContent() {
               lowestPrice: data.price || 999,
               originalPrice: data.mrp || Math.round((data.price || 999) * 1.4),
               bestStore: storeName,
-              productUrl: affiliateUrl,
+              productUrl: directUrl,
               productSource: 'AFFILIATE',
               fulfillmentType: 'EXTERNAL_RETAILER',
               smartValueScore: 92,
@@ -66,7 +66,7 @@ function DynamicProductContent() {
                 {
                   store: storeName,
                   price: data.price || 999,
-                  url: affiliateUrl,
+                  url: directUrl,
                   inStock: true,
                   productSource: 'AFFILIATE'
                 }

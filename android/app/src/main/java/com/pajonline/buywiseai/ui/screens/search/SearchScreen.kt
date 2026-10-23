@@ -1000,13 +1000,23 @@ fun SearchScreen(
                                                                     )
                                                                 }
                                                                 if (offer.discount != null && offer.discount > 0) {
-                                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                                    Text(
-                                                                        text = "${offer.discount.toInt()}% OFF",
-                                                                        fontSize = 10.5.sp,
-                                                                        fontWeight = FontWeight.Bold,
-                                                                        color = Color(0xFFFF7A00)
-                                                                    )
+                                                                    val dVal = if (offer.mrp != null && offer.mrp > offer.price) {
+                                                                        val calc = (((offer.mrp - offer.price) / offer.mrp) * 100).toInt()
+                                                                        if (calc in 1..95) calc else offer.discount.toInt().coerceIn(1, 90)
+                                                                    } else if (offer.discount.toInt() in 1..95) {
+                                                                        offer.discount.toInt()
+                                                                    } else {
+                                                                        0
+                                                                    }
+                                                                    if (dVal > 0) {
+                                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                                        Text(
+                                                                            text = "$dVal% OFF",
+                                                                            fontSize = 10.5.sp,
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            color = Color(0xFFFF7A00)
+                                                                        )
+                                                                    }
                                                                 }
                                                             }
 

@@ -369,6 +369,31 @@ export default function CompetitionPage() {
             >
               <span>📜</span> Rules &amp; Regulations / Terms
             </button>
+
+            {/* Official YouTube Shorts Channel Link ONLY */}
+            <a
+              href="https://www.youtube.com/@BUYWISEAI-u8n/shorts"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '12px 20px',
+                borderRadius: '20px',
+                background: 'linear-gradient(135deg, rgba(255, 0, 77, 0.35), rgba(255, 60, 0, 0.25))',
+                color: '#ffffff',
+                fontWeight: 900,
+                fontSize: '13.5px',
+                border: '1px solid #ff004d',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                boxShadow: '0 4px 16px rgba(255, 0, 77, 0.3)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>▶️</span> YouTube Shorts (@BUYWISEAI-u8n) ↗
+            </a>
           </div>
         </div>
 
@@ -647,6 +672,18 @@ export default function CompetitionPage() {
                 </div>
               )}
 
+              <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>🛍️ Need official garment photos or authentic dress?</span>
+                <a
+                  href={`https://www.amazon.in/s?k=${encodeURIComponent(competition.featuredProductTitle)}&tag=pajonline-21&ascsubtag=bw_web_comp`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '11px', fontWeight: 800, color: '#ffd700', textDecoration: 'none', background: 'rgba(255,215,0,0.15)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,215,0,0.4)' }}
+                >
+                  View on Amazon ↗
+                </a>
+              </div>
+
               <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '4px' }}>
                 <input
                   type="checkbox"
@@ -656,7 +693,11 @@ export default function CompetitionPage() {
                   style={{ marginTop: '3px', cursor: 'pointer' }}
                 />
                 <label htmlFor="consentCheck" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.4, cursor: 'pointer' }}>
-                  I confirm that I am 18+, own or have rights to this Try-On image, and agree to the <Link href="/competition-terms" target="_blank" style={{ color: '#ffd700' }}>Competition Terms &amp; Privacy Policy</Link> for community voting publication.
+                  I confirm that I am 18+, own or have rights to this image, have read &amp; agree to the{' '}
+                  <button type="button" onClick={() => setShowRulesModal(true)} style={{ background: 'none', border: 'none', color: '#ffd700', textDecoration: 'underline', padding: 0, cursor: 'pointer', font: 'inherit', fontWeight: 800 }}>
+                    Official Rules &amp; Regulations
+                  </button>{' '}
+                  and grant public voting display consent.
                 </label>
               </div>
 

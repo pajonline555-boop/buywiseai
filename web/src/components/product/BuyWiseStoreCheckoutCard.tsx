@@ -13,10 +13,14 @@ export default function BuyWiseStoreCheckoutCard({ product }: BuyWiseStoreChecko
 
   if (!isPartner) return null;
 
-  const rawUrl = (product.prices?.[0]?.url && product.prices[0].url.startsWith('http'))
+  const storeLower = (product.bestStore || '').toLowerCase();
+  const defaultSearchUrl = storeLower.includes('flipkart')
+    ? `https://www.flipkart.com/search?q=${encodeURIComponent(product.name)}`
+    : `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`;
+
+  const outboundAffiliateUrl = (product.prices?.[0]?.url && product.prices[0].url.startsWith('http'))
     ? product.prices[0].url
-    : product.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`;
-  const outboundAffiliateUrl = buildAffiliateUrl(rawUrl, product.bestStore || 'Amazon India', 'GEN_G_STORE');
+    : product.productUrl || defaultSearchUrl;
 
   return (
     <div 
@@ -87,7 +91,7 @@ export default function BuyWiseStoreCheckoutCard({ product }: BuyWiseStoreChecko
               cursor: 'pointer'
             }}
           >
-            PROCEED TO BUY NOW ➔
+            PROCEED TO VIEW NOW ➔
           </button>
         </a>
       </div>

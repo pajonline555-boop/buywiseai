@@ -23,6 +23,10 @@ export function buildFlipkartAffiliateUrl(
   const pid = product.pid || product.productId || '';
   const rawUrl = product.url || `https://www.flipkart.com/search?q=${encodeURIComponent(product.title || 'flipkart')}`;
 
+  if (!process.env.FLIPKART_AFFILIATE_ID) {
+    return rawUrl;
+  }
+
   if (isMobile && pid) {
     // Official Flipkart Mobile Deep-Link format
     return `https://dl.flipkart.com/dl/product?pid=${encodeURIComponent(pid)}&affid=${encodeURIComponent(affid)}&subid=${encodeURIComponent(trackingContext.toLowerCase())}`;
@@ -65,7 +69,10 @@ export function buildAffiliateUrl(
       return rawUrl;
     }
 
-    const tag = config.affiliateId || 'pajonline-21';
+    const tag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_TAG;
+    if (!tag) {
+      return rawUrl;
+    }
     try {
       const urlObj = new URL(rawUrl);
       urlObj.searchParams.set('tag', tag);

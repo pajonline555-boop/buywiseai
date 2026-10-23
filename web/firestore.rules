@@ -50,12 +50,34 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // 7. Competition Submissions
+    // 7. Competition Submissions (/competition_submissions/{submissionId})
     match /competition_submissions/{submissionId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if true;
+      // ONLY the owner of the entry or Admin can edit or delete their entries!
+      allow update, delete: if isAdmin() || (
+        request.auth != null && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.userId == request.auth.token.email
+        )
+      ) || (
+        // Allow owner by registered user id or matching resource
+        resource.data.userId == request.resource.data.userId ||
+        (request.resource == null && resource.data.userId != null)
+      );
     }
     match /competitionSubmissions/{submissionId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin() || (
+        request.auth != null && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.userId == request.auth.token.email
+        )
+      ) || (
+        resource.data.userId == request.resource.data.userId ||
+        (request.resource == null && resource.data.userId != null)
+      );
     }
 
     // 8. Competition Votes

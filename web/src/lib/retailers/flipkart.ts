@@ -1,5 +1,4 @@
 import { RetailerAdapter, RetailerSearchResult, StoreOffer } from './types';
-import { calculateLowestPriceForQuery } from './amazon';
 import axios from 'axios';
 
 function sanitizeSearchQuery(query: string): string {
@@ -26,10 +25,17 @@ export class FlipkartAdapter implements RetailerAdapter {
 
     if (!affiliateId || !affiliateToken) {
       return {
-        retailer: { id: this.id, name: this.name, country: this.country, currency: this.currency, enabled: this.enabled, logo: this.logo },
+        retailer: {
+          id: this.id,
+          name: this.name,
+          country: this.country,
+          currency: this.currency,
+          enabled: this.enabled,
+          logo: this.logo,
+        },
         offers: [],
         success: false,
-        error: 'Flipkart live API credentials required (FLIPKART_AFFILIATE_ID / FLIPKART_AFFILIATE_TOKEN). Connection status: CREDENTIALS_REQUIRED.',
+        error: 'Flipkart official Affiliate API credentials required (FLIPKART_AFFILIATE_ID / FLIPKART_AFFILIATE_TOKEN). Live product verification requires authorized API access.',
         checkedAt: timestamp,
       };
     }
@@ -63,23 +69,48 @@ export class FlipkartAdapter implements RetailerAdapter {
         const mrp = baseInfo.maximumRetailPrice?.amount || sellingPrice;
         const discount = mrp > specialPrice ? mrp - specialPrice : 0;
         const inStock = baseInfo.inStock !== false;
+        const imageUrl = baseInfo.imageUrls?.['400x400'] || baseInfo.imageUrls?.['200x200'];
+        const productUrl = baseInfo.productUrl;
 
         return {
           id: `fk-${baseInfo.productId || Date.now()}`,
           retailerId: this.id,
           store: this.name,
           title: baseInfo.title || cleanQuery,
-          url: baseInfo.productUrl || `https://www.flipkart.com/search?q=${encodeURIComponent(cleanQuery)}`,
+          url: productUrl || `https://www.flipkart.com/search?q=${encodeURIComponent(cleanQuery)}`,
+          directProductUrl: productUrl,
+          affiliateUrl: productUrl,
+          isDirectProductLink: Boolean(productUrl && productUrl.includes('/p/')),
           price: specialPrice,
           currency: baseInfo.flipkartSellingPrice?.currency || this.currency,
           originalPrice: mrp,
           mrp,
           discount,
-          imageUrl: baseInfo.imageUrls?.['400x400'] || baseInfo.imageUrls?.['200x200'],
+          imageUrl,
           logo: this.logo,
           availability: inStock ? 'in_stock' : 'out_of_stock',
           checkedAt: timestamp,
           sourceType: 'api',
+          verificationStatus: 'verified_live',
+          brand: baseInfo.productBrand,
+          productId: baseInfo.productId,
+          listedPrice: specialPrice,
+          shippingFee: 0,
+          effectivePayablePrice: specialPrice,
+          priceBasis: 'listed',
+          dataFreshness: 'Live Flipkart Affiliate API 1.0 Feed',
+          provenance: {
+            source: 'api',
+            provider: 'Flipkart Affiliate API 1.0',
+            rawListingId: baseInfo.productId,
+            lastChecked: timestamp,
+            isLiveFeed: true,
+          },
+          imageProvenance: {
+            url: imageUrl,
+            isGenuineProductImage: Boolean(imageUrl),
+            isFallback: false,
+          },
         };
       });
 

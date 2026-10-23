@@ -172,7 +172,7 @@ export default function CompetitionTermsPage() {
         <section>
           <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#ffd700', marginBottom: '8px' }}>4. Competition Period &amp; Frozen Rules</h2>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)' }}>
-            Each weekly competition cycle commences on <strong>Monday at 00:00 IST</strong> and closes voting on <strong>Saturday at 18:00 IST</strong>. Winners are verified and announced on <strong>Sunday</strong>. All rules, criteria, and prize structures are frozen upon weekly competition launch and will not be altered during an active cycle.
+            Each weekly competition cycle commences on <strong>Monday at 00:00 IST</strong> and closes voting on <strong>Saturday at 18:00 IST</strong>. Information regarding winner verification and announcements will be given on the BuyWise AI app and official social media channels. All rules, criteria, and prize structures are frozen upon weekly competition launch and will not be altered during an active cycle.
           </p>
         </section>
 

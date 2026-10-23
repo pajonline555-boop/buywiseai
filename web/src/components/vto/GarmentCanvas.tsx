@@ -69,6 +69,7 @@ interface GarmentCanvasProps {
   onOpenFitAssistant?: () => void;
   userId?: string;
   prewarmedAvatars?: PrewarmedAvatar[];
+  initialSize?: string | null;
 }
 
 interface StyleMatchResult {
@@ -86,11 +87,22 @@ export function GarmentCanvas({
   onOpenFitAssistant,
   userId = "guest_user",
   prewarmedAvatars = DEFAULT_AVATARS,
+  initialSize = null,
 }: GarmentCanvasProps) {
   const { t } = useTranslation();
 
   // Tier 1: Multi-Body Avatar Switcher State
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>("catalog");
+
+  useEffect(() => {
+    if (initialSize) {
+      const sz = initialSize.toLowerCase().trim();
+      if (sz === 's' || sz === 'petite') setSelectedAvatarId('petite');
+      else if (sz === 'm' || sz === 'regular') setSelectedAvatarId('regular');
+      else if (sz === 'l' || sz === 'curvy') setSelectedAvatarId('curvy');
+      else if (sz === 'xxl' || sz === 'xl' || sz === 'plus') setSelectedAvatarId('plus');
+    }
+  }, [initialSize]);
 
   // Tier 3: 1 Free Live GPU Try-On State
   const [freeQuotaRemaining, setFreeQuotaRemaining] = useState<number>(1);

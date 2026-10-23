@@ -236,6 +236,12 @@ fun EditProfileScreen(
                             mobileNumber = mobileNumber.trim()
                         )
 
+                        // 3. Update linked mobile state & re-bind listeners
+                        com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.syncDeviceToken(context)
+                        com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.syncLinkedDeviceState(context)
+                        com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.startRealtimeNotificationListener(context)
+                        com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.startLinkedDeviceListener(context)
+
                         isSaving = false
                         statusMessage = "✅ Profile saved successfully!"
                         Toast.makeText(context, "Profile updated!", Toast.LENGTH_SHORT).show()

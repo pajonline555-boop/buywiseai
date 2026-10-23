@@ -35,7 +35,10 @@ data class CompetitionSubmission(
     val shareCount: Int = 0,
     val consentAgreed: Boolean = true,
     val publicationConsentAgreed: Boolean = true,
-    val rejectionReason: String? = null
+    val rejectionReason: String? = null,
+    val submissionType: String = "REAL_DRESSED", // "REAL_DRESSED" or "AI_GENERATED"
+    val userPhone: String? = null,
+    val linkedMobile: String? = null
 )
 
 data class CompetitionVote(

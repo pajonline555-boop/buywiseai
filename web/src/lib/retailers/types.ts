@@ -58,6 +58,37 @@ export interface StoreOffer {
   partnerName?: string;
   partnerBadge?: boolean;
   tryOnEnabled?: boolean;
+  brand?: string;
+  model?: string;
+  productId?: string;
+  gtin?: string;
+  variant?: {
+    size?: string;
+    color?: string;
+    packQty?: number;
+  };
+  directProductUrl?: string;
+  affiliateUrl?: string;
+  isDirectProductLink?: boolean;
+  listedPrice?: number;
+  shippingFee?: number;
+  effectivePayablePrice?: number;
+  priceBasis?: 'listed' | 'effective_payable';
+  tier?: 'PREMIUM' | 'LUXURY';
+  dataFreshness?: string;
+  provenance?: {
+    source: SourceType;
+    provider: string;
+    rawListingId?: string;
+    lastChecked: string;
+    isLiveFeed: boolean;
+  };
+  imageProvenance?: {
+    url: string;
+    isGenuineProductImage: boolean;
+    isFallback: boolean;
+    safeHash?: string;
+  };
 }
 
 export interface RetailerSearchResult {
@@ -82,6 +113,22 @@ export interface GroupedOffers {
   exact: StoreOffer[];
   variant: StoreOffer[];
   similar: StoreOffer[];
+  premium?: StoreOffer[];
+  luxury?: StoreOffer[];
+}
+
+export interface ProviderStatusInfo {
+  retailerId: string;
+  retailerName: string;
+  status: 'LIVE' | 'CREDENTIALS_REQUIRED' | 'API_UNAVAILABLE' | 'RATE_LIMITED' | 'FAILED' | 'PARTNER_LIVE';
+  message?: string;
+}
+
+export interface TierSummary {
+  premiumCount: number;
+  luxuryCount: number;
+  lowestPremiumPrice: number;
+  lowestLuxuryPrice: number;
 }
 
 export interface ComparisonSummary {
@@ -91,6 +138,7 @@ export interface ComparisonSummary {
   highestPrice: number;
   maximumSavings: number;
   currency: string;
+  tierSummary?: TierSummary;
 }
 
 export interface ComparisonResponse {
@@ -103,4 +151,5 @@ export interface ComparisonResponse {
   recommendation: string;
   priceTrend?: PriceTrendSummary;
   errors: Array<{ retailer: string; error: string }>;
+  providerStatuses?: ProviderStatusInfo[];
 }

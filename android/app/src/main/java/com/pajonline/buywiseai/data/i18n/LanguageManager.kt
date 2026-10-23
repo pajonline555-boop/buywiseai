@@ -377,8 +377,8 @@ object LanguageManager {
             "kn" to "ಹೋಮ್", "or" to "ହୋମ୍", "ml" to "ഹോം", "as" to "হোম"
         ),
         "nav_search" to mapOf(
-            "en" to "SmartCompare", "hi" to "स्मार्ट तुलना", "hi-en" to "Compare", "pa" to "ਤੁਲਨਾ", "bn" to "স্মার্ট তুলনা",
-            "mr" to "स्मार्ट तुलना", "te" to "స్మార్ట్ పోలిక", "ta" to "ஒப்பீடு", "gu" to "સરખામણી", "ur" to "موازنہ",
+            "en" to "Compare", "hi" to "तुलना", "hi-en" to "Compare", "pa" to "ਤੁਲਨਾ", "bn" to "তুলনা",
+            "mr" to "तुलना", "te" to "పోలిక", "ta" to "ஒப்பீடு", "gu" to "સરખામણી", "ur" to "موازنہ",
             "kn" to "ಹೋಲಿಕೆ", "or" to "ତୁଳନା", "ml" to "താരതമ്യം", "as" to "তুলনা"
         ),
         "nav_comp" to mapOf(

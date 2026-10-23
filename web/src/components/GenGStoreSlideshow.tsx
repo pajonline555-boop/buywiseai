@@ -60,12 +60,8 @@ export default function GenGStoreSlideshow() {
   const currentProduct = validProducts[currentIndex] || validProducts[0];
   if (!currentProduct) return null;
 
-  const activeYoutubeUrl = currentProduct.youtubeUrl || 
-    (currentProduct as any).videoUrl || 
-    (currentProduct as any).youtube || 
-    (currentProduct.id === 'prod_partner_kamarbandh_1' || currentProduct.id === 'prod_sku_492959' || (currentProduct.title && currentProduct.title.toLowerCase().includes('kamarbandh')) 
-      ? 'https://youtube.com/shorts/LRIzcmOVWh0' 
-      : undefined);
+  const OFFICIAL_YOUTUBE_SHORTS_URL = 'https://www.youtube.com/@BUYWISEAI-u8n/shorts';
+  const activeYoutubeUrl = OFFICIAL_YOUTUBE_SHORTS_URL;
 
   const mrp = currentProduct.mrp ?? currentProduct.sellingPrice ?? 2999;
   const sellingPrice = currentProduct.sellingPrice ?? 1999;
@@ -79,16 +75,20 @@ export default function GenGStoreSlideshow() {
     setCurrentIndex((prev) => (prev - 1 + products.length) % products.length);
   };
 
-  const handleTryOn = (prod: PartnerProduct) => {
-    router.push(`/try-on?garmentUrl=${encodeURIComponent(prod.primaryImage)}&title=${encodeURIComponent(prod.title)}`);
+  const handleTryOn = (prod: PartnerProduct, size?: string) => {
+    const sizeParam = size ? `&size=${encodeURIComponent(size)}` : '';
+    router.push(`/try-on?garmentUrl=${encodeURIComponent(prod.primaryImage)}&title=${encodeURIComponent(prod.title)}${sizeParam}`);
   };
 
   const handleBuyNow = (prod: PartnerProduct) => {
-    // Send user directly to affiliate outbound destination
-    const rawUrl = prod.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(prod.title)}`;
-    const affiliateUrl = buildAffiliateUrl(rawUrl, prod.brand || prod.partnerName || 'Amazon India', 'GEN_G_STORE');
+    // Send user directly to proper retailer outbound destination
+    const targetUrl = prod.productUrl && prod.productUrl.startsWith('http')
+      ? prod.productUrl
+      : (prod.brand || prod.partnerName || '').toLowerCase().includes('flipkart')
+      ? `https://www.flipkart.com/search?q=${encodeURIComponent(prod.title)}`
+      : `https://www.amazon.in/s?k=${encodeURIComponent(prod.title)}`;
     if (typeof window !== 'undefined') {
-      window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -315,54 +315,66 @@ export default function GenGStoreSlideshow() {
                 </h3>
               </Link>
 
-              {activeYoutubeUrl && (
-                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => setIsVideoModalOpen(true)}
-                    title="Watch Official YouTube Video Demo"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      borderRadius: '14px',
-                      background: 'linear-gradient(135deg, rgba(255, 0, 77, 0.35), rgba(255, 60, 0, 0.25))',
-                      border: '1px solid #ff004d',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 15px rgba(255, 0, 77, 0.35)',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <span>▶️</span> Watch YouTube Video Demo
-                  </button>
-
-                  <a
-                    href={activeYoutubeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open video directly on YouTube in new tab"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 14px',
-                      borderRadius: '14px',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      color: '#ff4d79',
-                      fontSize: '12.5px',
-                      fontWeight: 800,
-                      textDecoration: 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <span>🔗</span> YouTube Link ↗
-                  </a>
+              {/* Auto Multi-Size Try-On Selector (Petite S, Regular M, Curvy L, Plus XXL) */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.35)', padding: '10px 14px', borderRadius: '14px', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 900, color: '#ffd700' }}>
+                  👗 Auto Multi-Size Try-On:
+                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[
+                    { label: 'S', title: 'Petite S' },
+                    { label: 'M', title: 'Regular M' },
+                    { label: 'L', title: 'Dusky L' },
+                    { label: 'XXL', title: 'Curvy XXL' }
+                  ].map(sz => (
+                    <button
+                      key={sz.label}
+                      onClick={() => handleTryOn(currentProduct, sz.label)}
+                      title={`Auto-Try ${sz.title} (${sz.label})`}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 215, 0, 0.6)',
+                        background: 'linear-gradient(135deg, rgba(40, 25, 60, 0.9), rgba(20, 15, 35, 0.9))',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {sz.label}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+
+              {/* Official YouTube Shorts Channel Link ONLY */}
+              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <a
+                  href={OFFICIAL_YOUTUBE_SHORTS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Watch Official BuyWise AI YouTube Shorts Channel"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, rgba(255, 0, 77, 0.35), rgba(255, 60, 0, 0.25))',
+                    border: '1px solid #ff004d',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 900,
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 15px rgba(255, 0, 77, 0.35)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>▶️</span> YouTube Shorts Channel (@BUYWISEAI-u8n) ↗
+                </a>
+              </div>
 
               <p style={{ fontSize: '14px', color: '#cbd5e1', marginBottom: '24px', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {currentProduct.description}
@@ -411,7 +423,7 @@ export default function GenGStoreSlideshow() {
                 <button
                   onClick={() => handleBuyNow(currentProduct)}
                   className="btn-primary"
-                  title="Buy Now on Verified Partner Store"
+                  title="View Now on Verified Partner Store"
                   style={{
                     padding: '13px 10px',
                     borderRadius: '16px',

@@ -17,6 +17,7 @@ import {
   adminDeleteCompetition,
   adminDeclareWinner,
   adminModerateSubmission,
+  adminBulkAutoApproveSubmissions,
   adminToggleVoteFreeze,
   fetchCompetitionsFromDb,
   fetchActiveCompetitionFromDb,
@@ -47,7 +48,7 @@ export default function AdminCompetitionsPage() {
   const [newStatus, setNewStatus] = useState<string>("LIVE");
   const [newRules, setNewRules] = useState("1. 100% Free Entry - No purchase necessary to enter or vote.\n2. One look submission per participant per week.\n3. Entrants must be 18 years or older.\n4. Submissions must feature this week's challenge item.\n5. Anti-fraud vote monitoring: Only 1 verified vote per user.");
   const [newEligibility, setNewEligibility] = useState("All verified BuyWise registered shoppers in India (18+ only)");
-  const [newTerms, setNewTerms] = useState("Participants retain copyright of their photos and grant BuyWise AI a non-exclusive license to display submitted try-on looks for community voting and winner recognition. Explicit consent can be revoked at any time. Winners are verified by administration and announced every Sunday.");
+  const [newTerms, setNewTerms] = useState("Participants retain copyright of their photos and grant BuyWise AI a non-exclusive license to display submitted try-on looks for community voting and winner recognition. Explicit consent can be revoked at any time. Winners are verified by administration and announced on the app and social media.");
   const [selectedInventorySku, setSelectedInventorySku] = useState("");
   const [showRulesPreviewModal, setShowRulesPreviewModal] = useState(false);
   const [selectedRulesComp, setSelectedRulesComp] = useState<Competition | null>(null);
@@ -211,6 +212,17 @@ export default function AdminCompetitionsPage() {
     setTimeout(() => setFeedback(null), 2500);
   };
 
+  const handleBulkAutoApprove = () => {
+    const report = adminBulkAutoApproveSubmissions(activeComp?.id);
+    if (activeComp) {
+      setActiveSubmissions(getSubmissions(activeComp.id));
+    } else {
+      setActiveSubmissions(getSubmissions());
+    }
+    setFeedback(`🤖 AI Bulk Auto-Approval Complete: ${report.approvedCount} Approved, ${report.rejectedCount} Flagged & Rejected for Nudity/Safety violations.`);
+    setTimeout(() => setFeedback(null), 5000);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newProductTitle) {
@@ -345,7 +357,7 @@ export default function AdminCompetitionsPage() {
               boxShadow: "0 4px 12px rgba(255, 215, 0, 0.3)"
             }}
           >
-            👑 Declare Sunday Winner
+            👑 Declare Winner
           </button>
 
           <button
@@ -744,7 +756,7 @@ export default function AdminCompetitionsPage() {
                           {c.winnerName ? (
                             <span style={{ color: "#ffd700", fontWeight: 800, fontSize: "12px" }}>🏆 {c.winnerName}</span>
                           ) : (
-                            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "11.5px" }}>Pending Sunday</span>
+                            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "11.5px" }}>Pending Announcement</span>
                           )}
                         </td>
                         <td style={{ padding: "14px 18px", textAlign: "right" }}>
@@ -783,6 +795,26 @@ export default function AdminCompetitionsPage() {
                 Moderate participant Try-On styled looks before they appear on the public voting wall.
               </p>
             </div>
+
+            <button
+              onClick={handleBulkAutoApprove}
+              style={{
+                padding: "10px 18px",
+                borderRadius: "14px",
+                background: "linear-gradient(135deg, #00ff88, #00d4ff)",
+                border: "none",
+                color: "#000000",
+                fontWeight: 900,
+                fontSize: "12.5px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 4px 14px rgba(0, 255, 136, 0.3)"
+              }}
+            >
+              🤖 AI Bulk Auto-Approve (Screen Nudity &amp; Safety)
+            </button>
           </div>
 
           {activeSubmissions.length === 0 ? (

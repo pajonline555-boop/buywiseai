@@ -54,8 +54,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.pajonline.buywiseai.data.repository.AuthRepository
 import com.pajonline.buywiseai.data.repository.AuthState
+import com.pajonline.buywiseai.data.repository.CompetitionRepository
+import com.pajonline.buywiseai.domain.model.CompetitionSubmission
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseGold
@@ -74,6 +79,8 @@ fun AdminDashboardScreen(
     val currentEmail = (authState as? AuthState.Authenticated)?.userEmail ?: "pajonline555@gmail.com"
     var broadcastText by remember { mutableStateOf("") }
     var isSendingBroadcast by remember { mutableStateOf(false) }
+
+    var submissionsList by remember { mutableStateOf(CompetitionRepository.getAllSubmissions()) }
 
     var activeShoppersCount by remember { mutableStateOf("2") }
     var shoppersSubtitle by remember { mutableStateOf("2 Registered Accounts") }
@@ -380,11 +387,154 @@ fun AdminDashboardScreen(
 
             AdminActionTile(
                 title = "🏆 Weekly Competition Manager",
-                subtitle = "Launch weekly challenges, declare Sunday winners, and review entry looks",
+                subtitle = "Launch weekly challenges, declare winners, and review entry looks",
                 badgeText = "CHALLENGES ➔",
                 accentColor = BuyWiseGold,
                 onClick = { launchWebAdmin("Weekly Competition Manager", "/admin/competitions") }
             )
+
+            // CHALLENGE ENTRIES MODERATION & AUTO-APPROVAL CARD
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🛡️", fontSize = 17.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text("Challenge Entries Moderation", fontSize = 14.sp, fontWeight = FontWeight.Black, color = BuyWiseGold)
+                                Text("Approve looks & auto-screen for safety", fontSize = 10.5.sp, color = Color.Gray)
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .background(BuyWiseGold.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                .border(1.dp, BuyWiseGold, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("${submissionsList.size} Looks", fontSize = 10.sp, fontWeight = FontWeight.Black, color = BuyWiseGold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // BULK AUTO APPROVAL BUTTON
+                    Button(
+                        onClick = {
+                            val report = CompetitionRepository.autoModerateBulkSubmissions()
+                            submissionsList = CompetitionRepository.getAllSubmissions()
+                            Toast.makeText(
+                                context,
+                                "🤖 AI Auto-Approval Done: ${report.approvedCount} Approved, ${report.rejectedCount} Rejected (Nudity/Safety check)",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp, horizontal = 10.dp)
+                    ) {
+                        Text("🤖 AI Bulk Auto-Approve (Screen Nudity & Safety)", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        submissionsList.forEach { sub ->
+                            val isApproved = sub.status == "APPROVED" || sub.status == "WINNER"
+                            val isRejected = sub.status == "REJECTED"
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFF1E1A33),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isApproved) BuyWiseEmerald.copy(alpha = 0.4f) else if (isRejected) Color(0xFFFF4D4D).copy(alpha = 0.4f) else BuyWiseGold.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.Black),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = sub.vtoResultImage,
+                                            contentDescription = sub.userName,
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize().padding(1.dp)
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(sub.userName, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White, maxLines = 1)
+                                        Text(
+                                            text = if (sub.submissionType == "REAL_DRESSED") "📸 Real Dressed" else "✨ AI Look",
+                                            fontSize = 9.5.sp,
+                                            color = BuyWiseCyan
+                                        )
+                                        Text(
+                                            text = "Status: ${sub.status}",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isApproved) BuyWiseEmerald else if (isRejected) Color(0xFFFF4D4D) else BuyWiseGold
+                                        )
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Button(
+                                            onClick = {
+                                                CompetitionRepository.moderateSubmission(sub.id, "APPROVED")
+                                                submissionsList = CompetitionRepository.getAllSubmissions()
+                                                Toast.makeText(context, "✅ Approved ${sub.userName}", Toast.LENGTH_SHORT).show()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
+                                            shape = RoundedCornerShape(6.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(26.dp)
+                                        ) {
+                                            Text("✓", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                CompetitionRepository.moderateSubmission(sub.id, "REJECTED", "Rejected by Admin")
+                                                submissionsList = CompetitionRepository.getAllSubmissions()
+                                                Toast.makeText(context, "❌ Rejected ${sub.userName}", Toast.LENGTH_SHORT).show()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3D1623)),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF4D4D)),
+                                            shape = RoundedCornerShape(6.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(26.dp)
+                                        ) {
+                                            Text("✕", color = Color(0xFFFF4D4D), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             AdminActionTile(
                 title = "🛡️ Security Scorecard & Audit Logs",

@@ -57,29 +57,29 @@ export const TOP_CATEGORIES: CategoryInfo[] = [
     bannerImage: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80",
     products: [
       {
-        id: "iphone-17",
-        name: "Apple iPhone 17 (256 GB) - Teal / Titanium",
+        id: "iphone-16",
+        name: "Apple iPhone 16 (128 GB) - Ultramarine",
         category: "Mobiles & Smartphones",
-        image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80",
-        rating: 4.9,
-        reviewsCount: 3420,
-        lowestPrice: 82900,
-        originalPrice: 89900,
-        bestStore: "Amazon India (pajonline-21)",
+        image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=800&q=80",
+        rating: 4.8,
+        reviewsCount: 28400,
+        lowestPrice: 67900,
+        originalPrice: 79900,
+        bestStore: "Amazon India",
         specs: [
-          { label: "Display", value: "6.3-inch Super Retina XDR OLED 120Hz ProMotion" },
-          { label: "Processor", value: "Apple A18 Pro 3nm Bionic Chip" },
-          { label: "Camera", value: "48MP Dual Fusion + 12MP TrueDepth Front" },
-          { label: "Battery", value: "Up to 29 hours Video Playback (30W MagSafe)" },
-          { label: "Storage", value: "256 GB NVMe Ultra Fast Storage" }
+          { label: "Display", value: "6.1-inch Super Retina XDR OLED with Ceramic Shield" },
+          { label: "Processor", value: "Apple A18 3nm Bionic Chip with 5-core GPU" },
+          { label: "Camera", value: "48MP Fusion Camera + Camera Control + 12MP Ultra Wide" },
+          { label: "Battery", value: "Up to 22 hours Video Playback with MagSafe 25W" },
+          { label: "Storage", value: "128 GB NVMe Storage" }
         ],
         prices: [
-          { store: "Amazon India", price: 82900, url: "/search?q=iPhone+17", inStock: true, tag: "pajonline-21" },
-          { store: "Flipkart", price: 83999, url: "/search?q=iPhone+17", inStock: true },
-          { store: "Croma", price: 84500, url: "/search?q=iPhone+17", inStock: true },
-          { store: "Tata CLiQ", price: 84900, url: "/search?q=iPhone+17", inStock: true }
+          { store: "Amazon India", price: 67900, url: "https://www.amazon.in/s?k=Apple+iPhone+16+128GB", inStock: true },
+          { store: "Flipkart", price: 68490, url: "https://www.flipkart.com/search?q=Apple+iPhone+16+128GB", inStock: true },
+          { store: "Croma", price: 69900, url: "https://www.croma.com/searchB?q=Apple+iPhone+16+128GB%3Arelevance&text=Apple+iPhone+16+128GB", inStock: true },
+          { store: "Reliance Digital", price: 69900, url: "https://www.reliancedigital.com/search?q=Apple+iPhone+16+128GB:relevance", inStock: true }
         ],
-        highlights: ["Save ₹7,000 on Amazon India", "A18 Pro Next-Gen Chip", "120Hz ProMotion OLED Screen"]
+        highlights: ["Save ₹12,000 on Amazon India with Festival Bank Offers", "A18 3nm Chip with Apple Intelligence", "New Dedicated Camera Control Button"]
       },
       {
         id: "samsung-s24-ultra",

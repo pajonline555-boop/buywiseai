@@ -247,7 +247,7 @@ export default function RulesAndRegulationsModal({
               </div>
 
               <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(0, 212, 255, 0.08)', border: '1px solid rgba(0, 212, 255, 0.3)', fontSize: '13px' }}>
-                <strong style={{ color: '#00d4ff' }}>⚖️ Voting Verification:</strong> Strictly 1 vote per mobile device or account. All suspicious or automated votes are filtered by anti-fraud algorithms prior to Sunday winner declaration.
+                <strong style={{ color: '#00d4ff' }}>⚖️ Voting Verification:</strong> Strictly 1 vote per mobile device or account. All suspicious or automated votes are filtered by anti-fraud algorithms prior to winner declaration. Information will be given on the app and social media.
               </div>
             </div>
           )}

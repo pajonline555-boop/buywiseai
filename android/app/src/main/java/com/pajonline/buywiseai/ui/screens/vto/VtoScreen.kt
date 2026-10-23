@@ -14,6 +14,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.pajonline.buywiseai.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -35,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -115,6 +117,19 @@ data class AndroidStyleMatchResult(
     val sizeAdvice: String,
     val colorMatchScore: String,
     val stylingTips: List<String>
+)
+
+data class DiverseIndianModel(
+    val id: String,
+    val name: String,
+    val tag: String,
+    val bodyType: String,
+    val skinTone: String,
+    val height: String,
+    val size: String,
+    val drawableRes: Int,
+    val summary: String,
+    val drapeNote: String
 )
 
 suspend fun saveImageToGallery(context: Context, imageUrl: String, title: String): Boolean {
@@ -249,7 +264,9 @@ fun evaluateStyleMatch(
 }
 
 @Composable
-fun VtoScreen() {
+fun VtoScreen(
+    onBack: () -> Unit = {}
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val privateVtoDir = remember {
@@ -375,6 +392,78 @@ fun VtoScreen() {
     var showChallengeSubmitDialog by remember { mutableStateOf(false) }
     var previewModalFile by remember { mutableStateOf<File?>(null) }
 
+    // DIVERSE INDIAN MODELS SHOWCASE STATE (Zero-Glitch Fitting Studio)
+    val diverseModels = remember {
+        listOf(
+            DiverseIndianModel(
+                id = "model_curvy_xxl",
+                name = "Kavita Patel (Plus Size XXL)",
+                tag = "Curvy / XXL Body",
+                bodyType = "Curvy • Plus Size",
+                skinTone = "Warm Golden Wheatish",
+                height = "5'5\"",
+                size = "Size XXL",
+                drawableRes = R.drawable.model_curvy_xxl,
+                summary = "Fuller curves with natural waist drape. Mirrorwork Kamarbandh fits comfortably and flatters waistline without pinching.",
+                drapeNote = "Guaranteed zero fabric pinch. Beautiful Dandiya flare with comfortable waistband stretch."
+            ),
+            DiverseIndianModel(
+                id = "model_dark_skin",
+                name = "Tanvi Desai (Deep Melanin)",
+                tag = "Deep Dark Skin Tone",
+                bodyType = "Medium Athletic (L)",
+                skinTone = "Rich Deep Melanin Tone",
+                height = "5'6\"",
+                size = "Size L",
+                drawableRes = R.drawable.model_dark_skin,
+                summary = "Deep melanin complexion. Handcrafted silver mirrorwork shines brilliantly with radiant festive contrast.",
+                drapeNote = "Silver latkans and mirror embroidery pop gorgeously against rich deep skin tone."
+            ),
+            DiverseIndianModel(
+                id = "model_warm_regular",
+                name = "Meera Shah (Wheatish Regular)",
+                tag = "Warm Wheatish Tone",
+                bodyType = "Classic Standard (M)",
+                skinTone = "Warm Wheatish Undertone",
+                height = "5'4\"",
+                size = "Size M",
+                drawableRes = R.drawable.model_warm_regular,
+                summary = "Classic Indian build with warm undertone. Traditional Dandiya flared drape with festive Diya styling.",
+                drapeNote = "Flattering for classic Gujarati Dandiya Raas with balanced waist-to-flare ratio."
+            ),
+            DiverseIndianModel(
+                id = "model_petite_s",
+                name = "Pooja Sharma (Petite Size S)",
+                tag = "Petite Slender (S)",
+                bodyType = "Petite Slender (S)",
+                skinTone = "Fair / Medium Warm",
+                height = "5'2\"",
+                size = "Size S",
+                drawableRes = R.drawable.model_petite_s,
+                summary = "Petite slender frame with lightweight Chaniya Choli drape. Snug waistband fit with high festive mobility.",
+                drapeNote = "Lightweight flare ensures shorter frames aren't overwhelmed while staying festive."
+            )
+        )
+    }
+    var selectedDiverseModel by remember { mutableStateOf<DiverseIndianModel?>(diverseModels.first()) }
+
+    // Auto-select Diverse Indian Model size if targetSize was passed from Gen-G slideshow or elsewhere
+    LaunchedEffect(VtoSessionState.targetSize) {
+        val size = VtoSessionState.targetSize?.uppercase()?.trim()
+        if (size != null) {
+            val matching = when (size) {
+                "S", "PETITE", "PETITE S", "SIZE S" -> diverseModels.firstOrNull { it.id == "model_petite_s" }
+                "M", "REGULAR", "REGULAR M", "SIZE M" -> diverseModels.firstOrNull { it.id == "model_warm_regular" }
+                "L", "DUSKY", "MELANIN", "SIZE L" -> diverseModels.firstOrNull { it.id == "model_dark_skin" }
+                "XXL", "XL", "CURVY", "PLUS", "SIZE XXL" -> diverseModels.firstOrNull { it.id == "model_curvy_xxl" }
+                else -> null
+            }
+            if (matching != null) {
+                selectedDiverseModel = matching
+            }
+        }
+    }
+
     // Upload styled look launcher
     val pickStyledLookLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -450,19 +539,35 @@ fun VtoScreen() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "AI Size & Style Match",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Powered by HI MAYA ✨",
-                        fontSize = 12.sp,
-                        color = BuyWiseGold,
-                        fontWeight = FontWeight.Bold
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0xFF1E1B2E), CircleShape)
+                            .border(1.dp, BuyWiseCyan.copy(alpha = 0.5f), CircleShape)
+                            .clickable { onBack() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("←", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+
+                    Column {
+                        Text(
+                            text = "AI Size & Style Match",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Powered by HI MAYA ✨",
+                            fontSize = 11.sp,
+                            color = BuyWiseGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 Icon(Icons.Default.Lock, contentDescription = "Privacy Lock", tint = BuyWiseEmerald)
             }
@@ -518,13 +623,14 @@ fun VtoScreen() {
                         modifier = Modifier
                             .size(86.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color.Black)
+                            .background(Color(0xFF140F26)),
+                        contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
                             model = selectedGarment.imageUrl,
                             contentDescription = selectedGarment.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().padding(3.dp)
                         )
                         if (selectedGarment.isChallenge) {
                             Box(
@@ -628,12 +734,15 @@ fun VtoScreen() {
                                 border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) BuyWiseGold else Color.White.copy(alpha = 0.15f))
                             ) {
                                 Column(modifier = Modifier.fillMaxSize()) {
-                                    Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().height(100.dp).background(Color(0xFF0C091A)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         AsyncImage(
                                             model = garment.imageUrl,
                                             contentDescription = garment.title,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize().padding(2.dp)
                                         )
                                     }
                                     Column(modifier = Modifier.padding(4.dp)) {
@@ -643,6 +752,442 @@ fun VtoScreen() {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // -------------------------------------------------------------
+            // SECTION A: REAL INDIAN BODIES & COMPLEXIONS (SMART TRIAL ROOM)
+            // -------------------------------------------------------------
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF16102A)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.5.dp, BuyWiseGold)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "🌟 Diverse Indian Bodies & Skin Tones",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                                color = BuyWiseGold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "100% authentic drape • Zero AI face distortion • Real festival fits",
+                                fontSize = 11.sp,
+                                color = Color.LightGray
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = BuyWiseEmerald.copy(alpha = 0.2f),
+                            border = BorderStroke(1.dp, BuyWiseEmerald)
+                        ) {
+                            Text(
+                                text = "★ 4 Body Types",
+                                color = BuyWiseEmerald,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 4 Readymade Body Type Chips / Cards
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(diverseModels) { model ->
+                            val isSel = selectedDiverseModel?.id == model.id
+                            Card(
+                                modifier = Modifier
+                                    .width(135.dp)
+                                    .clickable { selectedDiverseModel = model },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSel) Color(0xFF2C1E4A) else Color(0xFF100C1F)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(
+                                    if (isSel) 2.dp else 1.dp,
+                                    if (isSel) BuyWiseGold else Color.White.copy(alpha = 0.15f)
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(130.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFF0C091A)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = model.drawableRes,
+                                            contentDescription = model.name,
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize().padding(2.dp)
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xCC000000),
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(4.dp)
+                                        ) {
+                                            Text(
+                                                text = model.size,
+                                                color = BuyWiseGold,
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 9.sp,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = model.tag,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSel) BuyWiseGold else Color.White,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        text = "${model.height} • ${model.bodyType}",
+                                        fontSize = 9.5.sp,
+                                        color = Color.LightGray,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // ACTIVE SELECTED MODEL SHOWCASE
+                    if (selectedDiverseModel != null) {
+                        val model = selectedDiverseModel!!
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0B1E)),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, BuyWiseGold.copy(alpha = 0.7f))
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                // Full High-Res Model Showcase Box
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(340.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(Color.Black)
+                                ) {
+                                    AsyncImage(
+                                        model = model.drawableRes,
+                                        contentDescription = model.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+
+                                    // Top Badges
+                                    Row(
+                                        modifier = Modifier
+                                            .align(Alignment.TopStart)
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xDD000000),
+                                            border = BorderStroke(1.dp, BuyWiseGold)
+                                        ) {
+                                            Text(
+                                                text = "📏 ${model.height}",
+                                                color = BuyWiseGold,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xDD000000),
+                                            border = BorderStroke(1.dp, BuyWiseEmerald)
+                                        ) {
+                                            Text(
+                                                text = "👗 ${model.size}",
+                                                color = BuyWiseEmerald,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xDD000000),
+                                            border = BorderStroke(1.dp, BuyWiseCyan)
+                                        ) {
+                                            Text(
+                                                text = "🎨 ${model.skinTone}",
+                                                color = BuyWiseCyan,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = model.name,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = model.summary,
+                                    fontSize = 11.5.sp,
+                                    color = Color.LightGray,
+                                    lineHeight = 16.sp
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "💡 HI MAYA FIT NOTE: ${model.drapeNote}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BuyWiseGold,
+                                    lineHeight = 15.sp
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Quick Actions for this model look
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            resultLookUri = "android.resource://${context.packageName}/drawable/${model.id}"
+                                            VtoSessionState.lastGeneratedLookUri = resultLookUri
+                                            showChallengeSubmitDialog = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.weight(1.3f)
+                                    ) {
+                                        Text("🏆 Compete with Look", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            Toast.makeText(context, "✅ ${model.tag} look selected for Fit Studio!", Toast.LENGTH_SHORT).show()
+                                        },
+                                        border = BorderStroke(1.dp, BuyWiseCyan),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("✨ Fit Matches", fontSize = 11.sp, color = BuyWiseCyan, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // -------------------------------------------------------------
+            // SECTION B: OFFICIAL VIDEO SHOWCASE & SOCIAL MEDIAS (YOUTUBE, INSTAGRAM, WHATSAPP)
+            // -------------------------------------------------------------
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1430)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.5.dp, BuyWiseNeonPink)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🎬", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Official Drape & Movement Video",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                                color = BuyWiseNeonPink
+                            )
+                            Text(
+                                text = "See real 360° fabric drape, mirror sparkle & dance flow",
+                                fontSize = 11.sp,
+                                color = Color.LightGray
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Video Play Banner
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF0C081A))
+                            .clickable {
+                                val ytUrl = "https://www.youtube.com/@BUYWISEAI-u8n/shorts"
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ytUrl)))
+                            }
+                    ) {
+                        AsyncImage(
+                            model = selectedGarment.imageUrl,
+                            contentDescription = "Video Preview",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.55f))
+                        )
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xDDFF0055),
+                                modifier = Modifier.size(54.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("▶", fontSize = 22.sp, color = Color.White)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("▶️ Watch Official YouTube Shorts", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White)
+                            Text("Channel: @BUYWISEAI-u8n • 4K HD Movement Reels", fontSize = 10.sp, color = BuyWiseGold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Watch on our official channels:", fontSize = 11.sp, color = BuyWiseGold, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val ytUrl = "https://www.youtube.com/@BUYWISEAI-u8n/shorts"
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ytUrl)))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                        ) {
+                            Text("▶️ YouTube Shorts", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        Button(
+                            onClick = {
+                                val igUrl = "https://instagram.com/buywiseai"
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(igUrl)))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF833AB4)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                        ) {
+                            Text("📸 Instagram", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        Button(
+                            onClick = {
+                                val waUrl = "https://wa.me/919999999999?text=Hi%20BuyWise%20AI,%20I%20want%20to%20see%20the%20styling%20video%20for%20the%20Navratri%20Kamarbandh"
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(waUrl)))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                        ) {
+                            Text("💬 WhatsApp", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // -------------------------------------------------------------
+            // SECTION C: AFFILIATE DIVERT CARD FOR DRESS PHOTOS & PURCHASE
+            // -------------------------------------------------------------
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF291F14)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.5.dp, BuyWiseGold)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🛍️", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Get Official Photos & Buy on Amazon",
+                                fontSize = 15.5.sp,
+                                fontWeight = FontWeight.Black,
+                                color = BuyWiseGold
+                            )
+                            Text(
+                                text = "Affiliate Tag: pajonline-21 • Verified Discounts & Fast Delivery",
+                                fontSize = 11.sp,
+                                color = BuyWiseCyan
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Want high-resolution official photos of this dress to use for AI image generation or styling? Or want to buy the authentic outfit directly? Tap below to view product on Amazon.",
+                        fontSize = 11.sp,
+                        color = Color.LightGray,
+                        lineHeight = 15.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = {
+                            val amazonUrl = "https://www.amazon.in/s?k=Gujarati+Traditional+Navratri+Waist+Belt+Kamarbandh&tag=pajonline-21&ascsubtag=bw_vto_studio"
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(amazonUrl)))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("🛒 Open Amazon Product Page (tag: pajonline-21) ↗", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.5.sp)
                     }
                 }
             }
@@ -744,14 +1289,15 @@ fun VtoScreen() {
                                 modifier = Modifier
                                     .size(90.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.Black)
-                                    .border(1.5.dp, BuyWiseCyan, RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF0C091A))
+                                    .border(1.5.dp, BuyWiseCyan, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
                                     model = userRawPhotoUri,
                                     contentDescription = "Your Raw Photo",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize().padding(2.dp)
                                 )
                                 Box(
                                     modifier = Modifier
@@ -773,14 +1319,15 @@ fun VtoScreen() {
                                 modifier = Modifier
                                     .size(90.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.Black)
-                                    .border(1.5.dp, BuyWiseGold, RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF0C091A))
+                                    .border(1.5.dp, BuyWiseGold, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
                                     model = selectedGarment.imageUrl,
                                     contentDescription = selectedGarment.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize().padding(2.dp)
                                 )
                                 Box(
                                     modifier = Modifier
@@ -798,86 +1345,32 @@ fun VtoScreen() {
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // TRY-ON FITTING STYLE SELECTOR
-                    Text(
-                        text = "Fitting Mode:",
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.LightGray
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
+                    // AUTHENTIC FIT GUARANTEE CARD (100% Real User Body, Skin Tone, & Posture)
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF231238)),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.5.dp, BuyWiseNeonPink)
                     ) {
-                        // Option 1: WEAR ON MY PHOTO (Default & Recommended - 100% Real You)
-                        Card(
-                            modifier = Modifier
-                                .weight(1.05f)
-                                .clickable { selectedFittingMode = VtoFittingMode.FIT_ON_USER },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (selectedFittingMode == VtoFittingMode.FIT_ON_USER) Color(0xFF2E1546) else Color(0xFF130E22)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(
-                                1.5.dp,
-                                if (selectedFittingMode == VtoFittingMode.FIT_ON_USER) BuyWiseNeonPink else Color(0xFF2E2548)
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("👗", fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Wear On My Photo",
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (selectedFittingMode == VtoFittingMode.FIT_ON_USER) BuyWiseNeonPink else Color.White
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("👗", fontSize = 16.sp)
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "★ Recommended • Real Face & Hair",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (selectedFittingMode == VtoFittingMode.FIT_ON_USER) BuyWiseNeonPink else Color.Gray
+                                    text = "100% Real You Fitting (Your Body & Skin Tone)",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = BuyWiseNeonPink
                                 )
                             }
-                        }
-
-                        // Option 2: RUNWAY STUDIO (Designer Catalog Showcase)
-                        Card(
-                            modifier = Modifier
-                                .weight(0.95f)
-                                .clickable { selectedFittingMode = VtoFittingMode.RUNWAY_MODEL },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (selectedFittingMode == VtoFittingMode.RUNWAY_MODEL) Color(0xFF2E2415) else Color(0xFF130E22)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(
-                                1.5.dp,
-                                if (selectedFittingMode == VtoFittingMode.RUNWAY_MODEL) BuyWiseGold else Color(0xFF2E2548)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Drapes this outfit directly onto your real body, maintaining your exact posture, natural warm skin tone, and authentic photo background. Zero catalog face-swaps.",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.LightGray,
+                                lineHeight = 14.sp
                             )
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("👑", fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Runway Studio",
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (selectedFittingMode == VtoFittingMode.RUNWAY_MODEL) BuyWiseGold else Color.White
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Catalog Studio Showcase",
-                                    fontSize = 9.sp,
-                                    color = Color.Gray
-                                )
-                            }
                         }
                     }
 
@@ -895,17 +1388,14 @@ fun VtoScreen() {
                                 coroutineScope.launch {
                                     try {
                                         com.pajonline.buywiseai.util.ImagePreProcessor.uriToCompressedWebPBase64(context, rawUri, 1024, 80)
-                                        conversionStatusText = if (selectedFittingMode == VtoFittingMode.FIT_ON_USER)
-                                            "⚡ Generating Real AI Virtual Try-On via Diffusion Engine (~15s)..."
-                                        else
-                                            "👑 Loading luxury designer runway look..."
+                                        conversionStatusText = "⚡ Fitting dress onto your authentic body via Diffusion Engine (~15s)..."
                                         val outputFile = File(privateVtoDir, "vto_${System.currentTimeMillis()}.webp")
 
                                         val success = VtoImageSynthesizer.generateFittedLook(
                                             context = context,
                                             userPhotoUriOrUrl = rawUri.toString(),
                                             garment = selectedGarment,
-                                            mode = selectedFittingMode,
+                                            mode = VtoFittingMode.FIT_ON_USER,
                                             outputFile = outputFile
                                         )
 
@@ -913,7 +1403,7 @@ fun VtoScreen() {
                                             resultLookUri = outputFile.absolutePath
                                             VtoSessionState.lastGeneratedLookUri = outputFile.absolutePath
                                             localFiles = privateVtoDir.listFiles()?.sortedByDescending { it.lastModified() } ?: emptyList()
-                                            conversionStatusText = "✨ Converted successfully! Dress fitted on your photo."
+                                            conversionStatusText = "✨ Converted successfully! Dress fitted on your body."
                                             Toast.makeText(context, "✨ Success! Dress fitted beautifully.", Toast.LENGTH_LONG).show()
                                         } else {
                                             if (outputFile.exists()) {
@@ -932,9 +1422,7 @@ fun VtoScreen() {
                             }
                         },
                         enabled = !isConvertingTryOn,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedFittingMode == VtoFittingMode.FIT_ON_USER) BuyWiseNeonPink else BuyWiseGold
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -947,14 +1435,13 @@ fun VtoScreen() {
                                 fontWeight = FontWeight.Black
                             )
                         } else {
-                            val buttonTitle = when {
-                                userRawPhotoUri == null -> "📸 Upload Photo to Fit With Dress"
-                                selectedFittingMode == VtoFittingMode.FIT_ON_USER -> "✨ Fit Dress On My Photo (100% Real You)"
-                                else -> "👑 View Runway Studio Look"
-                            }
+                            val buttonTitle = if (userRawPhotoUri == null) 
+                                "📸 Upload Photo to Fit With Dress" 
+                            else 
+                                "✨ Fit Dress On My Photo (100% Real You)"
                             Text(
                                 text = buttonTitle,
-                                color = if (userRawPhotoUri != null && selectedFittingMode == VtoFittingMode.RUNWAY_MODEL) Color.Black else Color.White,
+                                color = Color.White,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 13.5.sp
                             )
@@ -1495,12 +1982,15 @@ fun VtoScreen() {
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                         ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().background(Color(0xFF0C091A)),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 AsyncImage(
                                     model = file,
                                     contentDescription = "Saved Look",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize().padding(2.dp)
                                 )
                             }
                         }
@@ -1581,9 +2071,12 @@ fun VtoScreen() {
     // Modal to Submit Entry to Weekly Challenge
     if (showChallengeSubmitDialog && activeComp != null) {
         var name by remember { mutableStateOf("Priya S.") }
-        var is18Plus by remember { mutableStateOf(true) }
-        var consentVoting by remember { mutableStateOf(true) }
-        var consentWinner by remember { mutableStateOf(true) }
+        var submissionType by remember { mutableStateOf("REAL_DRESSED") }
+        var is18Plus by remember { mutableStateOf(false) }
+        var consentVoting by remember { mutableStateOf(false) }
+        var consentWinner by remember { mutableStateOf(false) }
+        var consentRules by remember { mutableStateOf(false) }
+        var showRulesInDialog by remember { mutableStateOf(false) }
 
         Dialog(onDismissRequest = { showChallengeSubmitDialog = false }) {
             Surface(
@@ -1592,7 +2085,11 @@ fun VtoScreen() {
                 border = BorderStroke(1.dp, BuyWiseGold),
                 modifier = Modifier.fillMaxWidth().padding(14.dp)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1610,6 +2107,66 @@ fun VtoScreen() {
                         fontSize = 12.sp,
                         color = Color.LightGray
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // DUAL SELECTION TABS: REAL LOOK VS AI GENERATED
+                    Text("Select Submission Type:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BuyWiseGold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val isReal = submissionType == "REAL_DRESSED"
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isReal) Color(0xFF0D3823) else Color(0xFF1E1638),
+                            border = BorderStroke(1.5.dp, if (isReal) BuyWiseEmerald else Color.DarkGray),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    submissionType = "REAL_DRESSED"
+                                    val realUrl = "https://www.amazon.in/s?k=${Uri.encode(activeComp.featuredProductTitle)}&tag=pajonline-21&ascsubtag=bw_vto_realdress"
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(realUrl)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                }
+                        ) {
+                            Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("📸 Real Dressed", fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (isReal) BuyWiseEmerald else Color.White)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Wear look • Amazon ↗", fontSize = 9.sp, color = if (isReal) BuyWiseEmerald.copy(alpha = 0.85f) else Color.Gray)
+                            }
+                        }
+
+                        val isAi = submissionType == "AI_GENERATED"
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isAi) Color(0xFF381534) else Color(0xFF1E1638),
+                            border = BorderStroke(1.5.dp, if (isAi) BuyWiseNeonPink else Color.DarkGray),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    submissionType = "AI_GENERATED"
+                                    val aiUrl = "https://www.amazon.in/s?k=${Uri.encode(activeComp.featuredProductTitle)}&tag=pajonline-21&ascsubtag=bw_vto_ailook"
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(aiUrl)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                }
+                        ) {
+                            Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("✨ AI Look", fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (isAi) BuyWiseNeonPink else Color.White)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("AI styled • Amazon ↗", fontSize = 9.sp, color = if (isAi) BuyWiseNeonPink.copy(alpha = 0.85f) else Color.Gray)
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -1656,23 +2213,52 @@ fun VtoScreen() {
                         Text("Consent: Feature look on banner if declared winner", fontSize = 11.sp, color = Color.White)
                     }
 
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = consentRules,
+                            onCheckedChange = { consentRules = it },
+                            colors = CheckboxDefaults.colors(checkedColor = BuyWiseGold)
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { consentRules = !consentRules }
+                        ) {
+                            Text("I have read and agree to the ", fontSize = 11.sp, color = Color.White)
+                            Text(
+                                text = "Rules & Regulations",
+                                fontSize = 11.sp,
+                                color = BuyWiseGold,
+                                fontWeight = FontWeight.Black,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                                modifier = Modifier.clickable { showRulesInDialog = true }
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
                         onClick = {
-                            val voterId = "device_user_926dbc44"
+                            val prefs = context.getSharedPreferences("buywise_app_prefs", android.content.Context.MODE_PRIVATE)
+                            val voterId = prefs.getString("saved_device_voter_id", "device_user_926dbc44") ?: "device_user_926dbc44"
+                            val linkedPhone = prefs.getString("saved_user_phone", "") ?: ""
                             val lookToSubmit = resultLookUri ?: activeComp.featuredProductImage
                             val (success, msg) = CompetitionRepository.submitEntry(
                                 competitionId = activeComp.id,
                                 userId = voterId,
                                 userName = name,
                                 userPhotoUrl = null,
-                                vtoResultImage = lookToSubmit
+                                vtoResultImage = lookToSubmit,
+                                submissionType = submissionType,
+                                userPhone = linkedPhone
                             )
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             showChallengeSubmitDialog = false
                         },
-                        enabled = is18Plus && consentVoting && consentWinner,
+                        enabled = is18Plus && consentVoting && consentWinner && consentRules,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
                         shape = RoundedCornerShape(14.dp)
@@ -1681,6 +2267,12 @@ fun VtoScreen() {
                     }
                 }
             }
+        }
+
+        if (showRulesInDialog) {
+            com.pajonline.buywiseai.ui.components.ChallengeRulesDialog(
+                onDismissRequest = { showRulesInDialog = false }
+            )
         }
     }
 }

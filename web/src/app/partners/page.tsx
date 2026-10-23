@@ -66,10 +66,13 @@ export default function PartnersStorefront() {
   };
 
   const handleBuyNow = (product: PartnerProduct) => {
-    const rawUrl = product.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.title)}`;
-    const affiliateUrl = buildAffiliateUrl(rawUrl, product.brand || product.partnerName || 'Amazon India', 'GEN_G_STORE');
+    const targetUrl = product.productUrl && product.productUrl.startsWith('http')
+      ? product.productUrl
+      : (product.brand || product.partnerName || '').toLowerCase().includes('flipkart')
+      ? `https://www.flipkart.com/search?q=${encodeURIComponent(product.title)}`
+      : `https://www.amazon.in/s?k=${encodeURIComponent(product.title)}`;
     if (typeof window !== 'undefined') {
-      window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -339,7 +342,7 @@ export default function PartnersStorefront() {
                         <button
                           onClick={() => handleBuyNow(prod)}
                           className="btn-primary"
-                          title="Buy Now on Verified Partner Store"
+                          title="View Now on Verified Partner Store"
                           style={{
                             padding: '12px 10px',
                             borderRadius: '14px',

@@ -78,20 +78,25 @@ class SmartCompareViewModel(
         }
         val isPartner = slug.contains("buywise") || slug.contains("partner")
         val isFlipkart = slug.contains("flipkart")
-        val storeName = if (isPartner) "BUYWISE STORE" else if (isFlipkart) "Flipkart" else "Amazon"
+        val storeName = if (isPartner) "BUYWISE STORE" else if (isFlipkart) "Flipkart" else "Amazon India"
         val source = if (isPartner) "PARTNER" else "AFFILIATE"
         val offerUrl = if (isPartner) "https://buywiseai.pajonline.co.in/product/$slug" else "https://www.amazon.in/dp/$slug?tag=pajonline-21&ascsubtag=bw_gen_g_store"
+
+        val marketComp = com.pajonline.buywiseai.data.repository.SmartMarketIntelligence.generateMarketComparison(titleFromSlug)
+        val bestOffer = marketComp.stores.firstOrNull()
 
         selectedOffer = StoreOffer(
             id = "offer_$slug",
             store = storeName,
-            title = titleFromSlug,
-            price = 499.0,
-            mrp = 999.0,
+            title = bestOffer?.title ?: titleFromSlug,
+            price = bestOffer?.price ?: 1299.0,
+            mrp = bestOffer?.mrp ?: 2499.0,
+            discount = bestOffer?.discount ?: 45.0,
+            imageUrl = bestOffer?.imageUrl,
             url = offerUrl,
-            rating = 4.8,
-            reviewCount = 1240,
-            trustScore = 98,
+            rating = bestOffer?.rating ?: 4.5,
+            reviewCount = bestOffer?.reviewCount ?: 1240,
+            trustScore = bestOffer?.trustScore ?: 98,
             productSource = source,
             verificationStatus = "VERIFIED_LIVE",
             slug = slug

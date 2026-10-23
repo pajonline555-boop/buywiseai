@@ -101,10 +101,18 @@ export default function ProductIntelligenceHeader({
     }
   };
 
-  const rawOutboundUrl = (product.prices?.[0]?.url && product.prices[0].url.startsWith('http'))
+  const storeLower = (product.bestStore || '').toLowerCase();
+  const defaultSearchUrl = storeLower.includes('flipkart')
+    ? `https://www.flipkart.com/search?q=${encodeURIComponent(product.name)}`
+    : storeLower.includes('croma')
+    ? `https://www.croma.com/searchB?q=${encodeURIComponent(product.name)}`
+    : storeLower.includes('myntra')
+    ? `https://www.myntra.com/${encodeURIComponent(product.name)}`
+    : `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`;
+
+  const outboundAffiliateUrl = (product.prices?.[0]?.url && product.prices[0].url.startsWith('http'))
     ? product.prices[0].url
-    : product.productUrl || `https://www.amazon.in/s?k=${encodeURIComponent(product.name)}`;
-  const outboundAffiliateUrl = buildAffiliateUrl(rawOutboundUrl, product.bestStore || 'Amazon India', 'GEN_G_STORE');
+    : product.productUrl || defaultSearchUrl;
 
   return (
     <section 
@@ -259,7 +267,7 @@ export default function ProductIntelligenceHeader({
                       cursor: 'pointer'
                     }}
                   >
-                    ⚡ BUY NOW ➔
+                    ⚡ VIEW NOW ➔
                   </button>
                 </a>
               </>
@@ -284,7 +292,7 @@ export default function ProductIntelligenceHeader({
                     cursor: 'pointer'
                   }}
                 >
-                  🛒 BUY ON {product.bestStore.toUpperCase()} ➔
+                  🛒 VIEW ON {product.bestStore.toUpperCase()} ➔
                 </button>
               </a>
             )}

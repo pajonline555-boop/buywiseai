@@ -503,6 +503,120 @@ fun ProfileScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Linked Devices & Real-Time Sync Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.35f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(BuyWiseEmerald)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "📲 Linked Devices & Cloud Sync",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .background(BuyWiseEmerald.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                .border(1.dp, BuyWiseEmerald.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("● MULTI-DEVICE SYNC", fontSize = 9.sp, fontWeight = FontWeight.Black, color = BuyWiseEmerald)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val deviceModel = remember {
+                        val mfg = android.os.Build.MANUFACTURER.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.US) else it.toString() }
+                        "$mfg ${android.os.Build.MODEL}"
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF1B1630), RoundedCornerShape(14.dp))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(BuyWiseCyan.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("📱", fontSize = 18.sp)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = deviceModel,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = if (userPhone.isNotBlank()) "Linked Mobile: $userPhone" else "Mobile Number: Not Linked",
+                                fontSize = 11.sp,
+                                color = if (userPhone.isNotBlank()) BuyWiseGold else Color.Gray
+                            )
+                            Text(
+                                text = "Instant FCM Push • Real-Time Votes & Approvals Active",
+                                fontSize = 10.sp,
+                                color = BuyWiseEmerald
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    var isSyncingDevices by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = {
+                            isSyncingDevices = true
+                            com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.dispatchSyncPing(context) { success ->
+                                isSyncingDevices = false
+                                android.widget.Toast.makeText(
+                                    context,
+                                    if (success) "⚡ Linked device state updated! Latest votes & approvals synced." else "Linked device synced.",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (isSyncingDevices) "⏳ Synchronizing Linked Device..." else "🔄 Update State on Linked Device",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.5.sp
+                        )
+                    }
+                }
+            }
+
             if (isAdmin) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
@@ -1494,6 +1608,10 @@ fun ProfileScreen(
                                         .putString("saved_user_email", trimmedEmail)
                                         .putString("saved_user_phone", trimmedPhone)
                                         .apply()
+                                    com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.syncDeviceToken(context)
+                                    com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.syncLinkedDeviceState(context)
+                                    com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.startRealtimeNotificationListener(context)
+                                    com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.startLinkedDeviceListener(context)
                                     showEditProfileDialog = false
                                     Toast.makeText(context, "✓ Profile updated: $trimmedName", Toast.LENGTH_SHORT).show()
                                 }

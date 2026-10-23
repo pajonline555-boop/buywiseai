@@ -1,4 +1,5 @@
-"use client"
+"use client";
+
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import PhotoUploadModal from "@/components/PhotoUploadModal";
@@ -26,7 +27,9 @@ function SearchContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("score-desc");
-  const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles"); // Default to Tiles Mode
+  const [viewMode, setViewMode] = useState<"tiles" | "list">("tiles");
+  const [tierFilter, setTierFilter] = useState<"ALL" | "PREMIUM" | "LUXURY">("ALL");
+  const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
@@ -69,9 +72,11 @@ function SearchContent() {
 
   const sortOffers = (offers: StoreOffer[] = []) => {
     return [...offers].sort((a, b) => {
+      const priceA = a.effectivePayablePrice || a.price;
+      const priceB = b.effectivePayablePrice || b.price;
       if (sortBy === "score-desc") return (b.smartValueScore || 0) - (a.smartValueScore || 0);
-      if (sortBy === "price-asc") return a.price - b.price;
-      if (sortBy === "price-desc") return b.price - a.price;
+      if (sortBy === "price-asc") return priceA - priceB;
+      if (sortBy === "price-desc") return priceB - priceA;
       if (sortBy === "match-desc") return (b.matchConfidence || 0) - (a.matchConfidence || 0);
       return 0;
     });
@@ -89,7 +94,7 @@ function SearchContent() {
           BUYWISE AI INDIA
         </div>
         <div className="text-gradient" style={{ fontSize: "28px", fontWeight: 800, marginBottom: "24px" }}>
-          Searching Amazon, Flipkart, Croma, Tata CLiQ & Meesho...
+          Searching Amazon, Flipkart, Myntra & Verified Retailers...
         </div>
         <div style={{ width: "240px", height: "4px", background: "var(--glass-border)", borderRadius: "2px", overflow: "hidden" }}>
           <div style={{ width: "50%", height: "100%", background: "var(--gradient-accent)", animation: "pulse-glow 1.2s infinite linear" }}></div>
@@ -98,12 +103,25 @@ function SearchContent() {
     );
   }
 
-  const exactOffers = sortOffers(data?.groupedOffers?.exact || []);
-  const variantOffers = sortOffers(data?.groupedOffers?.variant || []);
-  const similarOffers = sortOffers(data?.groupedOffers?.similar || []);
-  const allOffers = sortOffers(data?.stores || []);
+  // Filter offers by tier & brand
+  const allRawOffers = data?.stores || [];
+  const uniqueBrands = Array.from(new Set(allRawOffers.map((o) => o.brand).filter(Boolean))) as string[];
 
-  const bestValueOffer = allOffers.find((o) => o.isBestValue) || allOffers[0];
+  const filteredOffers = allRawOffers.filter((o) => {
+    if (tierFilter === "PREMIUM" && o.tier !== "PREMIUM") return false;
+    if (tierFilter === "LUXURY" && o.tier !== "LUXURY") return false;
+    if (selectedBrand !== "ALL" && o.brand !== selectedBrand) return false;
+    return true;
+  });
+
+  const sortedOffers = sortOffers(filteredOffers);
+  const exactOffers = sortedOffers.filter((o) => o.matchType === "exact");
+  const variantOffers = sortedOffers.filter((o) => o.matchType === "variant");
+  const similarOffers = sortedOffers.filter((o) => o.matchType === "similar");
+
+  const bestValueOffer = sortedOffers.find((o) => o.isBestValue) || sortedOffers[0];
+  const premiumCount = data?.groupedOffers?.premium?.length || allRawOffers.filter((o) => o.tier === "PREMIUM").length;
+  const luxuryCount = data?.groupedOffers?.luxury?.length || allRawOffers.filter((o) => o.tier === "LUXURY").length;
 
   return (
     <main style={{ paddingTop: "110px", paddingBottom: "100px" }}>
@@ -139,21 +157,20 @@ function SearchContent() {
 
       <div className="container">
         {/* Top Header & Search Bar */}
-        <div style={{ marginBottom: "30px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "20px", marginBottom: "20px" }}>
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "20px", marginBottom: "16px" }}>
             <div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "4px 14px", background: "rgba(138, 43, 226, 0.12)", border: "1px solid var(--glass-border)", borderRadius: "20px", marginBottom: "8px" }}>
                 <span style={{ color: "var(--primary)", fontWeight: 800, fontSize: "12px" }}>BUYWISE AI INDIA 🇮🇳</span>
-                <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>Indian Platforms in INR (₹)</span>
+                <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>Verified Retailer Comparison</span>
               </div>
-              <h1 style={{ fontSize: "36px", fontWeight: 800 }}>
+              <h1 style={{ fontSize: "32px", fontWeight: 800 }}>
                 Comparison Results for &quot;<span className="text-gradient">{searchQuery || "All Products"}</span>&quot;
               </h1>
             </div>
 
             {/* View Mode & Sort Controls */}
             <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-              {/* Tiles / List View Toggle */}
               <div className="glass" style={{ padding: "4px", borderRadius: "16px", display: "flex", gap: "4px" }}>
                 <button
                   onClick={() => setViewMode("tiles")}
@@ -166,7 +183,6 @@ function SearchContent() {
                     fontWeight: 700,
                     fontSize: "13px",
                     cursor: "pointer",
-                    transition: "all 0.2s ease"
                   }}
                 >
                   📱 Tiles Mode
@@ -182,14 +198,12 @@ function SearchContent() {
                     fontWeight: 700,
                     fontSize: "13px",
                     cursor: "pointer",
-                    transition: "all 0.2s ease"
                   }}
                 >
                   📋 List Mode
                 </button>
               </div>
 
-              {/* Sort Dropdown */}
               <div className="glass" style={{ padding: "8px 18px", borderRadius: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>SORT:</span>
                 <select
@@ -198,7 +212,7 @@ function SearchContent() {
                   style={{ background: "transparent", color: "white", border: "none", outline: "none", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}
                 >
                   <option value="score-desc" style={{ background: "#111" }}>Smart Value Score</option>
-                  <option value="price-asc" style={{ background: "#111" }}>Lowest Price</option>
+                  <option value="price-asc" style={{ background: "#111" }}>Lowest Effective Price</option>
                   <option value="price-desc" style={{ background: "#111" }}>Highest Price</option>
                   <option value="match-desc" style={{ background: "#111" }}>Highest Match</option>
                 </select>
@@ -218,7 +232,7 @@ function SearchContent() {
             <button
               type="button"
               onClick={() => setIsVoiceModalOpen(true)}
-              title="Voice Search (Speech Recognition)"
+              title="Voice Search"
               style={{
                 background: "rgba(255, 255, 255, 0.08)",
                 border: "1px solid var(--glass-border)",
@@ -239,7 +253,7 @@ function SearchContent() {
             <button
               type="button"
               onClick={() => setIsPhotoModalOpen(true)}
-              title="Search by Photo (BuyWise AI Vision)"
+              title="Search by Photo"
               style={{
                 background: "rgba(255, 255, 255, 0.08)",
                 border: "1px solid var(--glass-border)",
@@ -261,94 +275,159 @@ function SearchContent() {
           </form>
         </div>
 
-        {/* Identified Product Header Card with Normalized Intent */}
-        {searchQuery && (() => {
-          const parsed = parseSearchIntent(searchQuery);
-          const caps = getCategoryCapabilities(parsed.intent.category);
-          return (
-            <div className="glass" style={{ padding: "24px 28px", borderRadius: "20px", marginBottom: "28px", border: "1px solid var(--glass-border)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-                <div>
-                  <div style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 700, letterSpacing: "1px", marginBottom: "4px" }}>
-                    INDIAN E-COMMERCE COMPARISON • {parsed.intent.category} → {parsed.intent.subcategory}
-                  </div>
-                  <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "4px" }}>
-                    {parsed.intent.normalizedQuery}
-                  </h2>
-                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", marginTop: "6px" }}>
-                    <span>Intent: <strong style={{ color: "#00d4ff" }}>{parsed.queryType}</strong></span>
-                    <span>•</span>
-                    <span>VTO Status: <strong style={{ color: caps.tryOnSupported ? "#00ff88" : "#ff0066" }}>{caps.tryOnSupported ? "✨ Supported" : "🚫 Not Applicable"}</strong></span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "12px" }}>
-                  <span style={{ background: "rgba(138, 43, 226, 0.15)", border: "1px solid var(--primary)", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: 700, color: "var(--primary)" }}>
-                    ✓ AI CONFIDENCE {Math.round(parsed.confidence * 100)}%
+        {/* 🌟 CUSTOMER-FACING CATEGORY TABS: PREMIUM VS LUXURY */}
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
+          <button
+            onClick={() => setTierFilter("ALL")}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "20px",
+              border: tierFilter === "ALL" ? "2px solid #00d4ff" : "1px solid var(--glass-border)",
+              background: tierFilter === "ALL" ? "rgba(0, 212, 255, 0.15)" : "var(--glass-bg)",
+              color: tierFilter === "ALL" ? "#00d4ff" : "white",
+              fontWeight: 800,
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            🌟 All Deals ({allRawOffers.length})
+          </button>
+          <button
+            onClick={() => setTierFilter("PREMIUM")}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "20px",
+              border: tierFilter === "PREMIUM" ? "2px solid #00ff88" : "1px solid var(--glass-border)",
+              background: tierFilter === "PREMIUM" ? "rgba(0, 255, 136, 0.15)" : "var(--glass-bg)",
+              color: tierFilter === "PREMIUM" ? "#00ff88" : "white",
+              fontWeight: 800,
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            ⚡ PREMIUM — Best-Value & Verified Low Prices ({premiumCount})
+          </button>
+          <button
+            onClick={() => setTierFilter("LUXURY")}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "20px",
+              border: tierFilter === "LUXURY" ? "2px solid #a78bfa" : "1px solid var(--glass-border)",
+              background: tierFilter === "LUXURY" ? "rgba(167, 139, 250, 0.2)" : "var(--glass-bg)",
+              color: tierFilter === "LUXURY" ? "#c4b5fd" : "white",
+              fontWeight: 800,
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            💎 LUXURY — Branded & Heritage Authentic ({luxuryCount})
+          </button>
+        </div>
+
+        {/* Brand Filter Chips if available */}
+        {uniqueBrands.length > 1 && (
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px", alignItems: "center" }}>
+            <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 700 }}>BRAND:</span>
+            <button
+              onClick={() => setSelectedBrand("ALL")}
+              style={{
+                padding: "4px 12px",
+                borderRadius: "14px",
+                fontSize: "11.5px",
+                fontWeight: selectedBrand === "ALL" ? 800 : 500,
+                border: selectedBrand === "ALL" ? "1px solid white" : "1px solid var(--glass-border)",
+                background: selectedBrand === "ALL" ? "rgba(255,255,255,0.15)" : "transparent",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              All Brands
+            </button>
+            {uniqueBrands.map((b) => (
+              <button
+                key={b}
+                onClick={() => setSelectedBrand(b)}
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: "14px",
+                  fontSize: "11.5px",
+                  fontWeight: selectedBrand === b ? 800 : 500,
+                  border: selectedBrand === b ? "1px solid #00ff88" : "1px solid var(--glass-border)",
+                  background: selectedBrand === b ? "rgba(0, 255, 136, 0.15)" : "transparent",
+                  color: selectedBrand === b ? "#00ff88" : "white",
+                  cursor: "pointer",
+                }}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Retailer Connection Status Bar */}
+        {data?.providerStatuses && data.providerStatuses.length > 0 && (
+          <div className="glass" style={{ padding: "10px 18px", borderRadius: "14px", marginBottom: "24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", fontSize: "11.5px" }}>
+            <span style={{ color: "var(--text-secondary)", fontWeight: 700 }}>RETAILER FEEDS:</span>
+            {data.providerStatuses.slice(0, 5).map((ps) => {
+              const isLive = ps.status === "LIVE" || ps.status === "PARTNER_LIVE";
+              const isReq = ps.status === "CREDENTIALS_REQUIRED";
+              return (
+                <div key={ps.retailerId} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: isLive ? "#00ff88" : isReq ? "#f59e0b" : "#64748b" }} />
+                  <span style={{ fontWeight: 600, color: "white" }}>{ps.retailerName}</span>
+                  <span style={{ color: isLive ? "#00ff88" : isReq ? "#f59e0b" : "#94a3b8", fontSize: "10px" }}>
+                    {isLive ? "Live" : isReq ? "Credentials Required" : "API Unavailable"}
                   </span>
                 </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Stores Checked Summary Bar */}
-        {data?.summary && (
-          <div className="glass" style={{ padding: "16px 24px", borderRadius: "16px", marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-              <div>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>INDIAN STORES CHECKED: </span>
-                <span style={{ fontWeight: 800 }}>{data.summary.totalStoresChecked}</span>
-              </div>
-              <div>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>ACTIVE OFFERS: </span>
-                <span style={{ fontWeight: 800 }}>{data.summary.successfulStores}</span>
-              </div>
-              <div>
-                <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>LOWEST PRICE: </span>
-                <span style={{ fontWeight: 800, color: "#00ff88" }}>₹{data.summary.lowestPrice.toLocaleString()}</span>
-              </div>
-              {data.summary.maximumSavings > 0 && (
-                <div>
-                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>MAX SAVINGS: </span>
-                  <span style={{ fontWeight: 800, color: "var(--accent)" }}>₹{data.summary.maximumSavings.toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-              Official Indian E-Commerce Feeds (Amazon.in, Flipkart, Croma, Tata CLiQ, Meesho)
-            </div>
+              );
+            })}
           </div>
         )}
 
         {/* 🏆 Best Value Recommendation Card */}
         {bestValueOffer && (
-          <div className="glass animate-fade-in" style={{ padding: "28px 32px", borderRadius: "24px", marginBottom: "36px", border: "1px solid var(--primary)", background: "linear-gradient(135deg, rgba(138, 43, 226, 0.14), transparent)" }}>
+          <div className="glass animate-fade-in" style={{ padding: "24px 28px", borderRadius: "20px", marginBottom: "32px", border: "1px solid var(--primary)", background: "linear-gradient(135deg, rgba(138, 43, 226, 0.14), transparent)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px" }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
-                  <span style={{ background: "var(--gradient-accent)", padding: "4px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 800, color: "white" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "10px" }}>
+                  <span style={{ background: "var(--gradient-accent)", padding: "4px 12px", borderRadius: "20px", fontSize: "11.5px", fontWeight: 800, color: "white" }}>
                     🏆 BEST VALUE RECOMMENDATION
                   </span>
-                  <span style={{ background: "rgba(0, 255, 128, 0.15)", border: "1px solid #00ff80", color: "#00ff80", padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 800 }}>
-                    SMART VALUE SCORE: {bestValueOffer.smartValueScore || 92}/100
+                  <span style={{ background: "rgba(0, 255, 128, 0.15)", border: "1px solid #00ff80", color: "#00ff80", padding: "4px 10px", borderRadius: "20px", fontSize: "11.5px", fontWeight: 800 }}>
+                    SMART VALUE: {bestValueOffer.smartValueScore || 92}/100
                   </span>
+                  {bestValueOffer.brand && (
+                    <span style={{ background: "rgba(255,255,255,0.08)", padding: "4px 10px", borderRadius: "12px", fontSize: "11px", fontWeight: 700 }}>
+                      {bestValueOffer.brand}
+                    </span>
+                  )}
                 </div>
 
-                <h3 style={{ fontSize: "28px", fontWeight: 800, marginBottom: "8px", color: "white" }}>
-                  {bestValueOffer.store} — ₹{bestValueOffer.price.toLocaleString()}
+                <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px", color: "white" }}>
+                  {bestValueOffer.store} — ₹{(bestValueOffer.effectivePayablePrice || bestValueOffer.price).toLocaleString()}
                 </h3>
 
-                <p style={{ fontSize: "15px", color: "var(--text-secondary)", maxWidth: "620px", lineHeight: 1.5, marginBottom: "16px" }}>
-                  {data?.recommendation || `BuyWise AI identifies ${bestValueOffer.store} as the Best Value choice combining price competitiveness, seller reliability, and product match confidence.`}
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", maxWidth: "620px", lineHeight: 1.5, marginBottom: "14px" }}>
+                  {data?.recommendation || `BuyWise AI identifies ${bestValueOffer.store} as the Best Value choice combining price competitiveness, authentic retailer listing, and verified attributes.`}
                 </p>
               </div>
 
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>VERIFIED BEST PRICE</div>
-                <div style={{ fontSize: "36px", fontWeight: 900, color: "#00ff88" }}>₹{bestValueOffer.price.toLocaleString()}</div>
-                <a href={bestValueOffer.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-block", marginTop: "12px" }}>
-                  <button className="btn-primary" style={{ padding: "12px 28px", fontSize: "15px" }}>View Best Deal →</button>
+                <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "2px" }}>VERIFIED EFFECTIVE PAYABLE</div>
+                <div style={{ fontSize: "32px", fontWeight: 900, color: "#00ff88" }}>
+                  ₹{(bestValueOffer.effectivePayablePrice || bestValueOffer.price).toLocaleString()}
+                </div>
+                {bestValueOffer.shippingFee && bestValueOffer.shippingFee > 0 ? (
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                    (Listed ₹{bestValueOffer.price.toLocaleString()} + ₹{bestValueOffer.shippingFee} Delivery)
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "11px", color: "#00ff88" }}>Free Delivery Included</div>
+                )}
+                <a href={bestValueOffer.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-block", marginTop: "10px" }}>
+                  <button className="btn-primary" style={{ padding: "10px 24px", fontSize: "14px" }}>
+                    {bestValueOffer.isDirectProductLink ? "View Direct Deal ↗" : "Search Retailer ↗"}
+                  </button>
                 </a>
               </div>
             </div>
@@ -357,23 +436,23 @@ function SearchContent() {
 
         {/* 🎯 EXACT MATCHES SECTION */}
         {exactOffers.length > 0 && (
-          <div style={{ marginBottom: "50px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px" }}>
-              <span style={{ fontSize: "24px" }}>🎯</span>
-              <h2 style={{ fontSize: "26px", fontWeight: 800 }}>Verified Store Listings ({exactOffers.length})</h2>
-              <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>(Prices in INR ₹)</span>
+          <div style={{ marginBottom: "40px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+              <span style={{ fontSize: "22px" }}>🎯</span>
+              <h2 style={{ fontSize: "22px", fontWeight: 800 }}>Verified Exact Matches ({exactOffers.length})</h2>
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>• True apples-to-apples price comparison</span>
             </div>
 
             {viewMode === "tiles" ? (
               <div className="comparison-grid">
-                {exactOffers.map((offer, idx) => (
-                  <OfferTileCard key={idx} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
+                {exactOffers.map((offer) => (
+                  <OfferTileCard key={`${offer.store}_${offer.productId || offer.id}_${offer.price}`} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
                 ))}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {exactOffers.map((offer, idx) => (
-                  <OfferListCard key={idx} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {exactOffers.map((offer) => (
+                  <OfferListCard key={`${offer.store}_${offer.productId || offer.id}_${offer.price}`} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
                 ))}
               </div>
             )}
@@ -382,46 +461,48 @@ function SearchContent() {
 
         {/* 🔄 CLOSE MATCHES (VARIANTS) SECTION */}
         {variantOffers.length > 0 && (
-          <div style={{ marginBottom: "50px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px" }}>
-              <span style={{ fontSize: "24px" }}>🔄</span>
-              <h2 style={{ fontSize: "26px", fontWeight: 800 }}>Variant & Color Deals ({variantOffers.length})</h2>
+          <div style={{ marginBottom: "40px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+              <span style={{ fontSize: "22px" }}>🔄</span>
+              <h2 style={{ fontSize: "22px", fontWeight: 800 }}>Size & Color Variant Deals ({variantOffers.length})</h2>
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>• Same model, different size or colorway</span>
             </div>
 
             {viewMode === "tiles" ? (
               <div className="comparison-grid">
-                {variantOffers.map((offer, idx) => (
-                  <OfferTileCard key={idx} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
+                {variantOffers.map((offer) => (
+                  <OfferTileCard key={`${offer.store}_${offer.productId || offer.id}_${offer.price}`} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
                 ))}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {variantOffers.map((offer, idx) => (
-                  <OfferListCard key={idx} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {variantOffers.map((offer) => (
+                  <OfferListCard key={`${offer.store}_${offer.productId || offer.id}_${offer.price}`} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* 🎨 SIMILAR PRODUCTS SECTION */}
+        {/* 🎨 SIMILAR ALTERNATIVE PRODUCTS SECTION */}
         {similarOffers.length > 0 && (
-          <div style={{ marginBottom: "50px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px" }}>
-              <span style={{ fontSize: "24px" }}>🎨</span>
-              <h2 style={{ fontSize: "26px", fontWeight: 800 }}>Similar Products ({similarOffers.length})</h2>
+          <div style={{ marginBottom: "40px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+              <span style={{ fontSize: "22px" }}>🎨</span>
+              <h2 style={{ fontSize: "22px", fontWeight: 800 }}>Similar Category Alternatives ({similarOffers.length})</h2>
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>• Distinct models presented separately</span>
             </div>
 
             {viewMode === "tiles" ? (
               <div className="comparison-grid">
-                {similarOffers.map((offer, idx) => (
-                  <OfferTileCard key={idx} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
+                {similarOffers.map((offer) => (
+                  <OfferTileCard key={`${offer.store}_${offer.productId || offer.id}_${offer.price}`} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
                 ))}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {similarOffers.map((offer, idx) => (
-                  <OfferListCard key={idx} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {similarOffers.map((offer) => (
+                  <OfferListCard key={`${offer.store}_${offer.productId || offer.id}_${offer.price}`} offer={offer} searchQuery={searchQuery} user={user} triggerToast={triggerToast} />
                 ))}
               </div>
             )}
@@ -429,25 +510,24 @@ function SearchContent() {
         )}
 
         {/* Empty Result State */}
-        {!loading && allOffers.length === 0 && (
+        {!loading && sortedOffers.length === 0 && (
           <div className="glass" style={{ padding: "60px 20px", textAlign: "center", borderRadius: "24px" }}>
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔍</div>
-            <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>No Store Offers Found</h3>
-            <p style={{ color: "var(--text-secondary)", maxWidth: "480px", margin: "0 auto 24px auto" }}>
-              We couldn&apos;t retrieve live store listings for this product. Ensure Indian retailer adapters are active.
+            <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>No Verified Store Offers Found</h3>
+            <p style={{ color: "var(--text-secondary)", maxWidth: "520px", margin: "0 auto 24px auto" }}>
+              We couldn&apos;t retrieve live store listings for this product under the selected filters. BuyWise AI strictly does not fabricate prices or results when live feeds are unavailable.
             </p>
             <button onClick={fetchComparison} className="btn-primary">Retry Search</button>
           </div>
         )}
+
+        {/* Affiliate Disclosure */}
+        <div style={{ marginTop: "40px", padding: "16px 20px", borderRadius: "14px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--glass-border)", fontSize: "11px", color: "var(--text-secondary)", lineHeight: 1.5, textAlign: "center" }}>
+          ℹ️ <strong>Transparency & Affiliate Disclosure:</strong> BuyWise AI compares product offerings across verified retailer feeds. When you purchase through links on our site, we may earn an affiliate commission at no extra cost to you. We strictly do not alter price rankings or favor stores based on commission.
+        </div>
       </div>
 
-      {/* Photo Upload Modal Trigger */}
-      <PhotoUploadModal
-        isOpen={isPhotoModalOpen}
-        onClose={() => setIsPhotoModalOpen(false)}
-      />
-
-      {/* Voice Search Modal Trigger */}
+      <PhotoUploadModal isOpen={isPhotoModalOpen} onClose={() => setIsPhotoModalOpen(false)} />
       <VoiceSearchModal
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
@@ -462,10 +542,12 @@ function SearchContent() {
   );
 }
 
-// 📱 TILES MODE CARD COMPONENT (Home Screen Style Tile Grid)
+// 📱 TILES MODE CARD COMPONENT
 function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: StoreOffer; searchQuery: string; user: any; triggerToast: (msg: string) => void }) {
   const matchPercentage = Math.round((offer.matchConfidence || 0.85) * 100);
   const [alertSaved, setAlertSaved] = useState(false);
+
+  const payablePrice = offer.effectivePayablePrice || offer.price;
 
   const handleSaveAlert = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -477,9 +559,9 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
       productTitle: offer.title,
       query: searchQuery || offer.title,
       store: offer.store,
-      currentPrice: offer.price,
-      targetPrice: Math.round(offer.price * 0.95), // alert threshold
-      lowestPriceSeen: offer.price,
+      currentPrice: payablePrice,
+      targetPrice: Math.round(payablePrice * 0.95),
+      lowestPriceSeen: payablePrice,
       smartValueScore: offer.smartValueScore || 95,
       trustScore: 92,
       status: "active",
@@ -489,119 +571,160 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
       notifyEveryDrop: true,
     };
 
-    // Save in Cloud Firestore
     try {
       await addDoc(collection(db, "alerts"), {
         ...newAlert,
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      console.log("Firestore alert save fallback to localStorage:", err);
+      console.log("Firestore alert fallback:", err);
     }
 
-    // Save in localStorage backup
     try {
       const existing = JSON.parse(localStorage.getItem("buywise_alerts") || "[]");
       localStorage.setItem("buywise_alerts", JSON.stringify([newAlert, ...existing]));
     } catch {}
 
     setAlertSaved(true);
-    triggerToast(`🔔 Price Drop Alert Saved for ${offer.store} — ${offer.title} at ₹${offer.price.toLocaleString()}! We will notify you on every price drop.`);
+    triggerToast(`🔔 Price Drop Alert Saved for ${offer.store} — ${offer.title} at ₹${payablePrice.toLocaleString()}!`);
   };
 
   return (
-    <div className="glass glass-card" style={{ padding: "26px", display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", borderRadius: "24px", border: offer.isLowest ? "1px solid #00ff88" : "1px solid var(--glass-border)", background: offer.isBestValue ? "rgba(138, 43, 226, 0.08)" : "var(--glass-bg)" }}>
+    <div className="glass glass-card" style={{ padding: "22px", display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", borderRadius: "20px", border: offer.isLowest ? "1.5px solid #00ff88" : "1px solid var(--glass-border)", background: offer.isBestValue ? "rgba(138, 43, 226, 0.08)" : "var(--glass-bg)" }}>
       <div>
         {/* Top Badges Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px", flexWrap: "wrap", gap: "8px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "6px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "white", color: "#111", fontWeight: 900, fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "28px", height: "28px", borderRadius: "6px", background: "white", color: "#111", fontWeight: 900, fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {offer.store[0]}
             </div>
-            <span style={{ fontWeight: 800, fontSize: "15px", color: "white" }}>{offer.store}</span>
+            <span style={{ fontWeight: 800, fontSize: "14px", color: "white" }}>{offer.store}</span>
           </div>
 
-          <span style={{ background: "rgba(0, 255, 128, 0.15)", border: "1px solid #00ff80", color: "#00ff80", padding: "3px 10px", borderRadius: "12px", fontSize: "11px", fontWeight: 800 }}>
-            {matchPercentage}% MATCH
-          </span>
+          <div style={{ display: "flex", gap: "6px" }}>
+            {offer.tier === "LUXURY" ? (
+              <span style={{ background: "rgba(167, 139, 250, 0.2)", border: "1px solid #a78bfa", color: "#c4b5fd", padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 800 }}>
+                💎 LUXURY
+              </span>
+            ) : (
+              <span style={{ background: "rgba(0, 255, 136, 0.15)", border: "1px solid #00ff88", color: "#00ff88", padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 800 }}>
+                ⚡ PREMIUM
+              </span>
+            )}
+            <span style={{ background: "rgba(0, 212, 255, 0.15)", border: "1px solid #00d4ff", color: "#00d4ff", padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 800 }}>
+              {matchPercentage}% MATCH
+            </span>
+          </div>
         </div>
 
-        {/* Product Thumbnail */}
-        <div style={{ marginBottom: "14px" }}>
-          <SafeProductImage src={offer.imageUrl} alt={offer.title} height={180} />
+        {/* Product Thumbnail - Dedicated per product record */}
+        <div style={{ marginBottom: "12px" }}>
+          <SafeProductImage src={offer.imageUrl} alt={offer.title} height={160} />
         </div>
+
+        {/* Brand Tag if present */}
+        {offer.brand && (
+          <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--accent)", letterSpacing: "0.5px", marginBottom: "4px" }}>
+            {offer.brand.toUpperCase()}
+          </div>
+        )}
 
         {/* Product Title */}
-        <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "14px", lineHeight: 1.4, color: "white", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "10px", lineHeight: 1.4, color: "white", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {offer.title}
         </h3>
 
+        {/* Variant Info (Size / Color) */}
+        {offer.variant && (offer.variant.size || offer.variant.color) && (
+          <div style={{ fontSize: "11.5px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+            {offer.variant.size && <span>Size: <strong style={{ color: "white" }}>{offer.variant.size}</strong></span>}
+            {offer.variant.size && offer.variant.color && <span> • </span>}
+            {offer.variant.color && <span>Color: <strong style={{ color: "white" }}>{offer.variant.color}</strong></span>}
+          </div>
+        )}
+
         {/* Rating & Award Badges */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
           {offer.rating && (
-            <span style={{ color: "#f1c40f", fontSize: "13px", fontWeight: 700 }}>
+            <span style={{ color: "#f1c40f", fontSize: "12px", fontWeight: 700 }}>
               ★ {offer.rating.toFixed(1)} {offer.reviewCount ? `(${offer.reviewCount.toLocaleString()})` : ""}
             </span>
           )}
 
           {offer.isLowest && (
-            <span style={{ background: "rgba(0, 255, 136, 0.2)", border: "1px solid #00ff88", color: "#00ff88", padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontWeight: 800 }}>
-              💰 LOWEST PRICE
+            <span style={{ background: "rgba(0, 255, 136, 0.2)", border: "1px solid #00ff88", color: "#00ff88", padding: "2px 6px", borderRadius: "8px", fontSize: "10px", fontWeight: 800 }}>
+              👑 LOWEST VERIFIED PRICE
             </span>
           )}
 
           {offer.isBestValue && (
-            <span style={{ background: "var(--gradient-accent)", color: "white", padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontWeight: 800 }}>
+            <span style={{ background: "var(--gradient-accent)", color: "white", padding: "2px 6px", borderRadius: "8px", fontSize: "10px", fontWeight: 800 }}>
               🏆 BEST VALUE
+            </span>
+          )}
+
+          {offer.isDirectProductLink && (
+            <span style={{ background: "rgba(0, 212, 255, 0.15)", color: "#00d4ff", padding: "2px 6px", borderRadius: "8px", fontSize: "10px", fontWeight: 700 }}>
+              ✓ Direct Product Link
             </span>
           )}
         </div>
       </div>
 
       <div>
-        {/* Price Tag in Indian Rupees (INR ₹) */}
-        <div style={{ padding: "16px", background: "rgba(255,255,255,0.03)", borderRadius: "16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 600 }}>VERIFIED PRICE (INR)</div>
-            <div style={{ fontSize: "26px", fontWeight: 900, color: offer.isLowest ? "#00ff88" : "var(--primary)" }}>
-              ₹{offer.price.toLocaleString()}
+        {/* Transparent Price Breakdown */}
+        <div style={{ padding: "12px 14px", background: "rgba(255,255,255,0.03)", borderRadius: "14px", marginBottom: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div>
+              <div style={{ fontSize: "10px", color: "var(--text-secondary)", fontWeight: 600 }}>EFFECTIVE PAYABLE PRICE</div>
+              <div style={{ fontSize: "24px", fontWeight: 900, color: offer.isLowest ? "#00ff88" : "white" }}>
+                ₹{payablePrice.toLocaleString()}
+              </div>
             </div>
+            {offer.originalPrice && offer.originalPrice > payablePrice && (
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "11px", color: "var(--text-secondary)", textDecoration: "line-through" }}>
+                  ₹{offer.originalPrice.toLocaleString()}
+                </div>
+                <div style={{ fontSize: "10.5px", color: "#00ff88", fontWeight: 700 }}>
+                  Save ₹{(offer.originalPrice - payablePrice).toLocaleString()}
+                </div>
+              </div>
+            )}
           </div>
-          {offer.originalPrice && offer.originalPrice > offer.price && (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", textDecoration: "line-through" }}>
-                ₹{offer.originalPrice.toLocaleString()}
-              </div>
-              <div style={{ fontSize: "11px", color: "#00ff88", fontWeight: 700 }}>
-                Save ₹{(offer.originalPrice - offer.price).toLocaleString()}
-              </div>
+          {offer.shippingFee && offer.shippingFee > 0 ? (
+            <div style={{ fontSize: "10px", color: "#f59e0b", marginTop: "4px" }}>
+              (Item: ₹{offer.price.toLocaleString()} + ₹{offer.shippingFee} Shipping)
+            </div>
+          ) : (
+            <div style={{ fontSize: "10px", color: "var(--text-secondary)", marginTop: "4px" }}>
+              ✓ Free Delivery on this listing
             </div>
           )}
         </div>
 
         {/* Buttons */}
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
           <button 
             onClick={handleSaveAlert}
             className="btn-secondary" 
             style={{ 
               flex: 1, 
-              padding: "10px", 
-              fontSize: "12px", 
+              padding: "9px", 
+              fontSize: "11.5px", 
               border: alertSaved ? "1px solid #00ff88" : "1px solid var(--glass-border)", 
               background: alertSaved ? "rgba(0, 255, 136, 0.15)" : "rgba(255,255,255,0.05)", 
               color: alertSaved ? "#00ff88" : "white", 
-              borderRadius: "12px", 
+              borderRadius: "10px", 
               cursor: "pointer", 
               fontWeight: 800,
-              boxShadow: alertSaved ? "0 0 15px rgba(0, 255, 136, 0.3)" : "none"
             }}
           >
-            {alertSaved ? "✅ Alert Saved!" : "🔔 Alert"}
+            {alertSaved ? "✅ Saved" : "🔔 Alert"}
           </button>
           <a href={offer.url} target="_blank" rel="noopener noreferrer" style={{ flex: 2, textDecoration: "none" }}>
-            <button className="btn-primary" style={{ width: "100%", padding: "10px", fontSize: "13px", fontWeight: 700 }}>
-              View Deal ↗
+            <button className="btn-primary" style={{ width: "100%", padding: "9px", fontSize: "12px", fontWeight: 700 }}>
+              {offer.isDirectProductLink ? "View Direct Deal ↗" : "Search Retailer ↗"}
             </button>
           </a>
         </div>
@@ -614,6 +737,7 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
 function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: StoreOffer; searchQuery: string; user: any; triggerToast: (msg: string) => void }) {
   const matchPercentage = Math.round((offer.matchConfidence || 0.8) * 100);
   const [alertSaved, setAlertSaved] = useState(false);
+  const payablePrice = offer.effectivePayablePrice || offer.price;
 
   const handleSaveAlert = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -625,9 +749,9 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
       productTitle: offer.title,
       query: searchQuery || offer.title,
       store: offer.store,
-      currentPrice: offer.price,
-      targetPrice: Math.round(offer.price * 0.95),
-      lowestPriceSeen: offer.price,
+      currentPrice: payablePrice,
+      targetPrice: Math.round(payablePrice * 0.95),
+      lowestPriceSeen: payablePrice,
       smartValueScore: offer.smartValueScore || 95,
       trustScore: 92,
       status: "active",
@@ -643,7 +767,7 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      console.log("Firestore alert save fallback:", err);
+      console.log("Firestore alert fallback:", err);
     }
 
     try {
@@ -652,74 +776,92 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
     } catch {}
 
     setAlertSaved(true);
-    triggerToast(`🔔 Price Drop Alert Saved for ${offer.store} — ${offer.title} at ₹${offer.price.toLocaleString()}! We will notify you on every price drop.`);
+    triggerToast(`🔔 Price Drop Alert Saved for ${offer.store} — ${offer.title} at ₹${payablePrice.toLocaleString()}!`);
   };
 
   return (
     <div
       className="glass"
       style={{
-        padding: "20px 26px",
-        borderRadius: "18px",
+        padding: "18px 22px",
+        borderRadius: "16px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: "20px",
+        gap: "16px",
         background: offer.isBestValue ? "rgba(138, 43, 226, 0.08)" : "transparent",
-        border: offer.isBestValue ? "1px solid var(--primary)" : "1px solid var(--glass-border)",
+        border: offer.isLowest ? "1.5px solid #00ff88" : "1px solid var(--glass-border)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "18px", flex: 1, minWidth: "280px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "280px" }}>
         <div style={{ width: "56px", height: "56px", flexShrink: 0 }}>
           <SafeProductImage src={offer.imageUrl} alt={offer.title} width={56} height={56} aspectRatio="1/1" />
         </div>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
-            <span style={{ fontWeight: 800, fontSize: "16px", color: "white" }}>{offer.store}</span>
-            <span style={{ fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "10px", background: "rgba(0, 255, 128, 0.15)", color: "#00ff80" }}>
+            <span style={{ fontWeight: 800, fontSize: "15px", color: "white" }}>{offer.store}</span>
+            {offer.brand && (
+              <span style={{ fontSize: "10.5px", fontWeight: 700, padding: "2px 6px", borderRadius: "6px", background: "rgba(255,255,255,0.08)" }}>
+                {offer.brand}
+              </span>
+            )}
+            <span style={{ fontSize: "10.5px", fontWeight: 700, padding: "2px 6px", borderRadius: "6px", background: "rgba(0, 255, 128, 0.15)", color: "#00ff80" }}>
               {matchPercentage}% Match
             </span>
             {offer.isLowest && (
-              <span style={{ fontSize: "11px", fontWeight: 800, padding: "2px 8px", borderRadius: "10px", background: "rgba(0, 255, 128, 0.2)", border: "1px solid #00ff80", color: "#00ff80" }}>
-                💰 LOWEST PRICE
+              <span style={{ fontSize: "10.5px", fontWeight: 800, padding: "2px 6px", borderRadius: "6px", background: "rgba(0, 255, 128, 0.2)", border: "1px solid #00ff80", color: "#00ff80" }}>
+                👑 LOWEST
+              </span>
+            )}
+            {offer.tier === "LUXURY" && (
+              <span style={{ fontSize: "10.5px", fontWeight: 800, padding: "2px 6px", borderRadius: "6px", background: "rgba(167, 139, 250, 0.2)", color: "#c4b5fd" }}>
+                💎 LUXURY
               </span>
             )}
           </div>
-          <div style={{ fontSize: "14px", color: "var(--text-secondary)", maxWidth: "480px" }}>
+          <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", maxWidth: "480px" }}>
             {offer.title}
           </div>
+          {offer.variant?.size && (
+            <div style={{ fontSize: "11px", color: "#00d4ff", marginTop: "2px" }}>
+              Size: {offer.variant.size}
+            </div>
+          )}
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "28px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>PRICE (INR)</div>
-          <div style={{ fontSize: "24px", fontWeight: 900, color: offer.isLowest ? "#00ff80" : "white" }}>
-            ₹{offer.price.toLocaleString()}
+          <div style={{ fontSize: "10px", color: "var(--text-secondary)" }}>EFFECTIVE PAYABLE</div>
+          <div style={{ fontSize: "22px", fontWeight: 900, color: offer.isLowest ? "#00ff88" : "white" }}>
+            ₹{payablePrice.toLocaleString()}
           </div>
+          {offer.shippingFee && offer.shippingFee > 0 && (
+            <div style={{ fontSize: "9.5px", color: "#f59e0b" }}>+₹{offer.shippingFee} Delivery</div>
+          )}
         </div>
 
         <button
           onClick={handleSaveAlert}
           className="btn-secondary"
           style={{
-            padding: "10px 16px",
-            fontSize: "13px",
+            padding: "8px 14px",
+            fontSize: "12px",
             border: alertSaved ? "1px solid #00ff88" : "1px solid var(--glass-border)",
             background: alertSaved ? "rgba(0, 255, 136, 0.15)" : "rgba(255,255,255,0.05)",
             color: alertSaved ? "#00ff88" : "white",
-            borderRadius: "12px",
+            borderRadius: "10px",
             cursor: "pointer",
             fontWeight: 800,
           }}
         >
-          {alertSaved ? "✅ Alert Saved!" : "🔔 Alert"}
+          {alertSaved ? "✅ Saved" : "🔔 Alert"}
         </button>
 
         <a href={offer.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-          <button className="btn-primary" style={{ padding: "10px 22px", fontSize: "14px" }}>
-            View Deal ↗
+          <button className="btn-primary" style={{ padding: "8px 18px", fontSize: "13px" }}>
+            {offer.isDirectProductLink ? "View Direct Deal ↗" : "Search Retailer ↗"}
           </button>
         </a>
       </div>

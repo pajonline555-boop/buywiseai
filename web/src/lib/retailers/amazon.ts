@@ -2,55 +2,12 @@ import { RetailerAdapter, RetailerSearchResult, StoreOffer } from './types';
 import { generateAmazonPAAPIHeaders } from './amazon-auth';
 import axios from 'axios';
 
-function sanitizeSearchQuery(query: string): string {
+export function sanitizeSearchQuery(query: string): string {
   let cleaned = query.trim().replace(/\s+/g, ' ');
   cleaned = cleaned.replace(/\bi\s*phone\b/gi, 'iPhone');
   cleaned = cleaned.replace(/\bi\s*pad\b/gi, 'iPad');
   cleaned = cleaned.replace(/\bmac\s*book\b/gi, 'MacBook');
   return cleaned;
-}
-
-export function calculateLowestPriceForQuery(query: string, retailerOffset: number = 0): number {
-  const lower = query.toLowerCase().trim();
-
-  // iPhone 17 family
-  if (lower.includes('iphone 17 pro') || lower.includes('iphone 17pro')) {
-    return 124900 + retailerOffset;
-  }
-  if (lower.includes('iphone 17')) {
-    return 82900 + retailerOffset; // Live Amazon India base model price ₹82,900
-  }
-
-  // iPhone 16 family
-  if (lower.includes('iphone 16 pro') || lower.includes('iphone 16pro')) {
-    return 119900 + retailerOffset;
-  }
-  if (lower.includes('iphone 16')) {
-    return 69900 + retailerOffset;
-  }
-
-  // iPhone 15 family
-  if (lower.includes('iphone 15 pro') || lower.includes('iphone 15pro')) {
-    return 124900 + retailerOffset;
-  }
-  if (lower.includes('iphone 15')) {
-    return 58900 + retailerOffset;
-  }
-
-  // MacBook
-  if (lower.includes('macbook air')) return 83900 + retailerOffset;
-  if (lower.includes('macbook pro')) return 159900 + retailerOffset;
-  if (lower.includes('macbook')) return 87900 + retailerOffset;
-
-  // Samsung Galaxy
-  if (lower.includes('s24 ultra') || lower.includes('s25 ultra')) return 119999 + retailerOffset;
-  if (lower.includes('s24') || lower.includes('s25')) return 74999 + retailerOffset;
-  if (lower.includes('samsung')) return 49999 + retailerOffset;
-
-  // Sony headphones/audio
-  if (lower.includes('sony')) return 24990 + retailerOffset;
-
-  return 14999 + retailerOffset;
 }
 
 export class AmazonAdapter implements RetailerAdapter {
@@ -68,15 +25,20 @@ export class AmazonAdapter implements RetailerAdapter {
     const secretKey = process.env.AMAZON_PAAPI_SECRET;
     const partnerTag = process.env.AMAZON_ASSOCIATE_TAG || 'pajonline-21';
 
-    // Build Amazon Affiliate Search URL with user tag: pajonline-21
-    const affiliateUrl = `https://www.amazon.in/s?k=${encodeURIComponent(cleanQuery)}&tag=${partnerTag}`;
-
+    // Official PA-API credentials check
     if (!accessKey || !secretKey) {
       return {
-        retailer: { id: this.id, name: this.name, country: this.country, currency: this.currency, enabled: this.enabled, logo: this.logo },
+        retailer: {
+          id: this.id,
+          name: this.name,
+          country: this.country,
+          currency: this.currency,
+          enabled: this.enabled,
+          logo: this.logo,
+        },
         offers: [],
         success: false,
-        error: 'Amazon PA-API live credentials required (AMAZON_PAAPI_KEY / AMAZON_PAAPI_SECRET). Connection status: CREDENTIALS_REQUIRED.',
+        error: 'Amazon India official PA-API 5.0 credentials required (AMAZON_PAAPI_KEY / AMAZON_PAAPI_SECRET). Live product verification requires authorized API access.',
         checkedAt: timestamp,
       };
     }
@@ -86,6 +48,8 @@ export class AmazonAdapter implements RetailerAdapter {
         Keywords: cleanQuery,
         Resources: [
           'ItemInfo.Title',
+          'ItemInfo.ByLineInfo',
+          'ItemInfo.Classifications',
           'Offers.Listings.Price',
           'Offers.Listings.SavingBasis',
           'Offers.Listings.Availability.Message',
@@ -124,27 +88,53 @@ export class AmazonAdapter implements RetailerAdapter {
         const rating = item.CustomerReviews?.StarRating?.Value ? parseFloat(item.CustomerReviews.StarRating.Value) : undefined;
         const reviewCount = item.CustomerReviews?.Count ? parseInt(item.CustomerReviews.Count, 10) : undefined;
 
-        const rawUrl = item.DetailPageURL || affiliateUrl;
+        const rawUrl = item.DetailPageURL || `https://www.amazon.in/dp/${item.ASIN}?tag=${partnerTag}`;
         const itemUrl = rawUrl.includes('?') ? `${rawUrl}&tag=${partnerTag}` : `${rawUrl}?tag=${partnerTag}`;
+        const imageUrl = item.Images?.Primary?.Large?.URL;
+        const brand = item.ItemInfo?.ByLineInfo?.Brand?.DisplayValue;
+        const title = item.ItemInfo?.Title?.DisplayValue || cleanQuery;
 
         return {
           id: `amz-${item.ASIN || Date.now()}`,
           retailerId: this.id,
           store: this.name,
-          title: item.ItemInfo?.Title?.DisplayValue || cleanQuery,
+          title,
           url: itemUrl,
+          directProductUrl: itemUrl,
+          affiliateUrl: itemUrl,
+          isDirectProductLink: Boolean(item.ASIN),
           price: priceAmount,
           currency: listing?.Price?.Currency || this.currency,
           originalPrice: savingBasis,
           mrp: savingBasis,
           discount,
-          imageUrl: item.Images?.Primary?.Large?.URL,
+          imageUrl,
           logo: this.logo,
           rating,
           reviewCount,
           availability: listing?.Availability?.Message?.toLowerCase().includes('in stock') ? 'in_stock' : 'unknown',
           checkedAt: timestamp,
           sourceType: 'api',
+          verificationStatus: 'verified_live',
+          brand,
+          productId: item.ASIN,
+          listedPrice: priceAmount,
+          shippingFee: 0,
+          effectivePayablePrice: priceAmount,
+          priceBasis: 'listed',
+          dataFreshness: 'Live Amazon PA-API 5.0 Feed',
+          provenance: {
+            source: 'api',
+            provider: 'Amazon India PA-API 5.0',
+            rawListingId: item.ASIN,
+            lastChecked: timestamp,
+            isLiveFeed: true,
+          },
+          imageProvenance: {
+            url: imageUrl,
+            isGenuineProductImage: Boolean(imageUrl),
+            isFallback: false,
+          },
         };
       });
 

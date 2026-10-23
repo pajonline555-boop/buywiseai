@@ -2,7 +2,7 @@ export const dynamic = "force-static";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { getSubmissions, adminModerateSubmission } from "@/lib/competition/store";
+import { getSubmissions, adminModerateSubmission, adminBulkAutoApproveSubmissions } from "@/lib/competition/store";
 import { logSecurityEvent } from "@/lib/auth/roleMiddleware";
 
 export async function GET(request: NextRequest) {
@@ -36,11 +36,27 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { submissionId, action, reason } = body;
+    const { submissionId, action, reason, competitionId } = body;
+
+    if (action === "BULK_AUTO_APPROVE") {
+      const result = adminBulkAutoApproveSubmissions(competitionId);
+      logSecurityEvent({
+        eventType: "ROLE_CHANGE",
+        userId: auth.adminContext.uid,
+        email: auth.adminContext.email,
+        route: "/api/admin/competition-submissions",
+        reason: `Admin ran bulk auto-moderation: ${result.approvedCount} approved, ${result.rejectedCount} rejected`
+      });
+      return NextResponse.json({
+        success: true,
+        message: `Bulk auto-approval complete: ${result.approvedCount} approved & notified on linked mobile, ${result.rejectedCount} rejected.`,
+        result
+      });
+    }
 
     if (!submissionId || !action) {
       return NextResponse.json(
-        { success: false, code: "BAD_REQUEST", message: "submissionId and action ('APPROVE' | 'REJECT') required." },
+        { success: false, code: "BAD_REQUEST", message: "submissionId and action ('APPROVE' | 'REJECT' | 'BULK_AUTO_APPROVE') required." },
         { status: 400 }
       );
     }

@@ -664,16 +664,17 @@ fun HomeScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(76.dp)
+                                        .size(80.dp)
                                         .clip(RoundedCornerShape(14.dp))
-                                        .background(Color(0xFF261D3D))
-                                        .border(1.dp, BuyWiseGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                                        .background(Color(0xFF140F26))
+                                        .border(1.dp, BuyWiseGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
                                 ) {
                                     AsyncImage(
                                         model = productImg,
                                         contentDescription = cleanShortTitle,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().padding(3.dp)
                                     )
                                 }
 
@@ -804,12 +805,21 @@ fun HomeScreen(
                         onNavigateToVto()
                     },
                     onBuyNowClick = { prod ->
-                        val rawUrl = prod.productUrl.ifEmpty { "https://www.amazon.in/s?k=${Uri.encode(prod.title)}" }
-                        val affiliateUrl = if (rawUrl.contains("tag=")) rawUrl
-                            else if (rawUrl.contains("?")) "$rawUrl&tag=pajonline-21&ascsubtag=bw_gen_g_store"
-                            else "$rawUrl?tag=pajonline-21&ascsubtag=bw_gen_g_store"
+                        val targetUrl = if (prod.productUrl.isNotBlank() && prod.productUrl.startsWith("http")) {
+                            prod.productUrl
+                        } else {
+                            val encoded = Uri.encode(prod.title)
+                            val retLower = prod.retailer.lowercase()
+                            when {
+                                retLower.contains("flipkart") -> "https://www.flipkart.com/search?q=$encoded"
+                                retLower.contains("myntra") -> "https://www.myntra.com/$encoded"
+                                retLower.contains("meesho") -> "https://www.meesho.com/search?q=$encoded"
+                                retLower.contains("ajio") -> "https://www.ajio.com/search/?text=$encoded"
+                                else -> "https://www.amazon.in/s?k=$encoded"
+                            }
+                        }
                         try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(affiliateUrl)).apply {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)

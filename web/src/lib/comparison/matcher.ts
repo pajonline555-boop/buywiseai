@@ -7,6 +7,134 @@ export interface MatchClassificationResult {
   identityConfidence: number;
   attributeMatchScore: number;
   visualSimilarityScore: number;
+  tier: 'PREMIUM' | 'LUXURY';
+  isSameProductAndVariant: boolean;
+  differenceReason?: string;
+}
+
+const LUXURY_BRANDS = new Set([
+  'puma', 'nike', 'adidas', 'under armour', 'asics', 'new balance',
+  'on running', 'skechers', 'reebok', 'jordan', 'converse', 'brooks',
+  'salomon', 'apple', 'sony', 'bose', 'sennheiser', 'bang & olufsen',
+  'ralph lauren', 'tommy hilfiger', 'calvin klein', 'armani', 'hugo boss',
+  'allen solly', 'louis philippe', 'van heusen'
+]);
+
+const VALUE_PREMIUM_BRANDS = new Set([
+  'lancer', 'asian', 'campus', 'sparx', 'bata', 'red tape', 'action',
+  'abros', 'liberty', 'power', 'veirdo', 'roadster', 'ben martin',
+  'fort collins', 'boat', 'noise', 'fire-boltt', 'realme', 'redmi', 'poco'
+]);
+
+export function extractBrandFromText(text: string): string | null {
+  const lower = (text || '').toLowerCase();
+  for (const b of Array.from(LUXURY_BRANDS).concat(Array.from(VALUE_PREMIUM_BRANDS))) {
+    const regex = new RegExp(`\\b${b}\\b`, 'i');
+    if (regex.test(lower)) {
+      return b.toUpperCase();
+    }
+  }
+  return null;
+}
+
+export function extractSneakerModel(text: string): string | null {
+  const lower = (text || '').toLowerCase();
+  // Match patterns like Wonder-3, Wonder-10, Wonder-13, Flyer Runner, Revolution 6, Air Max 270, Gel-Contend
+  const wonderMatch = lower.match(/\bwonder\s*[-]?\s*(\d+[a-z0-9-]*)/i);
+  if (wonderMatch) {
+    return `WONDER-${wonderMatch[1].toUpperCase()}`;
+  }
+  if (lower.includes('flyer runner')) return 'FLYER RUNNER';
+  if (lower.includes('revolution')) return 'REVOLUTION';
+  if (lower.includes('runfalcon')) return 'RUNFALCON';
+  if (lower.includes('gel-contend') || lower.includes('gel contend')) return 'GEL-CONTEND';
+  if (lower.includes('fresh foam')) return 'FRESH FOAM';
+  return null;
+}
+
+export function extractSizeFromText(text: string): string | null {
+  const lower = (text || '').toLowerCase();
+  const sizeMatch = lower.match(/\b(?:uk|us|eu|size)\s*[:.-]?\s*(\d{1,2}(?:\.\d)?)\b/i);
+  if (sizeMatch) {
+    return `UK ${sizeMatch[1]}`;
+  }
+  return null;
+}
+
+export function classifyProductTier(
+  offer: StoreOffer,
+  canonical?: CanonicalProduct
+): 'PREMIUM' | 'LUXURY' {
+  if (offer.tier) return offer.tier;
+
+  const brand = (offer.brand || extractBrandFromText(offer.title) || canonical?.brand || '').toLowerCase();
+
+  // If identifiable global / luxury brand
+  for (const lb of Array.from(LUXURY_BRANDS)) {
+    if (brand.includes(lb) || offer.title.toLowerCase().includes(lb)) {
+      return 'LUXURY';
+    }
+  }
+
+  // If known budget / value domestic brand
+  for (const vb of Array.from(VALUE_PREMIUM_BRANDS)) {
+    if (brand.includes(vb) || offer.title.toLowerCase().includes(vb)) {
+      return 'PREMIUM';
+    }
+  }
+
+  // Price-based tier inference for unspecified footwear/apparel
+  if (offer.price >= 2500) {
+    return 'LUXURY';
+  }
+
+  return 'PREMIUM';
+}
+
+export function isSameProductAndVariant(a: StoreOffer, b: StoreOffer): boolean {
+  // Brand check - Different brands must never be the same product
+  const brandA = (a.brand || extractBrandFromText(a.title) || '').toLowerCase();
+  const brandB = (b.brand || extractBrandFromText(b.title) || '').toLowerCase();
+  if (brandA && brandB && brandA !== brandB) {
+    return false;
+  }
+
+  // Gender check (Men vs Women) - Different genders are distinct products
+  const aMen = /\b(men|mens|men's)\b/i.test(a.title);
+  const aWomen = /\b(women|womens|women's|girls|girl|ladies)\b/i.test(a.title);
+  const bMen = /\b(men|mens|men's)\b/i.test(b.title);
+  const bWomen = /\b(women|womens|women's|girls|girl|ladies)\b/i.test(b.title);
+  if ((aMen && bWomen && !aWomen) || (aWomen && bMen && !bMen)) {
+    return false;
+  }
+
+  // Model check (e.g., Wonder-3 vs Wonder-13)
+  const modelA = (a.model || extractSneakerModel(a.title) || '').toUpperCase();
+  const modelB = (b.model || extractSneakerModel(b.title) || '').toUpperCase();
+  if (modelA && modelB && modelA !== modelB) {
+    return false;
+  }
+
+  // Variant check (Size) - Different sizes are distinct variants
+  const sizeA = a.variant?.size || extractSizeFromText(a.title);
+  const sizeB = b.variant?.size || extractSizeFromText(b.title);
+  if (sizeA && sizeB && sizeA.toUpperCase() !== sizeB.toUpperCase()) {
+    return false;
+  }
+
+  // Variant check (Color) - Different colors are distinct variants
+  const colorA = a.variant?.color;
+  const colorB = b.variant?.color;
+  if (colorA && colorB && colorA.toLowerCase() !== colorB.toLowerCase()) {
+    return false;
+  }
+
+  // If product IDs / ASINs / SKUs match exactly and attributes do not conflict
+  if (a.productId && b.productId && a.productId.toUpperCase() === b.productId.toUpperCase()) {
+    return true;
+  }
+
+  return Boolean(brandA && modelA && brandA === brandB && modelA === modelB);
 }
 
 export function classifyProductMatch(
@@ -14,35 +142,83 @@ export function classifyProductMatch(
   canonical: CanonicalProduct
 ): MatchClassificationResult {
   const offerTitle = offer.title.toLowerCase();
-  const canonicalBrand = canonical.brand ? canonical.brand.toLowerCase() : null;
-  const canonicalModel = canonical.model ? canonical.model.toLowerCase() : null;
-  const canonicalCategory = canonical.category ? canonical.category.toLowerCase() : null;
-  const canonicalSubcategory = canonical.subcategory ? canonical.subcategory.toLowerCase() : null;
+  const offerBrand = (offer.brand || extractBrandFromText(offer.title) || '').toLowerCase();
+  const canonicalBrand = (canonical.brand || '').toLowerCase();
 
-  // --- LAYER 1: PRODUCT IDENTITY CONFIDENCE (Model / SKU / GTIN Verification) ---
-  let identityConfidence = 0.50; // Neutral default when model is unknown
+  const offerModel = (offer.model || extractSneakerModel(offer.title) || '').toLowerCase();
+  const canonicalModel = (canonical.model || extractSneakerModel(canonical.rawInput) || '').toLowerCase();
 
-  if (canonicalModel) {
-    if (offerTitle.includes(canonicalModel)) {
-      // Check for variant model extension mismatch (e.g. "270 react" vs "270")
-      const titleWords = offerTitle.split(/\s+/);
-      const modelIndex = titleWords.findIndex(w => w.includes(canonicalModel));
-      const nextWord = modelIndex >= 0 && modelIndex + 1 < titleWords.length ? titleWords[modelIndex + 1] : '';
-      
-      const variantExtensions = ['react', 'flyknit', 'ultra', 'plus', 'pro', 'max', 'lite', 'se'];
-      const hasVariantExtension = variantExtensions.includes(nextWord);
+  const tier = classifyProductTier(offer, canonical);
 
-      if (hasVariantExtension && !canonical.productName?.toLowerCase().includes(nextWord)) {
-        // Offer is a distinct model variant
-        identityConfidence = 0.45;
-      } else {
-        // High-confidence exact model match
-        identityConfidence = 0.95;
-      }
-    } else {
-      // Expected model is completely missing from offer title
-      identityConfidence = 0.20;
-    }
+  // --- BRAND CONFLICT CHECK ---
+  // If user searched for a specific brand (e.g. Lancer) and the offer is a distinct brand (e.g. Asian or Puma),
+  // they are completely different products!
+  if (canonicalBrand && offerBrand && canonicalBrand !== offerBrand) {
+    return {
+      matchType: 'similar',
+      matchConfidence: 0.15,
+      identityConfidence: 0.05,
+      attributeMatchScore: 0.10,
+      visualSimilarityScore: 0.40,
+      tier,
+      isSameProductAndVariant: false,
+      differenceReason: `Brand mismatch: Expected ${canonical.brand}, found ${offer.brand || offerBrand}`,
+    };
+  }
+
+  // --- GENDER CONFLICT CHECK ---
+  const canonicalText = (canonical.title || canonical.rawInput || '').toLowerCase();
+  const isCanonicalMen = /\b(men|mens|men's)\b/i.test(canonicalText);
+  const isOfferWomen = /\b(women|womens|women's|ladies|girl|girls)\b/i.test(offerTitle);
+  const isCanonicalWomen = /\b(women|womens|women's|ladies|girl|girls)\b/i.test(canonicalText);
+  const isOfferMen = /\b(men|mens|men's|boy|boys)\b/i.test(offerTitle);
+
+  if ((isCanonicalMen && isOfferWomen) || (isCanonicalWomen && isOfferMen)) {
+    return {
+      matchType: 'similar',
+      matchConfidence: 0.25,
+      identityConfidence: 0.15,
+      attributeMatchScore: 0.20,
+      visualSimilarityScore: 0.40,
+      tier,
+      isSameProductAndVariant: false,
+      differenceReason: `Gender mismatch: Target is for ${isCanonicalMen ? 'Men' : 'Women'}, but offer is for ${isOfferWomen ? 'Women' : 'Men'}`,
+    };
+  }
+
+  // --- MODEL SPECIFICITY CHECK ---
+  // E.g., Lancer Wonder-3 vs Lancer Wonder-10
+  if (canonicalModel && offerModel && canonicalModel !== offerModel) {
+    return {
+      matchType: 'similar',
+      matchConfidence: 0.35,
+      identityConfidence: 0.20,
+      attributeMatchScore: 0.50,
+      visualSimilarityScore: 0.50,
+      tier,
+      isSameProductAndVariant: false,
+      differenceReason: `Model mismatch: Expected ${canonicalModel}, found ${offerModel}`,
+    };
+  }
+
+  // --- VARIANT ATTRIBUTE CHECK (Size / Color) ---
+  const offerSize = offer.variant?.size || extractSizeFromText(offer.title);
+  const canonicalSize = extractSizeFromText(canonical.rawInput);
+
+  let isVariantMismatch = false;
+  let variantReason = '';
+  if (canonicalSize && offerSize && canonicalSize.toUpperCase() !== offerSize.toUpperCase()) {
+    isVariantMismatch = true;
+    variantReason = `Size difference: Expected ${canonicalSize}, offer is ${offerSize}`;
+  }
+
+  // --- IDENTITY CONFIDENCE CALCULATION ---
+  let identityConfidence = 0.50;
+
+  if (canonicalModel && offerModel && canonicalModel === offerModel) {
+    identityConfidence = 0.95;
+  } else if (canonicalBrand && offerBrand && canonicalBrand === offerBrand) {
+    identityConfidence = 0.80;
   } else if (canonical.productName) {
     const nameWords = canonical.productName.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     const matches = nameWords.filter(w => offerTitle.includes(w));
@@ -51,68 +227,36 @@ export function classifyProductMatch(
     }
   }
 
-  // --- LAYER 2: ATTRIBUTE MATCH SCORE (Brand, Category, Color, Gender) ---
+  // --- ATTRIBUTE MATCH SCORE ---
   let attributeScore = 0;
-
-  // Brand (weight: 0.40)
-  if (canonicalBrand && offerTitle.includes(canonicalBrand)) {
+  if (canonicalBrand && (offerBrand === canonicalBrand || offerTitle.includes(canonicalBrand))) {
     attributeScore += 0.40;
   }
 
-  // Category / Subcategory with Synonym Matching (weight: 0.30)
-  const isFootwear = canonicalCategory === 'footwear' || canonicalSubcategory === 'running_shoes';
-  const hasFootwearTerm = offerTitle.includes('shoes') || offerTitle.includes('sneakers') || offerTitle.includes('footwear');
-
-  if (canonicalSubcategory && offerTitle.includes(canonicalSubcategory)) {
+  const isFootwear = canonical.category === 'footwear' || offerTitle.includes('shoes') || offerTitle.includes('sneakers');
+  if (isFootwear) {
     attributeScore += 0.30;
-  } else if (isFootwear && hasFootwearTerm) {
-    attributeScore += 0.25;
-  } else if (canonicalCategory && offerTitle.includes(canonicalCategory)) {
-    attributeScore += 0.20;
-  }
-
-  // Color (weight: 0.15)
-  if (canonical.colors && canonical.colors.length > 0) {
-    const colorMatch = canonical.colors.some(c => offerTitle.includes(c.toLowerCase()));
-    if (colorMatch) attributeScore += 0.15;
-  }
-
-  // Gender (weight: 0.15)
-  if (canonical.gender && offerTitle.includes(canonical.gender.toLowerCase())) {
-    attributeScore += 0.15;
   }
 
   const attributeMatchScore = Math.min(1.0, parseFloat(attributeScore.toFixed(2)));
+  const visualSimilarityScore = 0.60;
 
-  // --- LAYER 3: VISUAL & FEATURE SIMILARITY SCORE ---
-  let visualScore = 0.40;
-
-  if (canonical.styles && canonical.styles.length > 0) {
-    const styleMatch = canonical.styles.some(s => offerTitle.includes(s.toLowerCase()));
-    if (styleMatch) visualScore += 0.30;
-  }
-
-  if (canonical.visualFeatures && canonical.visualFeatures.length > 0) {
-    const featureMatch = canonical.visualFeatures.some(f => offerTitle.includes(f.toLowerCase()));
-    if (featureMatch) visualScore += 0.30;
-  }
-
-  const visualSimilarityScore = Math.min(1.0, parseFloat(visualScore.toFixed(2)));
-
-  // --- OVERALL MATCH CONFIDENCE (Weighted Combination) ---
+  // --- OVERALL MATCH CONFIDENCE ---
   const overallRaw = (identityConfidence * 0.55) + (attributeMatchScore * 0.35) + (visualSimilarityScore * 0.10);
   const overallMatchConfidence = Math.min(0.98, Math.max(0.10, parseFloat(overallRaw.toFixed(2))));
 
-  // --- STRICT EXACT MATCH GROUPING BOUNDARIES ---
   let matchType: 'exact' | 'variant' | 'similar' = 'similar';
-
-  if (identityConfidence >= 0.85 && attributeMatchScore >= 0.65 && overallMatchConfidence >= 0.78) {
+  if (isVariantMismatch) {
+    matchType = 'variant';
+  } else if (identityConfidence >= 0.85 && attributeMatchScore >= 0.65 && overallMatchConfidence >= 0.75) {
     matchType = 'exact';
-  } else if (overallMatchConfidence >= 0.45 && attributeMatchScore >= 0.45) {
+  } else if (overallMatchConfidence >= 0.45 && attributeMatchScore >= 0.35) {
     matchType = 'variant';
   } else {
     matchType = 'similar';
   }
+
+  const isSame = matchType === 'exact' && !isVariantMismatch;
 
   return {
     matchType,
@@ -120,5 +264,8 @@ export function classifyProductMatch(
     identityConfidence,
     attributeMatchScore,
     visualSimilarityScore,
+    tier,
+    isSameProductAndVariant: isSame,
+    differenceReason: isVariantMismatch ? variantReason : undefined,
   };
 }

@@ -1247,7 +1247,7 @@ function AdminCompetitionManager({
   const [newStatus, setNewStatus] = useState<string>("LIVE");
   const [newRules, setNewRules] = useState("1. 100% Free Entry - No purchase necessary to enter or vote.\n2. One look submission per participant per week.\n3. Entrants must be 18 years or older.\n4. Submissions must feature this week's challenge item.\n5. Anti-fraud vote monitoring: Only 1 verified vote per user.");
   const [newEligibility, setNewEligibility] = useState("All verified BuyWise registered shoppers in India (18+ only)");
-  const [newTerms, setNewTerms] = useState("Participants retain copyright of their photos and grant BuyWise AI a non-exclusive license to display submitted try-on looks for community voting and winner recognition. Explicit consent can be revoked at any time. Winners are verified by administration and announced every Sunday.");
+  const [newTerms, setNewTerms] = useState("Participants retain copyright of their photos and grant BuyWise AI a non-exclusive license to display submitted try-on looks for community voting and winner recognition. Explicit consent can be revoked at any time. Winners are verified by administration and announced on the app and social media.");
   const [selectedInventorySku, setSelectedInventorySku] = useState("");
   const [showRulesPreviewModal, setShowRulesPreviewModal] = useState(false);
   const [selectedRulesComp, setSelectedRulesComp] = useState<Competition | null>(null);
@@ -1419,7 +1419,7 @@ function AdminCompetitionManager({
             onClick={() => handleDeclareWinner()}
             style={{ padding: '10px 18px', borderRadius: '14px', background: 'linear-gradient(135deg, #ffd700, #ff8c00)', color: '#000', fontWeight: 900, fontSize: '12.5px', border: 'none', cursor: 'pointer' }}
           >
-            👑 Declare Sunday Winner
+            👑 Declare Winner
           </button>
 
           <button

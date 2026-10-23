@@ -401,7 +401,7 @@ export default function Home() {
               >
                 <div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 14px', borderRadius: '16px', background: 'rgba(0, 255, 136, 0.2)', border: '1px solid rgba(0, 255, 136, 0.5)', marginBottom: '14px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#00ff88' }}>👑 SUNDAY WINNER SPOTLIGHT</span>
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#00ff88' }}>👑 WINNER SPOTLIGHT</span>
                   </div>
 
                   <h3 style={{ fontSize: '24px', fontWeight: 900, color: 'white', marginBottom: '8px' }}>
@@ -571,12 +571,12 @@ export default function Home() {
         
         <div className="comparison-grid">
           <ProductCard 
-            id="iphone-17"
-            searchQuery="iPhone 17"
-            title="iPhone 17 (256 GB)"
-            amazonPrice="₹82,900"
-            flipkartPrice="₹83,999"
-            recommendation="Amazon (₹82,900 Best Price)"
+            id="iphone-16"
+            searchQuery="iPhone 16"
+            title="Apple iPhone 16 (128 GB)"
+            amazonPrice="₹67,900"
+            flipkartPrice="₹68,490"
+            recommendation="Amazon (₹67,900 Festival Price)"
             score={9.9}
             tag={t('latest_trending')}
           />

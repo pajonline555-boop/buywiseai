@@ -32,7 +32,6 @@ export class RetailerRegistry {
     this.register(cromaAdapter);
     this.register(etsyAdapter);
     this.register(ebayAdapter);
-    this.register(walmartAdapter);
 
     // Level 2 — Affiliate Network Adapters (Phase C)
     this.register(cuelinksAdapter);

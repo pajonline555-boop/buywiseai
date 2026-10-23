@@ -2,6 +2,7 @@ export type ConnectionStatus =
   | 'LIVE'
   | 'CONFIGURED'
   | 'CREDENTIALS_REQUIRED'
+  | 'API_UNAVAILABLE'
   | 'MOCK'
   | 'BLOCKED'
   | 'DISABLED'
@@ -100,15 +101,15 @@ export function getRetailerCapabilities(): RetailerCapability[] {
       name: 'Meesho',
       enabled: true,
       configured: false,
-      connectionStatus: 'CREDENTIALS_REQUIRED',
-      primaryMethod: 'affiliate_feed',
+      connectionStatus: 'API_UNAVAILABLE',
+      primaryMethod: 'disabled',
       supportedFields: {
-        price: true,
-        rating: true,
-        reviewCount: true,
-        availability: true,
-        sellerInfo: true,
-        returnPolicy: true,
+        price: false,
+        rating: false,
+        reviewCount: false,
+        availability: false,
+        sellerInfo: false,
+        returnPolicy: false,
       },
     },
     {

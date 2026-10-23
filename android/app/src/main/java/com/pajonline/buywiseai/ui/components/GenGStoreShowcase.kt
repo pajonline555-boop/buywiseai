@@ -117,18 +117,18 @@ fun GenGStoreShowcase(
                 slug = "biba-anarkali-suit"
             ),
             PartnerProductSlide(
-                id = "prod_partner_iphone17_1",
-                title = "Apple iPhone 17 (256 GB) - Teal / Titanium",
-                description = "Amazon India Choice: 6.3-inch Super Retina XDR OLED 120Hz ProMotion with A18 Pro Bionic Chip and 48MP Dual Fusion Camera.",
+                id = "prod_partner_iphone16_1",
+                title = "Apple iPhone 16 (128 GB) - Ultramarine",
+                description = "Amazon India Festival Choice: 6.1-inch Super Retina XDR OLED with A18 Bionic Chip, Camera Control, 48MP Fusion Camera & ₹12,000 Instant Bank Offer.",
                 retailer = "AMAZON INDIA",
-                rating = "4.9",
-                reviewCount = "3420",
-                sellingPrice = "₹82,900",
-                mrp = "₹89,900",
-                discountPercent = "8% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80",
-                productUrl = "https://www.amazon.in/s?k=Apple+iPhone+17",
-                slug = "iphone-17"
+                rating = "4.7",
+                reviewCount = "28400",
+                sellingPrice = "₹67,900",
+                mrp = "₹79,900",
+                discountPercent = "15% OFF FESTIVAL DEAL",
+                imageUrl = "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=800&q=80",
+                productUrl = "https://www.amazon.in/s?k=Apple+iPhone+16+128GB",
+                slug = "iphone-16"
             ),
             PartnerProductSlide(
                 id = "prod_partner_levis_jeans_1",
@@ -198,12 +198,21 @@ fun GenGStoreShowcase(
     }
 
     val handleBuyNow: () -> Unit = {
-        val rawUrl = currentProd.productUrl.ifEmpty { "https://www.amazon.in/s?k=${Uri.encode(currentProd.title)}" }
-        val affiliateUrl = if (rawUrl.contains("tag=")) rawUrl
-            else if (rawUrl.contains("?")) "$rawUrl&tag=pajonline-21&ascsubtag=bw_gen_g_store"
-            else "$rawUrl?tag=pajonline-21&ascsubtag=bw_gen_g_store"
+        val targetUrl = if (currentProd.productUrl.isNotBlank() && currentProd.productUrl.startsWith("http")) {
+            currentProd.productUrl
+        } else {
+            val encodedTitle = Uri.encode(currentProd.title)
+            val storeLower = currentProd.retailer.lowercase()
+            when {
+                storeLower.contains("flipkart") -> "https://www.flipkart.com/search?q=$encodedTitle"
+                storeLower.contains("myntra") -> "https://www.myntra.com/$encodedTitle"
+                storeLower.contains("meesho") -> "https://www.meesho.com/search?q=$encodedTitle"
+                storeLower.contains("ajio") -> "https://www.ajio.com/search/?text=$encodedTitle"
+                else -> "https://www.amazon.in/s?k=$encodedTitle"
+            }
+        }
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(affiliateUrl)).apply {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -501,6 +510,50 @@ fun GenGStoreShowcase(
                         }
                     }
 
+                    // Multi-Size Auto Try-On Options (Petite S, Regular M, Dusky L, Curvy XXL)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF0F0B1E), RoundedCornerShape(10.dp))
+                            .border(1.dp, BuyWiseGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "👗 Auto Try-On Sizes:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BuyWiseGold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("S", "M", "L", "XXL").forEach { sizeLabel ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            brush = Brush.horizontalGradient(
+                                                colors = listOf(Color(0xFF261D42), Color(0xFF191330))
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .border(1.dp, BuyWiseGold.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.targetSize = sizeLabel
+                                            onTryOnClick(currentProd)
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = sizeLabel,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Action Buttons: AI Try On + Buy Now + Share
@@ -545,7 +598,7 @@ fun GenGStoreShowcase(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "🛍️ Buy Now",
+                                text = "🛍️ View Now",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFF070510)
@@ -569,38 +622,63 @@ fun GenGStoreShowcase(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Quick Social Media Share Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Official YouTube Shorts Channel Link ONLY
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(Color(0xFF2C040E), Color(0xFF1B0720))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFF0055).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                val ytShortsUrl = "https://www.youtube.com/@BUYWISEAI-u8n/shorts"
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ytShortsUrl)).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Text(
-                            text = "Share to Social Media:",
-                            fontSize = 10.sp,
-                            color = Color.Gray,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0x2625D366), RoundedCornerShape(8.dp))
-                                .border(1.dp, Color(0x6625D366), RoundedCornerShape(8.dp))
-                                .clickable {
-                                    val shareUrl = "https://buywiseai.pajonline.co.in/product/${currentProd.slug.ifEmpty { currentProd.id }}"
-                                    val whatsappIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, "Check out ${currentProd.title} on BuyWise AI! Compare prices & try on: $shareUrl")
-                                        setPackage("com.whatsapp")
-                                    }
-                                    try {
-                                        context.startActivity(whatsappIntent)
-                                    } catch (e: Exception) {
-                                        handleShare()
-                                    }
-                                }
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("💬 WhatsApp", fontSize = 10.sp, color = Color(0xFF25D366), fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .background(Color(0xFFFF0000), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("▶", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Official YouTube Shorts Channel",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "@BUYWISEAI-u8n • Watch product styling reels",
+                                        fontSize = 9.5.sp,
+                                        color = Color(0xFFFF4D79)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Watch Shorts ↗",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFFF4D79)
+                            )
                         }
                     }
                 }

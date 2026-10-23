@@ -11,6 +11,7 @@ object VtoSessionState {
     var targetGarmentCategory by mutableStateOf<String?>("dresses")
     var targetCompetitionId by mutableStateOf<String?>(null)
     var targetRetailer by mutableStateOf<String?>(null)
+    var targetSize by mutableStateOf<String?>(null)
     var lastGeneratedLookUri by mutableStateOf<String?>(null)
 
     fun setTarget(
@@ -19,7 +20,8 @@ object VtoSessionState {
         price: Number,
         compId: String? = null,
         retailer: String? = null,
-        category: String? = "dresses"
+        category: String? = "dresses",
+        size: String? = null
     ) {
         targetGarmentTitle = title
         targetGarmentImageUrl = imageUrl
@@ -27,6 +29,7 @@ object VtoSessionState {
         targetCompetitionId = compId
         targetRetailer = retailer
         targetGarmentCategory = category ?: "dresses"
+        targetSize = size
     }
 
     fun clear() {
@@ -35,5 +38,6 @@ object VtoSessionState {
         targetGarmentPrice = null
         targetCompetitionId = null
         targetRetailer = null
+        targetSize = null
     }
 }

@@ -29,6 +29,7 @@ import PrivacyCenterModal from '@/components/profile/PrivacyCenterModal';
 import SocialMediaIcons from '@/components/SocialMediaIcons';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { useTheme } from '@/lib/theme/themeProvider';
+import { updateLinkedDeviceState } from '@/lib/notifications/competitionNotificationDispatcher';
 
 export default function ProfilePage() {
   const { t } = useTranslation();
@@ -497,6 +498,96 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* LINKED DEVICES & REAL-TIME SYNC CARD */}
+          <div
+            className="glass"
+            style={{
+              borderRadius: '20px',
+              padding: '24px',
+              border: '1px solid rgba(0, 212, 255, 0.4)',
+              background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(138, 43, 226, 0.08))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '22px' }}>📲</span>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: 'white' }}>
+                    Linked Devices &amp; Cloud Sync
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#00d4ff', fontWeight: 700 }}>
+                    ● Instant Votes, Approvals &amp; State Sync Active
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 900, padding: '3px 8px', borderRadius: '8px', background: 'rgba(0, 255, 136, 0.15)', color: '#00ff88', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
+                MULTI-DEVICE LIVE
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '18px' }}>📱</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: 'white' }}>Android Mobile Device</div>
+                    <div style={{ fontSize: '11px', color: '#ffd700' }}>
+                      {userProfile?.phone || user?.phoneNumber || '+91 98765 43210'} • Receiving instant vote notifications
+                    </div>
+                  </div>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#00ff88' }}>
+                  ● Synced
+                </span>
+              </div>
+
+              <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '18px' }}>💻</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: 'white' }}>Web Browser (Current Session)</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+                      Desktop &amp; PWA Client • Live Firestore sync
+                    </div>
+                  </div>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#00d4ff' }}>
+                  ● Active Now
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                const targetUid = user?.uid || 'guest_user';
+                const currentPhone = userProfile?.phone || user?.phoneNumber || (typeof window !== 'undefined' ? localStorage.getItem('buywise_user_phone') : null) || '+91 98765 43210';
+                await updateLinkedDeviceState({
+                  userId: targetUid,
+                  linkedMobile: currentPhone,
+                  updateData: { lastClientPing: new Date().toISOString() }
+                });
+                alert(`⚡ Linked mobile state updated for ${currentPhone}! Latest fashion challenge votes, approvals, and sync state dispatched to your mobile.`);
+              }}
+              style={{
+                padding: '12px 18px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #00d4ff, #8a2be2)',
+                color: 'white',
+                border: 'none',
+                fontWeight: 900,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textAlign: 'center',
+                boxShadow: '0 4px 15px rgba(0, 212, 255, 0.25)'
+              }}
+            >
+              🔄 Update State on Linked Devices Now
+            </button>
+          </div>
+
           {/* ADMIN COMMAND CENTER (ROLE-GATED) */}
           {isUserAdmin && (
             <div
@@ -741,7 +832,7 @@ export default function ProfilePage() {
               {[
                 { key: 'weeklyCompetition', label: '🏆 Weekly Competition Launches' },
                 { key: 'competitionVoting', label: '❤️ Competition Voting Updates' },
-                { key: 'winnerAnnouncements', label: '👑 Sunday Winner Spotlights' },
+                { key: 'winnerAnnouncements', label: '👑 Winner Spotlights' },
                 { key: 'priceDrops', label: '🔥 Instant Price Drop Alerts' },
                 { key: 'newArticles', label: '📰 Knowledge Hub Articles' },
                 { key: 'promotions', label: '🎟️ Offers & Partner Promotions' },

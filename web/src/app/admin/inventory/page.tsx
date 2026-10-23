@@ -569,6 +569,8 @@ export default function InventoryPage() {
       images: [formData.primaryImage],
       youtubeUrl: formData.youtubeUrl || undefined,
       garmentCategory: 'dresses' as const,
+      tryOnEnabled: true,
+      sizes: ['Petite S', 'Regular M', 'Dusky L', 'Curvy XXL'],
       warranty: 'Partner Quality Guaranteed',
       gstPercent: 5,
       commissionType: 'PERCENTAGE' as const,

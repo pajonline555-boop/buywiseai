@@ -3,9 +3,11 @@ package com.pajonline.buywiseai.ui.screens.web
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +58,11 @@ fun WebViewerScreen(
     var isLoading by remember { mutableStateOf(true) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var currentUrl by remember { mutableStateOf(initialUrl) }
+
+    // Always intercept back press and return directly to BuyWise AI app
+    BackHandler {
+        onBack()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -141,11 +148,13 @@ fun WebViewerScreen(
                                 loadWithOverviewMode = true
                                 allowFileAccess = false
                                 allowContentAccess = false
+                                mediaPlaybackRequiresUserGesture = false
                                 cacheMode = WebSettings.LOAD_NO_CACHE
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                 userAgentString = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 BuyWiseNativeApp/1.0"
                             }
                             clearCache(true)
+                            webChromeClient = WebChromeClient()
                             webViewClient = object : WebViewClient() {
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                     isLoading = true

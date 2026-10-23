@@ -1,0 +1,360 @@
+import { StoreOffer } from '../types';
+
+/**
+ * Isolated deterministic fixtures for BuyWise AI Comparison Engine tests.
+ * Quarantined exclusively for automated unit and regression testing.
+ * NEVER exposed as live production API results.
+ */
+
+// 1. Amazon India: Lancer Wonder-3 (Actual listing from Image 1 at ₹472)
+export const FIXTURE_AMAZON_LANCER_472: StoreOffer = {
+  id: 'amz-lancer-wonder3-472',
+  retailerId: 'amazon',
+  store: 'Amazon India',
+  title: 'LANCER Mens Wonder-3nbl-lgr Running Shoes',
+  brand: 'LANCER',
+  model: 'Wonder-3',
+  variant: { size: 'UK 8', color: 'Navy Blue / Light Grey' },
+  productId: 'B09WND3R1',
+  gtin: '8901234567890',
+  url: 'https://www.amazon.in/dp/B09WND3R1?tag=pajonline-21',
+  directProductUrl: 'https://www.amazon.in/dp/B09WND3R1?tag=pajonline-21',
+  affiliateUrl: 'https://www.amazon.in/dp/B09WND3R1?tag=pajonline-21',
+  isDirectProductLink: true,
+  price: 472,
+  listedPrice: 472,
+  shippingFee: 0,
+  effectivePayablePrice: 472,
+  priceBasis: 'listed',
+  currency: 'INR',
+  originalPrice: 1199,
+  mrp: 1199,
+  discount: 727,
+  imageUrl: 'https://m.media-amazon.com/images/I/71Kx9k7kZGL._AC_SL1500_.jpg',
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+  rating: 3.5,
+  reviewCount: 40,
+  availability: 'in_stock',
+  checkedAt: new Date().toISOString(),
+  sourceType: 'mock',
+  verificationStatus: 'verified_live',
+  matchType: 'exact',
+  tier: 'PREMIUM',
+  dataFreshness: 'Live Amazon India Listing Verified',
+  provenance: {
+    source: 'mock',
+    provider: 'Amazon PA-API Fixture',
+    rawListingId: 'B09WND3R1',
+    lastChecked: new Date().toISOString(),
+    isLiveFeed: false,
+  },
+  imageProvenance: {
+    url: 'https://m.media-amazon.com/images/I/71Kx9k7kZGL._AC_SL1500_.jpg',
+    isGenuineProductImage: true,
+    isFallback: false,
+  },
+};
+
+// 2. Flipkart: Lancer Wonder-3 (Matching product at ₹499 + ₹40 shipping)
+export const FIXTURE_FLIPKART_LANCER_499: StoreOffer = {
+  id: 'fk-lancer-wonder3-499',
+  retailerId: 'flipkart',
+  store: 'Flipkart',
+  title: 'LANCER Wonder-3 Running Shoes For Men (Navy Blue)',
+  brand: 'LANCER',
+  model: 'Wonder-3',
+  variant: { size: 'UK 8', color: 'Navy Blue / Light Grey' },
+  productId: 'SHOE748GFK91',
+  url: 'https://www.flipkart.com/lancer-wonder-3-running-shoes-men/p/itm748gfk91',
+  directProductUrl: 'https://www.flipkart.com/lancer-wonder-3-running-shoes-men/p/itm748gfk91',
+  isDirectProductLink: true,
+  price: 499,
+  listedPrice: 499,
+  shippingFee: 40,
+  effectivePayablePrice: 539,
+  priceBasis: 'effective_payable',
+  currency: 'INR',
+  originalPrice: 1199,
+  mrp: 1199,
+  discount: 700,
+  imageUrl: 'https://rukminim2.flixcart.com/image/832/832/xif0q/shoe/7/4/8/8-wonder-3-lancer-navy-blue-original-imagkz9.jpeg',
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2023_Flipkart.png',
+  rating: 3.6,
+  reviewCount: 95,
+  availability: 'in_stock',
+  checkedAt: new Date().toISOString(),
+  sourceType: 'mock',
+  verificationStatus: 'verified_live',
+  matchType: 'exact',
+  tier: 'PREMIUM',
+  dataFreshness: 'Flipkart Direct Verified',
+  provenance: {
+    source: 'mock',
+    provider: 'Flipkart Affiliate Fixture',
+    rawListingId: 'SHOE748GFK91',
+    lastChecked: new Date().toISOString(),
+    isLiveFeed: false,
+  },
+  imageProvenance: {
+    url: 'https://rukminim2.flixcart.com/image/832/832/xif0q/shoe/7/4/8/8-wonder-3-lancer-navy-blue-original-imagkz9.jpeg',
+    isGenuineProductImage: true,
+    isFallback: false,
+  },
+};
+
+// 3. Flipkart: Asian Men Wonder-13 at ₹649
+export const FIXTURE_FLIPKART_ASIAN_WONDER13_649: StoreOffer = {
+  id: 'fk-asian-wonder13-649',
+  retailerId: 'flipkart',
+  store: 'Flipkart',
+  title: 'Asian Men Wonder-13 Lightweight Mesh Sports Running Shoes (Anti-Slip Grip)',
+  brand: 'Asian',
+  model: 'Wonder-13',
+  variant: { size: 'UK 8', color: 'Grey/Orange' },
+  productId: 'SHOEASIANW13',
+  url: 'https://www.flipkart.com/asian-wonder-13-sports-running-shoes-men/p/itmasianw13',
+  directProductUrl: 'https://www.flipkart.com/asian-wonder-13-sports-running-shoes-men/p/itmasianw13',
+  isDirectProductLink: true,
+  price: 649,
+  listedPrice: 649,
+  shippingFee: 0,
+  effectivePayablePrice: 649,
+  priceBasis: 'listed',
+  currency: 'INR',
+  originalPrice: 1299,
+  mrp: 1299,
+  discount: 650,
+  imageUrl: 'https://rukminim2.flixcart.com/image/832/832/xif0q/shoe/w/1/3/8-wonder-13-asian-grey-original-imag9.jpeg',
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2023_Flipkart.png',
+  rating: 4.3,
+  reviewCount: 19100,
+  availability: 'in_stock',
+  checkedAt: new Date().toISOString(),
+  sourceType: 'mock',
+  verificationStatus: 'verified_live',
+  matchType: 'exact',
+  tier: 'PREMIUM',
+  dataFreshness: 'Flipkart Live Feed',
+  provenance: {
+    source: 'mock',
+    provider: 'Flipkart Affiliate Fixture',
+    rawListingId: 'SHOEASIANW13',
+    lastChecked: new Date().toISOString(),
+    isLiveFeed: false,
+  },
+  imageProvenance: {
+    url: 'https://rukminim2.flixcart.com/image/832/832/xif0q/shoe/w/1/3/8-wonder-13-asian-grey-original-imag9.jpeg',
+    isGenuineProductImage: true,
+    isFallback: false,
+  },
+};
+
+// 4. Amazon India: Asian Men Wonder-13 at ₹699
+export const FIXTURE_AMAZON_ASIAN_WONDER13_699: StoreOffer = {
+  id: 'amz-asian-wonder13-699',
+  retailerId: 'amazon',
+  store: 'Amazon India',
+  title: 'Asian Men Wonder-13 Lightweight Mesh Sports Running Shoes (Anti-Slip Grip)',
+  brand: 'Asian',
+  model: 'Wonder-13',
+  variant: { size: 'UK 8', color: 'Grey/Orange' },
+  productId: 'B08ASNW13X',
+  url: 'https://www.amazon.in/dp/B08ASNW13X?tag=pajonline-21',
+  directProductUrl: 'https://www.amazon.in/dp/B08ASNW13X?tag=pajonline-21',
+  affiliateUrl: 'https://www.amazon.in/dp/B08ASNW13X?tag=pajonline-21',
+  isDirectProductLink: true,
+  price: 699,
+  listedPrice: 699,
+  shippingFee: 0,
+  effectivePayablePrice: 699,
+  priceBasis: 'listed',
+  currency: 'INR',
+  originalPrice: 1299,
+  mrp: 1299,
+  discount: 600,
+  imageUrl: 'https://m.media-amazon.com/images/I/61asnw13xL._AC_SL1200_.jpg',
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+  rating: 4.3,
+  reviewCount: 16500,
+  availability: 'in_stock',
+  checkedAt: new Date().toISOString(),
+  sourceType: 'mock',
+  verificationStatus: 'verified_live',
+  matchType: 'exact',
+  tier: 'PREMIUM',
+  dataFreshness: 'Amazon India PA-API Verified',
+  provenance: {
+    source: 'mock',
+    provider: 'Amazon PA-API Fixture',
+    rawListingId: 'B08ASNW13X',
+    lastChecked: new Date().toISOString(),
+    isLiveFeed: false,
+  },
+  imageProvenance: {
+    url: 'https://m.media-amazon.com/images/I/61asnw13xL._AC_SL1200_.jpg',
+    isGenuineProductImage: true,
+    isFallback: false,
+  },
+};
+
+// 5. Myntra: Puma Men Flyer Runner (LUXURY Tier) at ₹1,799
+export const FIXTURE_MYNTRA_PUMA_FLYER_1799: StoreOffer = {
+  id: 'myn-puma-flyer-1799',
+  retailerId: 'myntra',
+  store: 'Myntra',
+  title: 'Puma Men Flyer Runner Mesh Lightweight Running Shoes',
+  brand: 'Puma',
+  model: 'Flyer Runner',
+  variant: { size: 'UK 8', color: 'Puma Black / Puma White' },
+  productId: 'MYN-PUMA-1029384',
+  url: 'https://www.myntra.com/running-shoes/puma/puma-men-flyer-runner-mesh-running-shoes/1029384/buy',
+  directProductUrl: 'https://www.myntra.com/running-shoes/puma/puma-men-flyer-runner-mesh-running-shoes/1029384/buy',
+  isDirectProductLink: true,
+  price: 1799,
+  listedPrice: 1799,
+  shippingFee: 0,
+  effectivePayablePrice: 1799,
+  priceBasis: 'listed',
+  currency: 'INR',
+  originalPrice: 3499,
+  mrp: 3499,
+  discount: 1700,
+  imageUrl: 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/1029384/puma_flyer_runner_black.jpg',
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d5/Myntra_logo.png',
+  rating: 4.6,
+  reviewCount: 48200,
+  availability: 'in_stock',
+  checkedAt: new Date().toISOString(),
+  sourceType: 'mock',
+  verificationStatus: 'verified_live',
+  matchType: 'exact',
+  tier: 'LUXURY',
+  dataFreshness: 'Myntra Brand Direct Feed',
+  provenance: {
+    source: 'mock',
+    provider: 'Myntra Feed Fixture',
+    rawListingId: 'MYN-PUMA-1029384',
+    lastChecked: new Date().toISOString(),
+    isLiveFeed: false,
+  },
+  imageProvenance: {
+    url: 'https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/1029384/puma_flyer_runner_black.jpg',
+    isGenuineProductImage: true,
+    isFallback: false,
+  },
+};
+
+// 6. Amazon India: Puma Men Flyer Runner (LUXURY Tier) at ₹1,899
+export const FIXTURE_AMAZON_PUMA_FLYER_1899: StoreOffer = {
+  id: 'amz-puma-flyer-1899',
+  retailerId: 'amazon',
+  store: 'Amazon India',
+  title: "Puma Men's Flyer Runner Running Shoe",
+  brand: 'Puma',
+  model: 'Flyer Runner',
+  variant: { size: 'UK 8', color: 'Puma Black / Puma White' },
+  productId: 'B07PMFLYR9',
+  url: 'https://www.amazon.in/dp/B07PMFLYR9?tag=pajonline-21',
+  directProductUrl: 'https://www.amazon.in/dp/B07PMFLYR9?tag=pajonline-21',
+  affiliateUrl: 'https://www.amazon.in/dp/B07PMFLYR9?tag=pajonline-21',
+  isDirectProductLink: true,
+  price: 1899,
+  listedPrice: 1899,
+  shippingFee: 0,
+  effectivePayablePrice: 1899,
+  priceBasis: 'listed',
+  currency: 'INR',
+  originalPrice: 3499,
+  mrp: 3499,
+  discount: 1600,
+  imageUrl: 'https://m.media-amazon.com/images/I/71pumaflyerL._AC_SL1500_.jpg',
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+  rating: 4.5,
+  reviewCount: 31200,
+  availability: 'in_stock',
+  checkedAt: new Date().toISOString(),
+  sourceType: 'mock',
+  verificationStatus: 'verified_live',
+  matchType: 'exact',
+  tier: 'LUXURY',
+  dataFreshness: 'Amazon India PA-API Verified',
+  provenance: {
+    source: 'mock',
+    provider: 'Amazon PA-API Fixture',
+    rawListingId: 'B07PMFLYR9',
+    lastChecked: new Date().toISOString(),
+    isLiveFeed: false,
+  },
+  imageProvenance: {
+    url: 'https://m.media-amazon.com/images/I/71pumaflyerL._AC_SL1500_.jpg',
+    isGenuineProductImage: true,
+    isFallback: false,
+  },
+};
+
+// 7. Asian Wonder-13 Different Size Variant (UK 10 vs UK 8)
+export const FIXTURE_ASIAN_WONDER13_SIZE_10: StoreOffer = {
+  ...FIXTURE_AMAZON_ASIAN_WONDER13_699,
+  id: 'amz-asian-wonder13-size10',
+  variant: { size: 'UK 10', color: 'Grey/Orange' },
+  price: 749,
+  listedPrice: 749,
+  effectivePayablePrice: 749,
+  matchType: 'variant',
+};
+
+// 8. Broken Image URL Offer
+export const FIXTURE_BROKEN_IMAGE_OFFER: StoreOffer = {
+  ...FIXTURE_AMAZON_LANCER_472,
+  id: 'amz-broken-img-offer',
+  imageUrl: 'https://invalid-non-existent-domain-404.com/broken.jpg',
+  imageProvenance: {
+    url: 'https://invalid-non-existent-domain-404.com/broken.jpg',
+    isGenuineProductImage: false,
+    isFallback: true,
+  },
+};
+
+// 9. Stale Price Offer (Checked 48 hours ago)
+export const FIXTURE_STALE_PRICE_OFFER: StoreOffer = {
+  ...FIXTURE_AMAZON_LANCER_472,
+  id: 'amz-stale-offer',
+  checkedAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
+  staleVerification: true,
+  verificationStatus: 'verification_stale',
+};
+
+// 10. Out of Stock Offer
+export const FIXTURE_OUT_OF_STOCK_OFFER: StoreOffer = {
+  ...FIXTURE_AMAZON_LANCER_472,
+  id: 'amz-out-of-stock-offer',
+  availability: 'out_of_stock',
+};
+
+// 11. Generic Search Link (Missing direct PDP URL)
+export const FIXTURE_GENERIC_SEARCH_LINK_OFFER: StoreOffer = {
+  ...FIXTURE_AMAZON_LANCER_472,
+  id: 'amz-generic-search-offer',
+  url: 'https://www.amazon.in/s?k=lancer+running+shoes',
+  directProductUrl: undefined,
+  isDirectProductLink: false,
+};
+
+// 12. Shipping Fee Comparison (Listed ₹450 + ₹80 shipping = ₹530 vs Listed ₹490 + ₹0 shipping = ₹490)
+export const FIXTURE_SHIPPING_HIGH_FEE_OFFER: StoreOffer = {
+  ...FIXTURE_AMAZON_LANCER_472,
+  id: 'store-high-shipping',
+  price: 450,
+  listedPrice: 450,
+  shippingFee: 80,
+  effectivePayablePrice: 530,
+};
+
+export const FIXTURE_SHIPPING_FREE_OFFER: StoreOffer = {
+  ...FIXTURE_AMAZON_LANCER_472,
+  id: 'store-free-shipping',
+  price: 490,
+  listedPrice: 490,
+  shippingFee: 0,
+  effectivePayablePrice: 490,
+};

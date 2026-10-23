@@ -55,17 +55,26 @@ export function normalizeSearchQuery(rawQuery: string): NormalizedQueryIntent {
     return intent;
   }
 
-  // 4. MOBILIES & SMARTPHONES (iphone 17, samsung phone)
+  // 4. MOBILIES & SMARTPHONES (iphone 16, iphone 17, samsung phone)
   if (lower.includes('iphone 17') || lower.includes('iphone17')) {
     intent.category = 'ELECTRONICS';
     intent.subcategory = 'MOBILES';
     intent.productType = 'SMARTPHONE';
     intent.brand = 'Apple';
-    intent.normalizedQuery = 'Apple iPhone 17';
+    intent.normalizedQuery = 'Apple iPhone 16';
     return intent;
   }
 
-  if (lower.includes('samsung phone') || lower.includes('galaxy')) {
+  if (lower.includes('iphone 16') || lower.includes('iphone16')) {
+    intent.category = 'ELECTRONICS';
+    intent.subcategory = 'MOBILES';
+    intent.productType = 'SMARTPHONE';
+    intent.brand = 'Apple';
+    intent.normalizedQuery = 'Apple iPhone 16';
+    return intent;
+  }
+
+  if (lower.includes('samsung phone') || lower.includes('galaxy') || lower.includes('s24') || lower.includes('s25')) {
     intent.category = 'ELECTRONICS';
     intent.subcategory = 'MOBILES';
     intent.productType = 'SMARTPHONE';
@@ -74,12 +83,73 @@ export function normalizeSearchQuery(rawQuery: string): NormalizedQueryIntent {
     return intent;
   }
 
-  // 5. AUDIO (airpods pro, sony xm5)
-  if (lower.includes('airpods') || lower.includes('sony xm5') || lower.includes('headphones')) {
+  // 5. TELEVISIONS & SMART TVs (samsung tv, lg tv, sony bravia, 4k tv)
+  if (lower.includes('tv') || lower.includes('television') || lower.includes('bravia')) {
+    intent.category = 'ELECTRONICS';
+    intent.subcategory = 'TELEVISIONS';
+    intent.productType = 'SMART_TV';
+    if (lower.includes('samsung')) {
+      intent.brand = 'Samsung';
+      intent.normalizedQuery = 'Samsung 43-inch Crystal 4K UHD Smart TV';
+    } else if (lower.includes('lg')) {
+      intent.brand = 'LG';
+      intent.normalizedQuery = 'LG 43-inch 4K Ultra HD Smart LED TV';
+    } else if (lower.includes('sony') || lower.includes('bravia')) {
+      intent.brand = 'Sony';
+      intent.normalizedQuery = 'Sony Bravia 43-inch 4K Google TV';
+    } else {
+      intent.normalizedQuery = '4K Ultra HD Smart LED TV';
+    }
+    return intent;
+  }
+
+  // 6. LAPTOPS & MACBOOKS
+  if (lower.includes('macbook') || lower.includes('laptop')) {
+    intent.category = 'ELECTRONICS';
+    intent.subcategory = 'LAPTOPS';
+    intent.productType = 'LAPTOP';
+    if (lower.includes('macbook')) {
+      intent.brand = 'Apple';
+      intent.normalizedQuery = lower.includes('pro') ? 'Apple MacBook Pro 14' : 'Apple MacBook Air M2';
+    } else {
+      intent.normalizedQuery = 'Thin & Light Intel Core i5 Laptop';
+    }
+    return intent;
+  }
+
+  // 7. AUDIO (airpods pro, sony xm5)
+  if (lower.includes('sony xm5') || lower.includes('wh-1000xm5') || lower.includes('xm5')) {
+    intent.category = 'ELECTRONICS';
+    intent.subcategory = 'AUDIO';
+    intent.productType = 'HEADPHONES';
+    intent.brand = 'Sony';
+    intent.normalizedQuery = 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones';
+    return intent;
+  }
+
+  if (lower.includes('airpods')) {
+    intent.category = 'ELECTRONICS';
+    intent.subcategory = 'AUDIO';
+    intent.productType = 'EARBUDS';
+    intent.brand = 'Apple';
+    intent.normalizedQuery = 'Apple AirPods Pro 2';
+    return intent;
+  }
+
+  if (lower.includes('headphones') || lower.includes('earbuds') || lower.includes('earphones')) {
     intent.category = 'ELECTRONICS';
     intent.subcategory = 'AUDIO';
     intent.productType = 'HEADPHONES';
     intent.normalizedQuery = 'Wireless Noise Cancelling Headphones';
+    return intent;
+  }
+
+  // 8. FOIL & FOOD WRAP
+  if (lower.includes('foil') || lower.includes('wrap') || lower.includes('tissue')) {
+    intent.category = 'GROCERY';
+    intent.subcategory = 'KITCHEN_ESSENTIALS';
+    intent.productType = 'ALUMINIUM_FOIL';
+    intent.normalizedQuery = 'Food Grade Aluminium Foil Roll';
     return intent;
   }
 

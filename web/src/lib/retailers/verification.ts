@@ -11,18 +11,19 @@ export function verifyOfferStatus(offer: StoreOffer): {
   const ageInHours = (now - checkedAtTime) / (1000 * 60 * 60);
 
   const priceVerifiedAt = offer.checkedAt || new Date().toISOString();
+  const isStale = ageInHours > 24 || Boolean(offer.staleVerification);
 
   if (offer.sourceType === 'mock') {
     return {
-      verificationStatus: 'unverified',
-      staleVerification: false,
+      verificationStatus: isStale ? 'verification_stale' : 'unverified',
+      staleVerification: isStale,
       priceVerifiedAt,
       sellerVerified: false,
     };
   }
 
   if (offer.sourceType === 'api' || offer.sourceType === 'affiliate') {
-    if (ageInHours <= 24) {
+    if (!isStale) {
       return {
         verificationStatus: 'verified_live',
         staleVerification: false,
@@ -40,8 +41,8 @@ export function verifyOfferStatus(offer: StoreOffer): {
   }
 
   return {
-    verificationStatus: 'unverified',
-    staleVerification: false,
+    verificationStatus: isStale ? 'verification_stale' : 'unverified',
+    staleVerification: isStale,
     priceVerifiedAt,
     sellerVerified: false,
   };

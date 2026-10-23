@@ -148,9 +148,9 @@ object MayaKnowledgeEngine {
         // 5. Orders, Buying, Payments & Cancellations
         if (q.contains("how to buy") || q.contains("buy kaise") || q.contains("shopping kaise") || q.contains("kharide")) {
             val ans = when (lang) {
-                "hi" -> "कोई उत्पाद खरीदने के लिए, SmartCompare में उत्पाद खोजें और 'Buy Now' या 'View Deal' दबाएं। यह आपको सर्वोत्तम कूपन बचत के साथ सत्यापित पार्टनर स्टोर (Amazon, Flipkart आदि) पर ले जाता है।"
-                "hinglish" -> "Product khareedne ke liye SmartCompare mein 'Buy Now' ya 'View Deal' tap karein. Yeh aapko best verified store (Amazon, Flipkart, Myntra) par direct deal aur active coupons ke saath le jata hai."
-                else -> "To buy an item, search or compare in SmartCompare. Tap 'Buy Now' or 'View Deal' to purchase directly from verified partners (Amazon, Flipkart, Myntra, etc.) with automatic coupon savings."
+                "hi" -> "कोई उत्पाद खरीदने के लिए, SmartCompare में उत्पाद खोजें और 'View Now' या 'View Deal' दबाएं। यह आपको सर्वोत्तम कूपन बचत के साथ सत्यापित स्टोर (Amazon, Flipkart आदि) पर ले जाता है।"
+                "hinglish" -> "Product khareedne ke liye SmartCompare mein 'View Now' ya 'View Deal' tap karein. Yeh aapko best verified store (Amazon, Flipkart, Myntra) par direct deal aur active coupons ke saath le jata hai."
+                else -> "To view or buy an item, search or compare in SmartCompare. Tap 'View Now' or 'View Deal' to open and purchase directly from verified stores (Amazon, Flipkart, Myntra, etc.) with automatic coupon savings."
             }
             return Pair(ans, "BUYING")
         }

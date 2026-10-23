@@ -14,22 +14,31 @@ export class BuyWisePartnerAdapter implements RetailerAdapter {
       const partnerProds = await getPartnerProducts();
       const queryLower = queryStr.toLowerCase().trim();
 
-      // Filter products by search relevance
+      const tokens = queryLower.split(/\s+/).filter(t => t.length > 2);
+
+      // Filter products by search relevance (exact substring or keyword token match)
       const matchingProds = partnerProds.filter(p => {
-        const titleMatch = p.title.toLowerCase().includes(queryLower);
-        const descMatch = p.description.toLowerCase().includes(queryLower);
-        const catMatch = p.category.toLowerCase().includes(queryLower);
-        const subcatMatch = p.subcategory?.toLowerCase().includes(queryLower) || false;
-        const brandMatch = p.brand.toLowerCase().includes(queryLower);
-        return titleMatch || descMatch || catMatch || subcatMatch || brandMatch;
+        const titleLower = p.title.toLowerCase();
+        const descLower = p.description.toLowerCase();
+        const catLower = p.category.toLowerCase();
+        const subcatLower = (p.subcategory || '').toLowerCase();
+        const brandLower = p.brand.toLowerCase();
+
+        if (titleLower.includes(queryLower) || descLower.includes(queryLower) || catLower.includes(queryLower)) {
+          return true;
+        }
+        return tokens.length > 0 && tokens.some(tok => 
+          titleLower.includes(tok) || descLower.includes(tok) || catLower.includes(tok) || subcatLower.includes(tok) || brandLower.includes(tok)
+        );
       });
 
       const offers: StoreOffer[] = matchingProds.map(p => ({
         id: p.id,
         retailerId: this.id,
-        store: `🟢 ${p.partnerName} (BuyWise Partner)`,
+        store: '🟢 BuyWise Store',
         title: p.title,
-        url: `/partners?product=${p.id}`,
+        url: p.productUrl && p.productUrl.startsWith('http') ? p.productUrl : `https://buywiseai.pajonline.co.in/partners?product=${p.id}`,
+        directProductUrl: `https://buywiseai.pajonline.co.in/partners?product=${p.id}`,
         price: p.sellingPrice,
         currency: 'INR',
         originalPrice: p.mrp,

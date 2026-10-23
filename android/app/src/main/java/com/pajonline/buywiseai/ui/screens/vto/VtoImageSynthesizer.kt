@@ -101,49 +101,55 @@ object VtoImageSynthesizer {
         }
 
         // 3. Fallback Engine: Canonical BuyWise Server (/api/vto/generate with Quality Gate)
-        try {
-            val serverUrl = "${com.pajonline.buywiseai.data.api.ApiClient.BASE_URL}/api/vto/generate"
-            Log.d(TAG, "Executing BuyWise Server VTO Fallback via $serverUrl...")
-            val payload = JSONObject().apply {
-                put("userImageBase64", userBase64)
-                put("garmentImageUrl", garment.imageUrl)
-                put("category", garment.category)
-                put("title", garment.title)
-                put("mode", mode.name)
-            }
-            val request = okhttp3.Request.Builder()
-                .url(serverUrl)
-                .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            val contentType = response.header("Content-Type", "") ?: ""
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: ""
-                if (!contentType.contains("application/json") || bodyStr.trim().startsWith("<")) {
-                    Log.w(TAG, "Server endpoint returned non-JSON response ($contentType). Host may be serving static HTML fallback.")
-                } else {
-                    val respJson = JSONObject(bodyStr)
-                    if (respJson.optBoolean("success", false)) {
-                        val rawB64 = respJson.optString("imageBase64", "")
-                        val cleanB64 = if (rawB64.contains(",")) rawB64.substringAfter(",") else rawB64
-                        if (cleanB64.isNotEmpty()) {
-                            val decodedBytes = Base64.decode(cleanB64, Base64.DEFAULT)
-                            FileOutputStream(outputFile).use { fos ->
-                                fos.write(decodedBytes)
-                            }
-                            Log.d(TAG, "🎉 Success via BuyWise Server Engine (${respJson.optString("modeUsed")}): ${outputFile.length()} bytes")
-                            return@withContext true
-                        }
-                    } else {
-                        Log.w(TAG, "Server VTO rejected result: ${respJson.optString("message")}")
-                    }
+        val serverEndpoints = listOf(
+            "${com.pajonline.buywiseai.data.api.ApiClient.BASE_URL}/api/vto/generate",
+            "https://buywiseai--pajonline-shopping.asia-southeast1.hosted.app/api/vto/generate"
+        )
+        for (serverUrl in serverEndpoints.distinct()) {
+            try {
+                Log.d(TAG, "Executing BuyWise Server VTO Fallback via $serverUrl...")
+                val payload = JSONObject().apply {
+                    put("userImageBase64", userBase64)
+                    put("garmentImageUrl", garment.imageUrl)
+                    put("category", garment.category)
+                    put("title", garment.title)
+                    put("mode", mode.name)
                 }
-            } else {
-                Log.w(TAG, "Server VTO returned HTTP ${response.code}: ${response.message}")
+                val request = okhttp3.Request.Builder()
+                    .url(serverUrl)
+                    .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                    .build()
+
+                val response = httpClient.newCall(request).execute()
+                val contentType = response.header("Content-Type", "") ?: ""
+                if (response.isSuccessful) {
+                    val bodyStr = response.body?.string() ?: ""
+                    if (!contentType.contains("application/json") || bodyStr.trim().startsWith("<")) {
+                        Log.w(TAG, "Server endpoint $serverUrl returned non-JSON response ($contentType). Host may be serving static HTML fallback.")
+                        continue
+                    } else {
+                        val respJson = JSONObject(bodyStr)
+                        if (respJson.optBoolean("success", false)) {
+                            val rawB64 = respJson.optString("imageBase64", "")
+                            val cleanB64 = if (rawB64.contains(",")) rawB64.substringAfter(",") else rawB64
+                            if (cleanB64.isNotEmpty()) {
+                                val decodedBytes = Base64.decode(cleanB64, Base64.DEFAULT)
+                                FileOutputStream(outputFile).use { fos ->
+                                    fos.write(decodedBytes)
+                                }
+                                Log.d(TAG, "🎉 Success via BuyWise Server Engine (${respJson.optString("modeUsed")}): ${outputFile.length()} bytes")
+                                return@withContext true
+                            }
+                        } else {
+                            Log.w(TAG, "Server VTO rejected result: ${respJson.optString("message")}")
+                        }
+                    }
+                } else {
+                    Log.w(TAG, "Server VTO $serverUrl returned HTTP ${response.code}: ${response.message}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Server VTO call to $serverUrl failed: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Server VTO fallback failed: ${e.message}", e)
         }
 
         // Under NO circumstances do we fall back to 2D cutout pasting!
