@@ -1,8 +1,9 @@
-export const dynamic = "force-static";
-import { NextResponse } from 'next/server';
+export const dynamic = "force-dynamic";
+import { NextRequest, NextResponse } from 'next/server';
 import { executeComparison, executeCanonicalComparison } from '@/lib/comparison/compare';
 import { isValidQuery } from '@/lib/comparison/validation';
 import { CanonicalProduct } from '@/lib/query/types';
+import { normalizeTextQueryToCanonical } from '@/lib/query/normalize';
 import { checkRateLimit } from '@/lib/security/rate-limiter';
 import { sanitizeQuery } from '@/lib/security/validator';
 import { validateCorsOrigin, getCorsHeaders } from '@/lib/security/cors';
@@ -22,7 +23,7 @@ export async function OPTIONS(request: Request) {
   });
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const correlationId = getCorrelationId(request);
   const origin = request.headers.get('origin');
@@ -52,8 +53,11 @@ export async function GET(request: Request) {
     );
   }
 
-  const { searchParams } = new URL(request.url);
-  const rawQuery = searchParams.get('q');
+  const url = new URL(request.url);
+  const rawQuery = request.nextUrl?.searchParams?.get('q') || 
+                   request.nextUrl?.searchParams?.get('query') || 
+                   url.searchParams.get('q') || 
+                   url.searchParams.get('query');
 
   if (!isValidQuery(rawQuery)) {
     return NextResponse.json(
@@ -128,17 +132,65 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { canonical, mode = 'exact' } = body;
+    const { canonical, q, query, mode = 'exact' } = body || {};
 
-    if (!canonical || typeof canonical !== 'object') {
+    const queryString = (typeof q === 'string' && q.trim()) || (typeof query === 'string' && query.trim()) || null;
+
+    if (!canonical && !queryString) {
       return NextResponse.json(
-        { error: 'CanonicalProduct object is required in request body.' },
+        { error: 'Search query or CanonicalProduct object is required in request body.' },
         { status: 400, headers: { 'X-Correlation-Id': correlationId, ...getCorsHeaders(origin), ...getSecurityHeaders() } }
       );
     }
 
     const searchMode = mode === 'similar' ? 'similar' : 'exact';
-    const comparisonResult = await executeCanonicalComparison(canonical as CanonicalProduct, searchMode);
+    let comparisonResult;
+    let loggedSku = 'unknown';
+
+    if (canonical && typeof canonical === 'object') {
+      const title = (canonical.title || canonical.rawInput || '').trim();
+      if (!title) {
+        return NextResponse.json(
+          { error: 'CanonicalProduct must contain a valid title or rawInput.' },
+          { status: 400, headers: { 'X-Correlation-Id': correlationId, ...getCorsHeaders(origin), ...getSecurityHeaders() } }
+        );
+      }
+
+      const base = normalizeTextQueryToCanonical(title);
+      const safeCanonical: CanonicalProduct = {
+        ...base,
+        id: canonical.id || base.id,
+        title,
+        brand: canonical.brand !== undefined ? canonical.brand : base.brand,
+        model: canonical.model !== undefined ? canonical.model : base.model,
+        category: canonical.category !== undefined ? canonical.category : base.category,
+        subcategory: canonical.subcategory !== undefined ? canonical.subcategory : base.subcategory,
+        rawInput: canonical.rawInput || title,
+        exactSearchQueries: Array.isArray(canonical.exactSearchQueries) && canonical.exactSearchQueries.length > 0
+          ? canonical.exactSearchQueries
+          : base.exactSearchQueries,
+        broadSearchQueries: Array.isArray(canonical.broadSearchQueries) && canonical.broadSearchQueries.length > 0
+          ? canonical.broadSearchQueries
+          : base.broadSearchQueries,
+        similarSearchQueries: Array.isArray(canonical.similarSearchQueries) && canonical.similarSearchQueries.length > 0
+          ? canonical.similarSearchQueries
+          : base.similarSearchQueries,
+      };
+
+      loggedSku = safeCanonical.title;
+      comparisonResult = await executeCanonicalComparison(safeCanonical, searchMode);
+    } else {
+      const cleanQuery = sanitizeQuery(queryString!);
+      if (!isValidQuery(cleanQuery)) {
+        return NextResponse.json(
+          { error: 'Search query is required and must be within length limits.' },
+          { status: 400, headers: { 'X-Correlation-Id': correlationId, ...getCorsHeaders(origin), ...getSecurityHeaders() } }
+        );
+      }
+      loggedSku = cleanQuery;
+      comparisonResult = await executeComparison(cleanQuery);
+    }
+
     const durationMs = Date.now() - startTime;
 
     emitTelemetryEvent({
@@ -147,7 +199,7 @@ export async function POST(request: Request) {
       severity: 'info',
       operation: 'compare_post',
       durationMs,
-      details: { sku: canonical.title, offerCount: comparisonResult.stores.length },
+      details: { sku: loggedSku, offerCount: comparisonResult.stores.length },
     });
 
     return NextResponse.json(comparisonResult, {

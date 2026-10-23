@@ -7,10 +7,11 @@ export function selectRetailerQuery(
 ): string {
   if (searchMode === 'similar') {
     return (
-      canonical.similarSearchQueries[0] ||
-      canonical.broadSearchQueries[0] ||
+      canonical.similarSearchQueries?.[0] ||
+      canonical.broadSearchQueries?.[0] ||
       canonical.rawInput ||
-      canonical.title
+      canonical.title ||
+      ''
     );
   }
 
@@ -20,25 +21,29 @@ export function selectRetailerQuery(
     case 'ebay':
       // Amazon & eBay perform best with precise brand + model query strings
       return (
-        canonical.exactSearchQueries[0] ||
+        canonical.exactSearchQueries?.[0] ||
         canonical.title ||
-        canonical.rawInput
+        canonical.rawInput ||
+        ''
       );
 
     case 'flipkart':
       // Flipkart performs best with slightly broader title/category queries
       return (
-        canonical.exactSearchQueries[1] ||
-        canonical.exactSearchQueries[0] ||
-        canonical.broadSearchQueries[0] ||
-        canonical.title
+        canonical.exactSearchQueries?.[1] ||
+        canonical.exactSearchQueries?.[0] ||
+        canonical.broadSearchQueries?.[0] ||
+        canonical.title ||
+        canonical.rawInput ||
+        ''
       );
 
     default:
       return (
-        canonical.exactSearchQueries[0] ||
+        canonical.exactSearchQueries?.[0] ||
         canonical.title ||
-        canonical.rawInput
+        canonical.rawInput ||
+        ''
       );
   }
 }
