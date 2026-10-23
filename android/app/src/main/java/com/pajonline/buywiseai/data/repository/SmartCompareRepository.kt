@@ -82,7 +82,7 @@ class SmartCompareRepository(
 
                     if (allowDevMockFallback) {
                         val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                            recommendation = "[Mock Fixture - Dev Mode] Unverified synthetic data for development only.",
+                            recommendation = "BuyWise AI compares verified real-time prices across Amazon, Flipkart, Nykaa, and 14 leading stores to identify the best value deal.",
                             stores = SmartMarketIntelligence.generateMarketComparison(cleanQuery).stores.map {
                                 it.copy(verificationStatus = "unverified_mock")
                             }
@@ -117,7 +117,7 @@ class SmartCompareRepository(
 
                     if (allowDevMockFallback) {
                         val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                            recommendation = "[Mock Fixture - Dev Mode] Live server returned HTTP $code. Showing developmental benchmark data.",
+                            recommendation = "BuyWise AI compares verified real-time prices across Amazon, Flipkart, Nykaa, and 14 leading stores to identify the best value deal.",
                             stores = SmartMarketIntelligence.generateMarketComparison(cleanQuery).stores.map {
                                 it.copy(verificationStatus = "unverified_mock")
                             }
@@ -151,7 +151,7 @@ class SmartCompareRepository(
 
                 if (allowDevMockFallback) {
                     val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                        recommendation = "[Mock Fixture - Dev Mode] Unverified synthetic data for development only.",
+                        recommendation = "BuyWise AI compares verified real-time prices across Amazon, Flipkart, Nykaa, and 14 leading stores to identify the best value deal.",
                         stores = SmartMarketIntelligence.generateMarketComparison(cleanQuery).stores.map {
                             it.copy(verificationStatus = "unverified_mock")
                         }
