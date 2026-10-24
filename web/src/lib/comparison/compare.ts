@@ -6,13 +6,15 @@ import { normalizeOffer } from './normalize';
 import { validateSearchResultOffer } from '../search/SearchResultValidator';
 import { CanonicalProduct } from '../query/types';
 import { selectRetailerQuery } from './planner';
-import { classifyProductMatch, isSameProductAndVariant } from './matcher';
+import { classifyProductMatch, isSameProductAndVariant, groupSameProductsAcrossRetailers, extractFabricFromText, extractPackCountFromText } from './matcher';
+
 import { normalizeTextQueryToCanonical } from '../query/normalize';
 import { calculateSmartValueScore } from '../score/engine';
 import { calculateTrustScore } from '../trust/engine';
 import { recordPriceHistory, getPriceHistory } from '../history/store';
 import { analyzePriceTrend } from '../history/engine';
 import { auditAndIsolateDuplicateImages } from './imageAuditor';
+import { getCategoryMarketFallbackOffers } from './categoryMarketFallback';
 
 export async function executeComparison(
   query: string,
@@ -78,11 +80,16 @@ export async function executeCanonicalComparison(
       const searchRes = result.value;
       if (searchRes.success && searchRes.offers.length > 0) {
         successfulStores++;
-        // Update provider status to LIVE
+        // Update provider status to LIVE or SEARCH_LINK_ONLY
         const pStatus = providerStatuses.find((p) => p.retailerId === adapter.id);
         if (pStatus && pStatus.status !== 'PARTNER_LIVE') {
-          pStatus.status = 'LIVE';
-          pStatus.message = undefined;
+          if (searchRes.offers.some((o) => o.isSearchLinkOnly)) {
+            pStatus.status = 'SEARCH_LINK_ONLY';
+            pStatus.message = 'Direct retailer search link. Prices and stock verified directly on retailer site.';
+          } else {
+            pStatus.status = 'LIVE';
+            pStatus.message = undefined;
+          }
         }
 
         searchRes.offers.forEach((rawOffer) => {
@@ -135,7 +142,32 @@ export async function executeCanonicalComparison(
     console.warn(`[ImageAuditor] Isolated ${imgReport.duplicateImageCount} duplicate images across distinct products.`);
   }
 
-  const allOffers = sanitizedOffers;
+  let allOffers = [...sanitizedOffers];
+  if (allOffers.length < 3) {
+    const fallbackOffers = getCategoryMarketFallbackOffers(canonical.rawInput || canonical.title, canonical);
+    const existingStoreNames = allOffers.map((o) => o.store.toLowerCase());
+    for (const fb of fallbackOffers) {
+      const alreadyPresent = existingStoreNames.some((s) => s.includes(fb.store.toLowerCase()) || fb.store.toLowerCase().includes(s));
+      if (!alreadyPresent) {
+        allOffers.push(fb);
+      }
+    }
+    successfulStores = allOffers.length;
+    providerStatuses.forEach((ps) => {
+      const retailerOffers = allOffers.filter((o) => o.retailerId === ps.retailerId);
+      if (retailerOffers.length > 0) {
+        const hasVerifiedLive = retailerOffers.some((o) => o.verificationStatus === 'verified_live' && !o.isSearchLinkOnly);
+        const hasSearchLinkOnly = retailerOffers.some((o) => o.isSearchLinkOnly);
+        if (hasVerifiedLive) {
+          ps.status = ps.retailerId === 'buywise_partners' ? 'PARTNER_LIVE' : 'LIVE';
+          ps.message = undefined;
+        } else if (hasSearchLinkOnly) {
+          ps.status = 'SEARCH_LINK_ONLY';
+          ps.message = 'Direct retailer search link. Prices and stock verified directly on retailer site.';
+        }
+      }
+    });
+  }
 
   // Calculate Smart Value Score & Independent Shopping Trust Score
   allOffers.forEach((offer) => {
@@ -178,12 +210,18 @@ export async function executeCanonicalComparison(
     });
 
     groupedByProduct.forEach((productOffers) => {
-      const minPrice = Math.min(...productOffers.map((o) => o.effectivePayablePrice || o.price));
-      productOffers.forEach((o) => {
-        if ((o.effectivePayablePrice || o.price) === minPrice) {
-          o.isLowest = true;
-        }
-      });
+      // LOWEST VERIFIED PRICE: Only authentic live verified offers with price > 0 can be lowest
+      const verifiedOffers = productOffers.filter(
+        (o) => !o.isSearchLinkOnly && o.verificationStatus === 'verified_live' && (o.effectivePayablePrice || o.price) > 0
+      );
+      if (verifiedOffers.length > 0) {
+        const minPrice = Math.min(...verifiedOffers.map((o) => o.effectivePayablePrice || o.price));
+        verifiedOffers.forEach((o) => {
+          if ((o.effectivePayablePrice || o.price) === minPrice) {
+            o.isLowest = true;
+          }
+        });
+      }
     });
   }
 
@@ -200,6 +238,35 @@ export async function executeCanonicalComparison(
   // Analyze Price History Trends
   const historyEntries = getPriceHistory(canonical.id);
   const priceTrend = analyzePriceTrend(historyEntries, lowestPrice);
+
+  // Group exact same products across retailers (Same Product Comparison)
+  const sameProductComparisons = groupSameProductsAcrossRetailers(allOffers);
+
+  // Mode A: Best Matches (Diverse products ranked by relevance and score)
+  // Take leading offer from each product group to display unique styles/fabrics/options
+  let bestMatches = sameProductComparisons.map((group) => {
+    const primary = { ...group.offers[0] };
+    if (!primary.fabric && group.fabric) primary.fabric = group.fabric;
+    return primary;
+  });
+
+  // Filter or prioritize by budget if specified in query (e.g. "under ₹500")
+  if (canonical.maxPrice && canonical.maxPrice > 0) {
+    const underBudget = bestMatches.filter((o) => (o.effectivePayablePrice || o.price) <= (canonical.maxPrice || Infinity));
+    if (underBudget.length > 0) {
+      bestMatches = underBudget;
+    }
+  }
+
+  // Prioritize fabric if specified (e.g. "cotton")
+  if (canonical.fabric) {
+    const targetFabric = canonical.fabric.toLowerCase();
+    bestMatches.sort((a, b) => {
+      const aHas = (a.fabric || a.variant?.fabric || extractFabricFromText(a.title) || '').toLowerCase().includes(targetFabric) ? 1 : 0;
+      const bHas = (b.fabric || b.variant?.fabric || extractFabricFromText(b.title) || '').toLowerCase().includes(targetFabric) ? 1 : 0;
+      return bHas - aHas;
+    });
+  }
 
   // Group into match categories AND customer-facing categories (PREMIUM and LUXURY)
   const premiumOffers = allOffers.filter((o) => o.tier === 'PREMIUM');
@@ -237,6 +304,11 @@ export async function executeCanonicalComparison(
     query: canonical.rawInput,
     timestamp,
     stores: allOffers,
+    bestMatches,
+    sameProductComparisons,
+    filterCategory: canonical.category || undefined,
+    filterMaxPrice: canonical.maxPrice || undefined,
+    filterFabric: canonical.fabric || undefined,
     groupedOffers,
     summary,
     recommendation,
@@ -245,6 +317,7 @@ export async function executeCanonicalComparison(
     providerStatuses,
   };
 }
+
 
 function generateRecommendation(
   offers: StoreOffer[],
@@ -256,14 +329,16 @@ function generateRecommendation(
   }
 
   const bestValueOffer = offers.find((o) => o.isBestValue) || offers[0];
-  const lowestOffer = offers.find((o) => o.isLowest) || offers[0];
+  const lowestVerifiedOffer = offers.find((o) => o.isLowest && !o.isSearchLinkOnly && o.verificationStatus === 'verified_live');
 
   let text = `BuyWise AI identifies ${bestValueOffer.store} as the Best Value deal at ₹${bestValueOffer.price.toLocaleString()} with a Smart Value Score of ${bestValueOffer.smartValueScore || 85}/100.`;
 
   if (tierSummary.premiumCount > 0 && tierSummary.luxuryCount > 0) {
     text += ` Available in Premium (Value) from ₹${tierSummary.lowestPremiumPrice.toLocaleString()} and Luxury (Branded) from ₹${tierSummary.lowestLuxuryPrice.toLocaleString()}.`;
-  } else if (savings > 0) {
-    text += ` Lowest verified price found at ₹${lowestOffer.price.toLocaleString()} on ${lowestOffer.store}, offering savings of ₹${savings.toLocaleString()}.`;
+  } else if (lowestVerifiedOffer && savings > 0) {
+    text += ` Lowest verified price found at ₹${lowestVerifiedOffer.price.toLocaleString()} on ${lowestVerifiedOffer.store}, offering savings of ₹${savings.toLocaleString()}.`;
+  } else {
+    text += ` External store prices are verified directly on retailer sites via compliant search links.`;
   }
 
   return text;

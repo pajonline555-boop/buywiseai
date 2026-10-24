@@ -40,6 +40,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -96,6 +97,7 @@ fun SearchScreen(
     val listState = rememberLazyListState()
     var isHeaderVisible by remember { mutableStateOf(true) }
     var selectedTierFilter by remember { mutableStateOf("ALL") }
+    var selectedViewMode by remember { mutableStateOf("BEST_MATCHES") } // BEST_MATCHES | SAME_PRODUCT | ALL_STORES
 
     val currentViewModelQuery = viewModel.currentQuery
     var query by remember { mutableStateOf(currentViewModelQuery.ifBlank { "samsung tv" }) }
@@ -103,11 +105,13 @@ fun SearchScreen(
     val executeSearch = { searchStr: String ->
         isHeaderVisible = true
         selectedTierFilter = "ALL"
+        selectedViewMode = "BEST_MATCHES"
         coroutineScope.launch {
             try {
                 listState.scrollToItem(0)
             } catch (_: Exception) {}
         }
+
         viewModel.performSearch(searchStr)
     }
 
@@ -210,10 +214,14 @@ fun SearchScreen(
 
     // Popular Quick Comparison Suggestions
     val trendingSearches = listOf(
+        "👗 Girl Dresses" to "Girl Dresses",
         "📺 Samsung 43\" 4K TV" to "Samsung 43 inch 4K TV",
         "📱 iPhone 16" to "iPhone 16",
         "💻 MacBook Air M2" to "MacBook Air M2",
         "🎧 Sony XM5" to "Sony WH-1000XM5",
+        "💄 Maybelline Lipstick" to "Maybelline Lipstick",
+        "👟 Running Shoes" to "Running Shoes",
+        "💍 Kamarbandh" to "Kamarbandh",
         "👗 Banarasi Saree" to "Banarasi Silk Saree",
         "🧺 LG 7kg Washing Machine" to "LG 7kg Front Load Washing Machine",
         "🧊 Samsung Refrigerator" to "Samsung 236L Refrigerator"
@@ -414,7 +422,37 @@ fun SearchScreen(
 
                             if (response.stores.isEmpty()) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text("No store offers found for this query.", color = Color.Gray)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(24.dp)
+                                    ) {
+                                        Text("No store offers found for this query.", color = Color.Gray, fontSize = 14.sp)
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text("Explore Popular Categories:", color = BuyWiseCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Button(
+                                                onClick = { 
+                                                    query = "Girl Dresses"
+                                                    executeSearch("Girl Dresses") 
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B2E)),
+                                                border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.5f))
+                                            ) {
+                                                Text("👗 Girl Dresses", color = Color.White, fontSize = 12.sp)
+                                            }
+                                            Button(
+                                                onClick = { 
+                                                    query = "Samsung 43 inch 4K TV"
+                                                    executeSearch("Samsung 43 inch 4K TV") 
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B2E)),
+                                                border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.5f))
+                                            ) {
+                                                Text("📺 4K Smart TV", color = Color.White, fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 LazyColumn(
@@ -766,72 +804,271 @@ fun SearchScreen(
                                                 }
                                             }
                                         }
+                                    }
 
-                                        // Filter Chips: All, Lowest Price, Branded
-                                        item(key = "tier_filter_tabs") {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                val bestLow = lowestPriceOffers.minOfOrNull { it.price }?.toInt() ?: 0
-                                                val bestBrd = brandedOffers.minOfOrNull { it.price }?.toInt() ?: 0
+                                        // Multi-Retailer Comparison Mode Selector (Google Shopping Style)
+                                        item(key = "comparison_mode_selector") {
+                                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    val bestCount = response.bestMatches.ifEmpty { response.stores }.size
+                                                    val sameCount = response.sameProductComparisons.size
+                                                    val allCount = response.stores.size
 
-                                                val tabs = listOf(
-                                                    Triple("ALL", "All Offers (${response.stores.size})", Color.White),
-                                                    Triple("LOWEST_PRICE", "👑 Lowest (₹$bestLow)", BuyWiseEmerald),
-                                                    Triple("BRANDED", "💎 Branded (₹$bestBrd)", Color(0xFFC4B5FD))
-                                                )
+                                                    val modeTabs = listOf(
+                                                        Triple("BEST_MATCHES", "🌟 Best Matches ($bestCount)", BuyWiseCyan),
+                                                        Triple("SAME_PRODUCT", "🎯 Same Product ($sameCount)", BuyWiseEmerald),
+                                                        Triple("ALL_STORES", "🏪 All Stores ($allCount)", Color(0xFFC4B5FD))
+                                                    )
 
-                                                tabs.forEach { (key, label, activeColor) ->
-                                                    val isSelected = selectedTierFilter == key
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .background(
-                                                                if (isSelected) activeColor.copy(alpha = 0.18f) else Color(0xFF1B172E),
-                                                                RoundedCornerShape(20.dp)
+                                                    modeTabs.forEach { (modeKey, modeLabel, activeColor) ->
+                                                        val isSelected = selectedViewMode == modeKey
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .background(
+                                                                    if (isSelected) activeColor.copy(alpha = 0.18f) else Color(0xFF1B172E),
+                                                                    RoundedCornerShape(8.dp)
+                                                                )
+                                                                .border(
+                                                                    1.dp,
+                                                                    if (isSelected) activeColor else Color(0xFF2C2548),
+                                                                    RoundedCornerShape(8.dp)
+                                                                )
+                                                                .clickable { selectedViewMode = modeKey }
+                                                                .padding(vertical = 8.dp),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = modeLabel,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                                color = if (isSelected) activeColor else Color.LightGray,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
                                                             )
-                                                            .border(
-                                                                1.dp,
-                                                                if (isSelected) activeColor else Color.DarkGray.copy(alpha = 0.4f),
-                                                                RoundedCornerShape(20.dp)
+                                                        }
+                                                    }
+                                                }
+
+                                                Spacer(modifier = Modifier.height(6.dp))
+
+                                                if (selectedViewMode == "BEST_MATCHES") {
+                                                    Text(
+                                                        text = "💡 Best Matches: Ranked by style, fabric & relevance. Compare exact identical models under 'Same Product'.",
+                                                        fontSize = 11.sp,
+                                                        color = Color.LightGray,
+                                                        lineHeight = 14.sp
+                                                    )
+                                                } else if (selectedViewMode == "SAME_PRODUCT") {
+                                                    Text(
+                                                        text = "🎯 Same Product: Aggregating the identical brand & design across multiple online platforms.",
+                                                        fontSize = 11.sp,
+                                                        color = BuyWiseEmerald,
+                                                        lineHeight = 14.sp
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = "🏪 All Stores: Live stream of all detected store listings across 14 retailers.",
+                                                        fontSize = 11.sp,
+                                                        color = Color.Gray,
+                                                        lineHeight = 14.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Tier filter tabs (only in ALL_STORES mode)
+                                        if (selectedViewMode == "ALL_STORES") {
+                                            item(key = "tier_filter_tabs") {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    val bestLow = lowestPriceOffers.minOfOrNull { it.price }?.toInt() ?: 0
+                                                    val bestBrd = brandedOffers.minOfOrNull { it.price }?.toInt() ?: 0
+
+                                                    val tabs = listOf(
+                                                        Triple("ALL", "All Offers (${response.stores.size})", Color.White),
+                                                        Triple("LOWEST_PRICE", "👑 Lowest (₹$bestLow)", BuyWiseEmerald),
+                                                        Triple("BRANDED", "💎 Branded (₹$bestBrd)", Color(0xFFC4B5FD))
+                                                    )
+
+                                                    tabs.forEach { (key, label, activeColor) ->
+                                                        val isSelected = selectedTierFilter == key
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .background(
+                                                                    if (isSelected) activeColor.copy(alpha = 0.18f) else Color(0xFF1B172E),
+                                                                    RoundedCornerShape(20.dp)
+                                                                )
+                                                                .border(
+                                                                    1.dp,
+                                                                    if (isSelected) activeColor else Color.DarkGray.copy(alpha = 0.4f),
+                                                                    RoundedCornerShape(20.dp)
+                                                                )
+                                                                .clickable { selectedTierFilter = key }
+                                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = label,
+                                                                fontSize = 11.sp,
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                                color = if (isSelected) activeColor else Color.LightGray
                                                             )
-                                                            .clickable { selectedTierFilter = key }
-                                                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = label,
-                                                            fontSize = 11.sp,
-                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                            color = if (isSelected) activeColor else Color.LightGray
-                                                        )
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
 
-                                    // Store Comparison Product Offers
-                                    items(
-                                        items = displayedOffers,
-                                        key = { offer -> "${offer.store}_${offer.price}_${offer.title.hashCode()}" }
-                                    ) { offer ->
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    viewModel.selectOffer(offer)
-                                                    onOfferSelect(offer)
-                                                },
-                                            colors = CardDefaults.cardColors(containerColor = Color(0xFF161326)),
-                                            shape = RoundedCornerShape(14.dp),
-                                            border = BorderStroke(
-                                                width = if (offer.isLowest == true || offer.matchType == "LOWEST_PRICE") 1.5.dp else 1.dp,
-                                                color = if (offer.matchType == "LOWEST_PRICE" || offer.isLowest == true) BuyWiseEmerald.copy(alpha = 0.6f)
-                                                        else if (offer.matchType == "BRANDED") Color(0xFFA78BFA).copy(alpha = 0.6f)
-                                                        else if (offer.isBestValue == true) BuyWiseGold.copy(alpha = 0.5f)
-                                                        else Color(0xFF28233D)
-                                            )
-                                        ) {
+                                    // MODE 2: SAME PRODUCT MULTI-STORE COMPARISON
+                                    if (selectedViewMode == "SAME_PRODUCT" && response.sameProductComparisons.isNotEmpty()) {
+                                        items(
+                                            items = response.sameProductComparisons,
+                                            key = { group -> group.id }
+                                        ) { group ->
+                                            Card(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = CardDefaults.cardColors(containerColor = Color(0xFF151226)),
+                                                shape = RoundedCornerShape(14.dp),
+                                                border = BorderStroke(1.dp, BuyWiseEmerald.copy(alpha = 0.5f))
+                                            ) {
+                                                Column(modifier = Modifier.padding(14.dp)) {
+                                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(64.dp)
+                                                                .background(Color(0xFF0F0C1B), RoundedCornerShape(8.dp)),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            if (!group.primaryImageUrl.isNullOrBlank()) {
+                                                                AsyncImage(
+                                                                    model = group.primaryImageUrl,
+                                                                    contentDescription = group.productTitle,
+                                                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                                                                    contentScale = ContentScale.Crop
+                                                                )
+                                                            } else {
+                                                                Text("👗", fontSize = 24.sp)
+                                                            }
+                                                        }
+
+                                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = group.productTitle,
+                                                                fontSize = 13.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color.White,
+                                                                maxLines = 2,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                            if (!group.variantInfo.isNullOrBlank()) {
+                                                                Spacer(modifier = Modifier.height(2.dp))
+                                                                Text(
+                                                                    text = "🌿 ${group.variantInfo}",
+                                                                    fontSize = 10.5.sp,
+                                                                    color = BuyWiseEmerald,
+                                                                    fontWeight = FontWeight.SemiBold
+                                                                )
+                                                            }
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                            Text(
+                                                                text = "Compared across ${group.storeCount} online stores: from ₹${group.lowestPrice.toInt()}",
+                                                                fontSize = 11.sp,
+                                                                color = BuyWiseCyan,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                    }
+
+                                                    Spacer(modifier = Modifier.height(10.dp))
+                                                    HorizontalDivider(color = Color(0xFF231E3D), thickness = 1.dp)
+                                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                                    // Multi-store listing rows
+                                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                        group.offers.forEach { storeOffer ->
+                                                            Row(
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .background(Color(0xFF1B1730), RoundedCornerShape(8.dp))
+                                                                    .clickable {
+                                                                        viewModel.selectOffer(storeOffer)
+                                                                        onOfferSelect(storeOffer)
+                                                                    }
+                                                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                            ) {
+                                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .background(getStoreBadgeColor(storeOffer.store), RoundedCornerShape(4.dp))
+                                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Text(storeOffer.store, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                                    }
+                                                                    if (storeOffer.price == group.lowestPrice) {
+                                                                        Text("👑 Lowest", fontSize = 9.sp, color = BuyWiseEmerald, fontWeight = FontWeight.Bold)
+                                                                    }
+                                                                }
+
+                                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                                    Text(
+                                                                        text = "₹${NumberFormat.getIntegerInstance(Locale.forLanguageTag("en-IN")).format(storeOffer.price.toInt())}",
+                                                                        fontSize = 14.sp,
+                                                                        fontWeight = FontWeight.Bold,
+                                                                        color = if (storeOffer.price == group.lowestPrice) BuyWiseEmerald else Color.White
+                                                                    )
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .background(BuyWiseCyan.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Text("VIEW ➔", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = BuyWiseCyan)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // MODES 1 & 3: BEST MATCHES & ALL STORES
+                                        val activeList = if (selectedViewMode == "BEST_MATCHES") {
+                                            response.bestMatches.ifEmpty { displayedOffers }
+                                        } else {
+                                            displayedOffers
+                                        }
+
+                                        items(
+                                            items = activeList,
+                                            key = { offer -> "${offer.store}_${offer.price}_${offer.title.hashCode()}" }
+                                        ) { offer ->
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        viewModel.selectOffer(offer)
+                                                        onOfferSelect(offer)
+                                                    },
+                                                colors = CardDefaults.cardColors(containerColor = Color(0xFF161326)),
+                                                shape = RoundedCornerShape(14.dp),
+                                                border = BorderStroke(
+                                                    width = if (offer.isLowest == true || offer.matchType == "LOWEST_PRICE") 1.5.dp else 1.dp,
+                                                    color = if (offer.matchType == "LOWEST_PRICE" || offer.isLowest == true) BuyWiseEmerald.copy(alpha = 0.6f)
+                                                            else if (offer.matchType == "BRANDED") Color(0xFFA78BFA).copy(alpha = 0.6f)
+                                                            else if (offer.isBestValue == true) BuyWiseGold.copy(alpha = 0.5f)
+                                                            else Color(0xFF28233D)
+                                                )
+                                            ) {
+
                                             Column(modifier = Modifier.padding(12.dp)) {
                                                 // Header Row: Store badge + Lowest/Best Value + Trust score
                                                 Row(
@@ -963,6 +1200,43 @@ fun SearchScreen(
 
                                                         Spacer(modifier = Modifier.height(4.dp))
 
+                                                        if (!offer.fabric.isNullOrBlank() || !offer.style.isNullOrBlank() || offer.isSearchLinkOnly == true) {
+                                                            Row(
+                                                                modifier = Modifier.padding(vertical = 2.dp),
+                                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                if (!offer.fabric.isNullOrBlank()) {
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .background(Color(0xFF0D251C), RoundedCornerShape(4.dp))
+                                                                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Text(text = "🌿 ${offer.fabric}", fontSize = 9.5.sp, color = BuyWiseEmerald, fontWeight = FontWeight.SemiBold)
+                                                                    }
+                                                                }
+                                                                if (!offer.style.isNullOrBlank()) {
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .background(Color(0xFF1E1738), RoundedCornerShape(4.dp))
+                                                                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Text(text = "👗 ${offer.style}", fontSize = 9.5.sp, color = Color(0xFFC4B5FD))
+                                                                    }
+                                                                }
+                                                                if (offer.isSearchLinkOnly == true) {
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .background(Color(0xFF262338), RoundedCornerShape(4.dp))
+                                                                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Text(text = "🔗 Direct Search Link", fontSize = 9.sp, color = Color.LightGray)
+                                                                    }
+                                                                }
+                                                            }
+                                                            Spacer(modifier = Modifier.height(3.dp))
+                                                        }
+
                                                         if (offer.rating != null) {
                                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                                 Text("★ ${offer.rating}", fontSize = 11.sp, color = BuyWiseGold, fontWeight = FontWeight.Bold)
@@ -976,6 +1250,7 @@ fun SearchScreen(
                                                             }
                                                             Spacer(modifier = Modifier.height(4.dp))
                                                         }
+
 
                                                         // Price & Discount Line
                                                         Row(
@@ -1050,7 +1325,8 @@ fun SearchScreen(
                                 }
                             }
                         }
-                        else -> {
+                        }
+                        is SmartCompareUiState.Idle -> {
                             // Welcoming initial state with popular categories
                             Column(
                                 modifier = Modifier.fillMaxSize(),

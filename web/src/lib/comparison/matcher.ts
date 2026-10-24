@@ -91,6 +91,36 @@ export function classifyProductTier(
   return 'PREMIUM';
 }
 
+export function extractFabricFromText(text: string): string | null {
+  const lower = (text || '').toLowerCase();
+  if (lower.includes('100% cotton') || lower.includes('pure cotton')) return '100% Cotton';
+  if (lower.includes('banarasi silk') || lower.includes('banarasi festive silk')) return 'Banarasi Silk';
+  if (lower.includes('cotton blend')) return 'Cotton Blend';
+  if (lower.includes('cotton')) return 'Cotton';
+  if (lower.includes('crepe')) return 'Crepe';
+  if (lower.includes('georgette')) return 'Georgette';
+  if (lower.includes('silk')) return 'Silk';
+  if (lower.includes('chiffon')) return 'Chiffon';
+  if (lower.includes('denim')) return 'Denim';
+  if (lower.includes('linen')) return 'Linen';
+  if (lower.includes('polyester')) return 'Polyester';
+  if (lower.includes('net') || lower.includes('tulle')) return 'Net / Tulle';
+  if (lower.includes('rayon') || lower.includes('viscose')) return 'Rayon';
+  return null;
+}
+
+export function extractPackCountFromText(text: string): number {
+  const lower = (text || '').toLowerCase();
+  const packMatch = lower.match(/\bpack\s*of\s*(\d+)\b/i) ||
+                    lower.match(/\bset\s*of\s*(\d+)\b/i) ||
+                    lower.match(/\b(\d+)\s*(?:pack|pcs|pieces)\b/i);
+  if (packMatch) {
+    const qty = parseInt(packMatch[1], 10);
+    if (!isNaN(qty) && qty > 0) return qty;
+  }
+  return 1;
+}
+
 export function isSameProductAndVariant(a: StoreOffer, b: StoreOffer): boolean {
   // Brand check - Different brands must never be the same product
   const brandA = (a.brand || extractBrandFromText(a.title) || '').toLowerCase();
@@ -99,12 +129,26 @@ export function isSameProductAndVariant(a: StoreOffer, b: StoreOffer): boolean {
     return false;
   }
 
-  // Gender check (Men vs Women) - Different genders are distinct products
-  const aMen = /\b(men|mens|men's)\b/i.test(a.title);
+  // Gender check (Men vs Women/Girls) - Different genders are distinct products
+  const aMen = /\b(men|mens|men's|boy|boys)\b/i.test(a.title);
   const aWomen = /\b(women|womens|women's|girls|girl|ladies)\b/i.test(a.title);
-  const bMen = /\b(men|mens|men's)\b/i.test(b.title);
+  const bMen = /\b(men|mens|men's|boy|boys)\b/i.test(b.title);
   const bWomen = /\b(women|womens|women's|girls|girl|ladies)\b/i.test(b.title);
   if ((aMen && bWomen && !aWomen) || (aWomen && bMen && !bMen)) {
+    return false;
+  }
+
+  // Pack Count check - Pack of 1 vs Pack of 5 must NEVER be declared the same product
+  const packA = a.packQty || a.variant?.packQty || extractPackCountFromText(a.title);
+  const packB = b.packQty || b.variant?.packQty || extractPackCountFromText(b.title);
+  if (packA !== packB) {
+    return false;
+  }
+
+  // Fabric / Material check - Cotton vs Crepe vs Polyester must NEVER be grouped as same product
+  const fabricA = a.fabric || a.variant?.fabric || extractFabricFromText(a.title);
+  const fabricB = b.fabric || b.variant?.fabric || extractFabricFromText(b.title);
+  if (fabricA && fabricB && fabricA.toLowerCase() !== fabricB.toLowerCase()) {
     return false;
   }
 
@@ -134,8 +178,83 @@ export function isSameProductAndVariant(a: StoreOffer, b: StoreOffer): boolean {
     return true;
   }
 
+  // Check significant title word overlap if brand and fabric match
+  if (brandA && brandB && brandA === brandB) {
+    const titleA = a.title || a.productTitle || '';
+    const titleB = b.title || b.productTitle || '';
+    const cleanWordsA = titleA.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
+    const cleanWordsB = titleB.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
+    const common = cleanWordsA.filter(w => cleanWordsB.includes(w));
+    if (common.length >= 3) {
+      return true;
+    }
+  }
+
   return Boolean(brandA && modelA && brandA === brandB && modelA === modelB);
 }
+
+export function groupSameProductsAcrossRetailers(offers: StoreOffer[]): import('../retailers/types').SameProductGroup[] {
+  const groups: Array<{
+    id: string;
+    productTitle: string;
+    brand?: string;
+    model?: string;
+    fabric?: string;
+    style?: string;
+    variantInfo?: string;
+    primaryImageUrl?: string;
+    offers: StoreOffer[];
+  }> = [];
+
+  for (const offer of offers) {
+    let matchedGroup = groups.find(g => g.offers.some(existing => isSameProductAndVariant(existing, offer)));
+    if (matchedGroup) {
+      matchedGroup.offers.push(offer);
+    } else {
+      const titleText = offer.title || offer.productTitle || '';
+      const brand = offer.brand || extractBrandFromText(titleText) || undefined;
+      const model = offer.model || extractSneakerModel(titleText) || undefined;
+      const fabric = offer.fabric || offer.variant?.fabric || extractFabricFromText(titleText) || undefined;
+      const pack = offer.packQty || offer.variant?.packQty || extractPackCountFromText(titleText);
+      const variantInfo = [fabric, pack > 1 ? `Pack of ${pack}` : undefined, offer.variant?.size].filter(Boolean).join(' · ');
+
+      groups.push({
+        id: `spg-${groups.length + 1}-${Date.now()}`,
+        productTitle: titleText,
+        brand,
+        model,
+        fabric,
+        style: offer.style,
+        variantInfo: variantInfo || undefined,
+        primaryImageUrl: offer.imageUrl,
+        offers: [offer],
+      });
+    }
+  }
+
+  return groups.map(g => {
+    // Sort offers within group by effective price ascending
+    g.offers.sort((a, b) => (a.effectivePayablePrice || a.price) - (b.effectivePayablePrice || b.price));
+    const lowestPrice = g.offers[0].effectivePayablePrice || g.offers[0].price;
+    const highestPrice = g.offers[g.offers.length - 1].effectivePayablePrice || g.offers[g.offers.length - 1].price;
+
+    return {
+      id: g.id,
+      productTitle: g.productTitle,
+      brand: g.brand,
+      model: g.model,
+      fabric: g.fabric,
+      style: g.style,
+      variantInfo: g.variantInfo,
+      primaryImageUrl: g.primaryImageUrl,
+      lowestPrice,
+      highestPrice,
+      storeCount: new Set(g.offers.map(o => o.store)).size,
+      offers: g.offers,
+    };
+  });
+}
+
 
 export function classifyProductMatch(
   offer: StoreOffer,

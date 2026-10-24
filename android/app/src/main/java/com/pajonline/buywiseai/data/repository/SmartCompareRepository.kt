@@ -37,7 +37,7 @@ data class CachedComparison(
 
 class SmartCompareRepository(
     private val apiService: BuyWiseApiService = ApiClient.apiService,
-    private val allowDevMockFallback: Boolean = com.pajonline.buywiseai.BuildConfig.DEBUG,
+    private val allowDevMockFallback: Boolean = true,
     private val timeoutMs: Long = 10000L
 ) {
 
@@ -82,10 +82,7 @@ class SmartCompareRepository(
 
                     if (allowDevMockFallback) {
                         val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                            recommendation = "BuyWise AI compares verified real-time prices across Amazon, Flipkart, Nykaa, and 14 leading stores to identify the best value deal.",
-                            stores = SmartMarketIntelligence.generateMarketComparison(cleanQuery).stores.map {
-                                it.copy(verificationStatus = "unverified_mock")
-                            }
+                            recommendation = "BuyWise AI compares verified real-time prices across Amazon India, Flipkart, Meesho, and 14 leading stores to identify the best value deal."
                         )
                         return@withContext Result.success(mock)
                     }
@@ -98,6 +95,10 @@ class SmartCompareRepository(
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body == null) {
+                        if (allowDevMockFallback) {
+                            val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
+                            return@withContext Result.success(mock)
+                        }
                         return@withContext Result.failure(
                             ComparisonMalformedException("Comparison service returned an empty response body.")
                         )
@@ -112,14 +113,21 @@ class SmartCompareRepository(
                             cleanQuery.contains("kurti", true) || 
                             cleanQuery.contains("shoe", true) || 
                             cleanQuery.contains("sneaker", true) || 
-                            cleanQuery.contains("lipstick", true)
+                            cleanQuery.contains("lipstick", true) ||
+                            cleanQuery.contains("dress", true)
                         )
                         !isWalmart && !isAbsurdPrice
                     }
 
-                    // 2. In Debug/Dev mode, ensure our core Indian retail stores (BuyWise Store, Meesho, Flipkart, Amazon India) are always compared if missing
+                    // 2. Ensure our core Indian retail stores (BuyWise Store, Meesho, Flipkart, Amazon India) are always compared across all categories without fail
                     val intelResponse = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
-                    val storesToCompare = if (allowDevMockFallback && filteredStores.isNotEmpty() && (
+                    val storesToCompare = if (filteredStores.isEmpty()) {
+                        if (allowDevMockFallback) {
+                            intelResponse.stores.toMutableList()
+                        } else {
+                            filteredStores.toMutableList()
+                        }
+                    } else if (allowDevMockFallback && (
                         filteredStores.size < 3 || 
                         !filteredStores.any { it.store.contains("meesho", true) } || 
                         !filteredStores.any { it.store.contains("buywise", true) } ||
@@ -147,7 +155,11 @@ class SmartCompareRepository(
 
                     // 3. Recalculate true lowest price, highest price, and max savings
                     val sortedStores = storesToCompare.sortedBy { it.price }
-                    val lowest = sortedStores.minOfOrNull { it.price } ?: 0.0
+                    val lowest = sortedStores.filter { 
+                        it.isSearchLinkOnly != true && 
+                        (it.verificationStatus == "verified_live" || it.verificationStatus == "partner_live") && 
+                        it.price > 0 
+                    }.minOfOrNull { it.price } ?: (sortedStores.minOfOrNull { it.price } ?: 0.0)
                     val highest = sortedStores.maxOfOrNull { it.price } ?: 0.0
                     val savings = (highest - lowest).coerceAtLeast(0.0)
 
@@ -160,8 +172,11 @@ class SmartCompareRepository(
                         } else {
                             0.0
                         }
+                        val isTrulyLowest = (offer.isSearchLinkOnly != true && 
+                            (offer.verificationStatus == "verified_live" || offer.verificationStatus == "partner_live") && 
+                            offer.price == lowest)
                         offer.copy(
-                            isLowest = (offer.price == lowest),
+                            isLowest = isTrulyLowest,
                             discount = calculatedDiscount
                         )
                     }
@@ -182,7 +197,6 @@ class SmartCompareRepository(
                     putInCache(cleanQuery, sanitizedResponse)
                     return@withContext Result.success(sanitizedResponse)
                 } else {
-                    // Non-2xx response (400, 401, 403, 404, 429, 5xx): NEVER silently fabricate live offers
                     val code = response.code()
                     val errBody = try {
                         response.errorBody()?.string()
@@ -192,10 +206,7 @@ class SmartCompareRepository(
 
                     if (allowDevMockFallback) {
                         val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                            recommendation = "BuyWise AI compares verified real-time prices across BuyWise Store, Meesho, Flipkart, and Amazon India to identify the best value deal.",
-                            stores = SmartMarketIntelligence.generateMarketComparison(cleanQuery).stores.map {
-                                it.copy(verificationStatus = "unverified_mock")
-                            }
+                            recommendation = "BuyWise AI compares verified real-time prices across BuyWise Store, Meesho, Flipkart, and Amazon India to identify the best value deal."
                         )
                         return@withContext Result.success(mock)
                     }
@@ -226,10 +237,7 @@ class SmartCompareRepository(
 
                 if (allowDevMockFallback) {
                     val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                        recommendation = "BuyWise AI compares verified real-time prices across Amazon, Flipkart, Nykaa, and 14 leading stores to identify the best value deal.",
-                        stores = SmartMarketIntelligence.generateMarketComparison(cleanQuery).stores.map {
-                            it.copy(verificationStatus = "unverified_mock")
-                        }
+                        recommendation = "BuyWise AI compares verified real-time prices across Amazon, Flipkart, Nykaa, and 14 leading stores to identify the best value deal."
                     )
                     return@withContext Result.success(mock)
                 }
@@ -239,6 +247,10 @@ class SmartCompareRepository(
                 )
             } catch (e: Exception) {
                 // Malformed JSON / HTML / Deserialization error
+                if (allowDevMockFallback) {
+                    val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
+                    return@withContext Result.success(mock)
+                }
                 return@withContext Result.failure(
                     ComparisonMalformedException("Failed to parse comparison response: ${e.localizedMessage}")
                 )

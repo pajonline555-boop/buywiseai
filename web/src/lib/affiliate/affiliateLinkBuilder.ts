@@ -69,7 +69,7 @@ export function buildAffiliateUrl(
       return rawUrl;
     }
 
-    const tag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_TAG;
+    const tag = process.env.NEXT_PUBLIC_AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_TAG || config.affiliateId || 'pajonline-21';
     if (!tag) {
       return rawUrl;
     }

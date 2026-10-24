@@ -413,11 +413,17 @@ function SearchContent() {
               </div>
 
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "2px" }}>VERIFIED EFFECTIVE PAYABLE</div>
-                <div style={{ fontSize: "32px", fontWeight: 900, color: "#00ff88" }}>
+                <div style={{ fontSize: "11px", color: bestValueOffer.isSearchLinkOnly ? "#ffaa00" : "var(--text-secondary)", marginBottom: "2px", fontWeight: 700 }}>
+                  {bestValueOffer.isSearchLinkOnly ? "ESTIMATED MARKET REFERENCE" : "VERIFIED EFFECTIVE PAYABLE"}
+                </div>
+                <div style={{ fontSize: "32px", fontWeight: 900, color: bestValueOffer.isSearchLinkOnly ? "#ffaa00" : "#00ff88" }}>
                   ₹{(bestValueOffer.effectivePayablePrice || bestValueOffer.price).toLocaleString()}
                 </div>
-                {bestValueOffer.shippingFee && bestValueOffer.shippingFee > 0 ? (
+                {bestValueOffer.isSearchLinkOnly ? (
+                  <div style={{ fontSize: "10px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                    *Verify live price directly on {bestValueOffer.store}
+                  </div>
+                ) : bestValueOffer.shippingFee && bestValueOffer.shippingFee > 0 ? (
                   <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
                     (Listed ₹{bestValueOffer.price.toLocaleString()} + ₹{bestValueOffer.shippingFee} Delivery)
                   </div>
@@ -426,7 +432,7 @@ function SearchContent() {
                 )}
                 <a href={bestValueOffer.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-block", marginTop: "10px" }}>
                   <button className="btn-primary" style={{ padding: "10px 24px", fontSize: "14px" }}>
-                    {bestValueOffer.isDirectProductLink ? "View Direct Deal ↗" : "Search Retailer ↗"}
+                    {bestValueOffer.isDirectProductLink && !bestValueOffer.isSearchLinkOnly ? "View Direct Deal ↗" : `Search ${bestValueOffer.store} ↗`}
                   </button>
                 </a>
               </div>
@@ -651,9 +657,15 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
             </span>
           )}
 
-          {offer.isLowest && (
+          {offer.isLowest && !offer.isSearchLinkOnly && offer.verificationStatus === 'verified_live' && (
             <span style={{ background: "rgba(0, 255, 136, 0.2)", border: "1px solid #00ff88", color: "#00ff88", padding: "2px 6px", borderRadius: "8px", fontSize: "10px", fontWeight: 800 }}>
               👑 LOWEST VERIFIED PRICE
+            </span>
+          )}
+
+          {offer.isSearchLinkOnly && (
+            <span style={{ background: "rgba(255, 170, 0, 0.15)", border: "1px solid #ffaa00", color: "#ffaa00", padding: "2px 6px", borderRadius: "8px", fontSize: "10px", fontWeight: 800 }}>
+              🔗 SEARCH LINK ONLY
             </span>
           )}
 
@@ -663,7 +675,7 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
             </span>
           )}
 
-          {offer.isDirectProductLink && (
+          {offer.isDirectProductLink && !offer.isSearchLinkOnly && (
             <span style={{ background: "rgba(0, 212, 255, 0.15)", color: "#00d4ff", padding: "2px 6px", borderRadius: "8px", fontSize: "10px", fontWeight: 700 }}>
               ✓ Direct Product Link
             </span>
@@ -676,10 +688,17 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
         <div style={{ padding: "12px 14px", background: "rgba(255,255,255,0.03)", borderRadius: "14px", marginBottom: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div>
-              <div style={{ fontSize: "10px", color: "var(--text-secondary)", fontWeight: 600 }}>EFFECTIVE PAYABLE PRICE</div>
-              <div style={{ fontSize: "24px", fontWeight: 900, color: offer.isLowest ? "#00ff88" : "white" }}>
+              <div style={{ fontSize: "10px", color: offer.isSearchLinkOnly ? "#ffaa00" : "var(--text-secondary)", fontWeight: 700 }}>
+                {offer.isSearchLinkOnly ? "ESTIMATED MARKET REFERENCE" : "EFFECTIVE PAYABLE PRICE"}
+              </div>
+              <div style={{ fontSize: "24px", fontWeight: 900, color: offer.isLowest && !offer.isSearchLinkOnly ? "#00ff88" : "white" }}>
                 ₹{payablePrice.toLocaleString()}
               </div>
+              {offer.isSearchLinkOnly && (
+                <div style={{ fontSize: "9.5px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                  *Prices verified live on {offer.store}
+                </div>
+              )}
             </div>
             {offer.originalPrice && offer.originalPrice > payablePrice && (
               <div style={{ textAlign: "right" }}>
@@ -696,11 +715,11 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
             <div style={{ fontSize: "10px", color: "#f59e0b", marginTop: "4px" }}>
               (Item: ₹{offer.price.toLocaleString()} + ₹{offer.shippingFee} Shipping)
             </div>
-          ) : (
+          ) : !offer.isSearchLinkOnly ? (
             <div style={{ fontSize: "10px", color: "var(--text-secondary)", marginTop: "4px" }}>
               ✓ Free Delivery on this listing
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Buttons */}
@@ -724,7 +743,7 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
           </button>
           <a href={offer.url} target="_blank" rel="noopener noreferrer" style={{ flex: 2, textDecoration: "none" }}>
             <button className="btn-primary" style={{ width: "100%", padding: "9px", fontSize: "12px", fontWeight: 700 }}>
-              {offer.isDirectProductLink ? "View Direct Deal ↗" : "Search Retailer ↗"}
+              {offer.isDirectProductLink && !offer.isSearchLinkOnly ? "View Direct Deal ↗" : `Search ${offer.store} ↗`}
             </button>
           </a>
         </div>
@@ -809,9 +828,14 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
             <span style={{ fontSize: "10.5px", fontWeight: 700, padding: "2px 6px", borderRadius: "6px", background: "rgba(0, 255, 128, 0.15)", color: "#00ff80" }}>
               {matchPercentage}% Match
             </span>
-            {offer.isLowest && (
+            {offer.isLowest && !offer.isSearchLinkOnly && offer.verificationStatus === 'verified_live' && (
               <span style={{ fontSize: "10.5px", fontWeight: 800, padding: "2px 6px", borderRadius: "6px", background: "rgba(0, 255, 128, 0.2)", border: "1px solid #00ff80", color: "#00ff80" }}>
                 👑 LOWEST
+              </span>
+            )}
+            {offer.isSearchLinkOnly && (
+              <span style={{ fontSize: "10.5px", fontWeight: 800, padding: "2px 6px", borderRadius: "6px", background: "rgba(255, 170, 0, 0.15)", border: "1px solid #ffaa00", color: "#ffaa00" }}>
+                🔗 Search Link
               </span>
             )}
             {offer.tier === "LUXURY" && (
@@ -833,13 +857,17 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
 
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "10px", color: "var(--text-secondary)" }}>EFFECTIVE PAYABLE</div>
-          <div style={{ fontSize: "22px", fontWeight: 900, color: offer.isLowest ? "#00ff88" : "white" }}>
+          <div style={{ fontSize: "10px", color: offer.isSearchLinkOnly ? "#ffaa00" : "var(--text-secondary)", fontWeight: 700 }}>
+            {offer.isSearchLinkOnly ? "ESTIMATED REFERENCE" : "EFFECTIVE PAYABLE"}
+          </div>
+          <div style={{ fontSize: "22px", fontWeight: 900, color: offer.isLowest && !offer.isSearchLinkOnly ? "#00ff88" : "white" }}>
             ₹{payablePrice.toLocaleString()}
           </div>
-          {offer.shippingFee && offer.shippingFee > 0 && (
+          {offer.isSearchLinkOnly ? (
+            <div style={{ fontSize: "9px", color: "var(--text-secondary)" }}>Verify on {offer.store}</div>
+          ) : offer.shippingFee && offer.shippingFee > 0 ? (
             <div style={{ fontSize: "9.5px", color: "#f59e0b" }}>+₹{offer.shippingFee} Delivery</div>
-          )}
+          ) : null}
         </div>
 
         <button
@@ -861,7 +889,7 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
 
         <a href={offer.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
           <button className="btn-primary" style={{ padding: "8px 18px", fontSize: "13px" }}>
-            {offer.isDirectProductLink ? "View Direct Deal ↗" : "Search Retailer ↗"}
+            {offer.isDirectProductLink && !offer.isSearchLinkOnly ? "View Direct Deal ↗" : `Search ${offer.store} ↗`}
           </button>
         </a>
       </div>

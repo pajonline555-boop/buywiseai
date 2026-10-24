@@ -30,7 +30,29 @@ data class StoreOffer(
     val fulfillmentType: String? = "EXTERNAL_RETAILER",
     val shippingEstimate: String? = "4–7 Business Days",
     val returnPolicy: String? = "7-Day Return Policy",
-    val slug: String? = null
+    val slug: String? = null,
+    val fabric: String? = null,
+    val style: String? = null,
+    val occasion: String? = null,
+    val ageGroup: String? = null,
+    val packQty: Int? = 1,
+    val sourceLabel: String? = null,
+    val isSearchLinkOnly: Boolean? = false
+)
+
+data class SameProductGroup(
+    val id: String,
+    val productTitle: String,
+    val brand: String? = null,
+    val model: String? = null,
+    val fabric: String? = null,
+    val style: String? = null,
+    val variantInfo: String? = null,
+    val primaryImageUrl: String? = null,
+    val lowestPrice: Double = 0.0,
+    val highestPrice: Double = 0.0,
+    val storeCount: Int = 0,
+    val offers: List<StoreOffer> = emptyList()
 )
 
 data class ComparisonSummary(
@@ -47,9 +69,15 @@ data class ComparisonResponse(
     val query: String? = null,
     val timestamp: String? = null,
     val stores: List<StoreOffer> = emptyList(),
+    val bestMatches: List<StoreOffer> = emptyList(),
+    val sameProductComparisons: List<SameProductGroup> = emptyList(),
+    val filterCategory: String? = null,
+    val filterMaxPrice: Double? = null,
+    val filterFabric: String? = null,
     val summary: ComparisonSummary? = null,
     val recommendation: String? = null
 )
+
 
 data class Product(
     val id: String,

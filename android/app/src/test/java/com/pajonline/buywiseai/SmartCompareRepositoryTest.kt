@@ -212,4 +212,24 @@ class SmartCompareRepositoryTest {
         assertNotNull(exception)
         assertEquals(400, exception!!.statusCode)
     }
+
+    @Test
+    fun testAllowDevMockFallbackFillsEmptyStoresWhenBackendReturnsEmpty() = runBlocking {
+        val devRepo = SmartCompareRepository(apiService = fakeApiService, allowDevMockFallback = true, timeoutMs = 200L)
+        val emptyResponse = ComparisonResponse(
+            product = "girl dresses",
+            query = "girl dresses",
+            stores = emptyList(),
+            summary = ComparisonSummary(totalStoresChecked = 5, lowestPrice = 0.0)
+        )
+        fakeApiService.responseProvider = { Response.success(emptyResponse) }
+
+        val result = devRepo.searchSmartCompare("girl dresses")
+        assertTrue("Dev repo search should succeed", result.isSuccess)
+        val body = result.getOrNull()
+        assertNotNull(body)
+        assertTrue("Stores must not be empty with fallback enabled", body!!.stores.isNotEmpty())
+        assertTrue("Should contain Hopscotch or Dress offer", body.stores.any { it.title.contains("Dress", ignoreCase = true) || it.title.contains("Hopscotch", ignoreCase = true) })
+    }
 }
+

@@ -33,9 +33,12 @@ export interface CanonicalProduct {
   inferredAttributes: Record<string, unknown>;
   visibleText: string[];
   confidence: CanonicalConfidence;
+  maxPrice?: number | null;
+  fabric?: string | null;
   exactSearchQueries: string[];
   similarSearchQueries: string[];
   broadSearchQueries: string[];
   budgetSearchQueries: string[];
   createdAt: string;
 }
+

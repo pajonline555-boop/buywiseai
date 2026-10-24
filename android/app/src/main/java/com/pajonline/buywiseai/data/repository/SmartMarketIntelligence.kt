@@ -1051,8 +1051,8 @@ object SmartMarketIntelligence {
     // CATEGORY 6: FASHION, APPAREL & ETHNIC WEAR
     // ==========================================
     private fun isFashionOrEthnic(q: String): Boolean {
-        val wordRegex = Regex("""\b(saree|sari|kurta|kurti|lehenga|kamarbandh|ethnic|dress|shirt|tshirt|t-shirt|jeans|shoes|sneakers|jacket|jackets|suit|blazer|hoodie|coat|overcoat|sweater|cardigan|trouser|trousers|pant|pants|top|tops|bomber|windcheater|clothing|apparel|footwear|sandals|boots)\b""", RegexOption.IGNORE_CASE)
-        val multiWordKeywords = listOf("running shoes", "casual shoes", "formal shoes", "ethnic wear")
+        val wordRegex = Regex("""\b(saree|sari|sarees|saris|kurta|kurtas|kurti|kurtis|lehenga|lehengas|kamarbandh|waistband|tagdi|ethnic|dress|dresses|frock|frocks|gown|gowns|skirt|skirts|shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|jeans|denim|shoes|sneakers|jacket|jackets|suit|suits|blazer|blazers|hoodie|hoodies|coat|coats|overcoat|sweater|sweaters|cardigan|trouser|trousers|pant|pants|top|tops|bomber|windcheater|clothing|apparel|footwear|sandals|boots|innerwear|underwear|lingerie|bra|bras|panty|panties|trunk|trunks|boxer|boxers|brief|briefs|vest|vests|nightwear|sleepwear|activewear|girl|girls|boy|boys|kid|kids|baby|toddler)\b""", RegexOption.IGNORE_CASE)
+        val multiWordKeywords = listOf("running shoes", "casual shoes", "formal shoes", "ethnic wear", "girl dresses", "girls dress", "girls dresses", "summer dress", "party dress", "floral dress", "party wear")
         return wordRegex.containsMatchIn(q) || multiWordKeywords.any { q.contains(it) }
     }
 
@@ -1068,6 +1068,72 @@ object SmartMarketIntelligence {
         // 2. Branded (Top Authentic Brand)
         if (!hasSpecificBrand(lower)) {
             val (lowestItem, brandedItem) = when {
+                lower.contains("dress") || lower.contains("frock") || lower.contains("gown") -> {
+                    if (lower.contains("girl") || lower.contains("kid") || lower.contains("baby") || lower.contains("child")) {
+                        Quad(
+                            "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+                            499.0,
+                            1499.0,
+                            "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=800&auto=format&fit=crop&q=80"
+                        ) to Quad(
+                            "Little Bansi Girls Traditional Handblock Festive Cotton Anarkali Dress",
+                            1299.0,
+                            2999.0,
+                            "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=800&auto=format&fit=crop&q=80"
+                        )
+                    } else {
+                        Quad(
+                            "Rare Women Western Floral Print A-Line Casual Summer Dress",
+                            699.0,
+                            1999.0,
+                            "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80"
+                        ) to Quad(
+                            "AND Women Floral Print Tiered Fit and Flare Georgette Midi Dress",
+                            1699.0,
+                            3499.0,
+                            "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80"
+                        )
+                    }
+                }
+                lower.contains("kamarbandh") || lower.contains("tagdi") || lower.contains("waistband") || lower.contains("gujarati") -> {
+                    Quad(
+                        "Etietnic Gujarati Traditional Embroidered Kamarbandh",
+                        499.0,
+                        999.0,
+                        "https://buywiseai.pajonline.co.in/kamarbandh.png"
+                    ) to Quad(
+                        "Zaveri Pearls Traditional Gold Plated Kundan Kamarbandh Waist Chain",
+                        899.0,
+                        2499.0,
+                        "https://buywiseai.pajonline.co.in/kamarbandh.png"
+                    )
+                }
+                lower.contains("panty") || lower.contains("panties") || lower.contains("brief") -> {
+                    Quad(
+                        "Louis Craft Women's 100% Combed Cotton Printed Panties (Pack of 5)",
+                        289.0,
+                        499.0,
+                        "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg"
+                    ) to Quad(
+                        "Enamor Women Anti-Microbial Cotton Hipster Briefs (Pack of 3)",
+                        599.0,
+                        899.0,
+                        "https://m.media-amazon.com/images/I/41DSHIr6S6L._AC_SL800_.jpg"
+                    )
+                }
+                lower.contains("bra") -> {
+                    Quad(
+                        "Zivame Padded Wirefree Seamless T-Shirt Bra",
+                        999.0,
+                        1999.0,
+                        "https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg"
+                    ) to Quad(
+                        "Enamor Medium Coverage Wirefree Everyday Cotton Bra",
+                        649.0,
+                        1199.0,
+                        "https://m.media-amazon.com/images/I/714AcwEJC0L._AC_SL800_.jpg"
+                    )
+                }
                 lower.contains("jacket") || lower.contains("coat") || lower.contains("blazer") || lower.contains("hoodie") || lower.contains("bomber") -> {
                     Quad(
                         "Fort Collins Men Lightweight Water-Resistant Padded Bomber Jacket",
@@ -1164,11 +1230,14 @@ object SmartMarketIntelligence {
             val isSaree = lower.contains("saree") || lower.contains("sari")
             val isLancer = lowestItem.first.contains("Lancer", ignoreCase = true)
             val isKurti = lower.contains("kurta") || lower.contains("kurti")
+            val isDress = lower.contains("dress") || lower.contains("frock") || lower.contains("gown")
+            val isKamarbandh = lower.contains("kamarbandh") || lower.contains("tagdi") || lower.contains("gujarati")
 
             val meeshoLowPrice = when {
                 isSaree -> 299.0
                 isKurti -> 249.0
                 isLancer -> 489.0
+                isDress -> (lowestItem.second - 50.0).coerceAtLeast(299.0)
                 else -> (lowestItem.second - 50.0).coerceAtLeast(199.0)
             }
             val buywisePrice = when {
@@ -1200,7 +1269,12 @@ object SmartMarketIntelligence {
                 StoreOffer(
                     id = "fash_bw_store",
                     store = "🟢 BuyWise Store",
-                    title = if (isSaree) "BuyWise Direct: Banarasi Festive Silk Saree with Blouse Piece" else "${lowestItem.first} (BuyWise Direct)",
+                    title = when {
+                        isSaree -> "BuyWise Direct: Banarasi Festive Silk Saree with Blouse Piece"
+                        isDress -> "${lowestItem.first} (BuyWise Partner Collection)"
+                        isKamarbandh -> "BuyWise Verified: Etietnic Gujarati Traditional Embroidered Kamarbandh"
+                        else -> "${lowestItem.first} (BuyWise Direct)"
+                    },
                     url = "https://buywiseai.pajonline.co.in/partners",
                     price = buywisePrice,
                     mrp = if (isSaree) 1999.0 else lowestItem.third,
@@ -1324,17 +1398,26 @@ object SmartMarketIntelligence {
             return wrapResponse(query, stores, today, rec)
         }
 
-        val (title, basePrice, mrpPrice, imgUrl) = when {
-            lower.contains("jacket") || lower.contains("coat") || lower.contains("blazer") || lower.contains("hoodie") || lower.contains("bomber") -> {
-                val jacketTitle = when {
-                    lower.contains("leather") -> "Men Premium Faux Leather Biker Jacket with Zipper Pockets"
-                    lower.contains("winter") || lower.contains("puffer") -> "Men & Women Ultra-Warm Quilted Puffer Winter Jacket with Hood"
-                    lower.contains("denim") -> "Men Classic Washed Denim Trucker Jacket"
-                    else -> "Men & Women Lightweight Water-Resistant Padded Bomber Jacket"
+            val (title, basePrice, mrpPrice, imgUrl) = when {
+                lower.contains("dress") || lower.contains("frock") || lower.contains("gown") -> {
+                    if (lower.contains("girl") || lower.contains("kid") || lower.contains("baby") || lower.contains("child")) {
+                        Quad("Girls Floral Printed Cotton Festive Party Dress", 699.0, 1999.0,
+                            "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=800&auto=format&fit=crop&q=80")
+                    } else {
+                        Quad("Women Elegant Floral Print Fit & Flare Midi Dress", 1299.0, 2999.0,
+                            "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80")
+                    }
                 }
-                Quad(jacketTitle, 1699.0, 3999.0,
-                    "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&auto=format&fit=crop&q=80")
-            }
+                lower.contains("jacket") || lower.contains("coat") || lower.contains("blazer") || lower.contains("hoodie") || lower.contains("bomber") -> {
+                    val jacketTitle = when {
+                        lower.contains("leather") -> "Men Premium Faux Leather Biker Jacket with Zipper Pockets"
+                        lower.contains("winter") || lower.contains("puffer") -> "Men & Women Ultra-Warm Quilted Puffer Winter Jacket with Hood"
+                        lower.contains("denim") -> "Men Classic Washed Denim Trucker Jacket"
+                        else -> "Men & Women Lightweight Water-Resistant Padded Bomber Jacket"
+                    }
+                    Quad(jacketTitle, 1699.0, 3999.0,
+                        "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&auto=format&fit=crop&q=80")
+                }
             lower.contains("saree") || lower.contains("sari") -> {
                 Quad("Traditional Woven Banarasi Silk Festive Saree with Unstitched Blouse Piece", 1299.0, 3999.0,
                     "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80")
@@ -2203,11 +2286,35 @@ object SmartMarketIntelligence {
         val highest = stores.maxOfOrNull { it.price } ?: 0.0
         val savings = highest - lowest
 
+        val groups = stores.groupBy { 
+            it.title.substringBefore("(").trim()
+        }
+        val sameProductComparisons = groups.map { (title, groupOffers) ->
+            val first = groupOffers.first()
+            com.pajonline.buywiseai.domain.model.SameProductGroup(
+                id = "spg_${title.hashCode()}",
+                productTitle = title,
+                brand = first.store,
+                fabric = first.fabric,
+                style = first.style,
+                variantInfo = first.fabric,
+                primaryImageUrl = first.imageUrl,
+                lowestPrice = groupOffers.minOfOrNull { it.price } ?: first.price,
+                highestPrice = groupOffers.maxOfOrNull { it.price } ?: first.price,
+                storeCount = groupOffers.size,
+                offers = groupOffers.sortedBy { it.price }
+            )
+        }
+
+        val bestMatches = groups.values.map { it.minByOrNull { offer -> offer.price } ?: it.first() }
+
         return ComparisonResponse(
             product = query,
             query = query,
             timestamp = today,
             stores = stores,
+            bestMatches = bestMatches,
+            sameProductComparisons = sameProductComparisons,
             summary = ComparisonSummary(
                 totalStoresChecked = 14,
                 successfulStores = stores.size,
@@ -2219,6 +2326,7 @@ object SmartMarketIntelligence {
             recommendation = "BuyWise AI recommends $recommendation"
         )
     }
+
 
     private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
     private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)

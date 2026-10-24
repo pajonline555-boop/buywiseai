@@ -162,4 +162,46 @@ class SmartMarketIntelligenceTest {
         val minLowest = lowestPriceOffers.minOf { it.price }
         assertEquals("Lowest price shoes must be 472.0 on Amazon India", 472.0, minLowest, 0.01)
     }
+
+    @Test
+    fun testGirlDressesReturnsHopscotchAndLittleBansi() {
+        val result = SmartMarketIntelligence.generateMarketComparison("girl dresses")
+        assertTrue("Stores must not be empty for girl dresses", result.stores.isNotEmpty())
+
+        val lowestPriceOffers = result.stores.filter { it.matchType == "LOWEST_PRICE" }
+        val brandedOffers = result.stores.filter { it.matchType == "BRANDED" }
+
+        assertTrue("Must include Lowest Price Found offers for girl dresses", lowestPriceOffers.isNotEmpty())
+        assertTrue("Must include Branded offers for girl dresses", brandedOffers.isNotEmpty())
+
+        val hopscotchOffer = lowestPriceOffers.first()
+        assertTrue("Title should mention Hopscotch or Dress: ${hopscotchOffer.title}", 
+            hopscotchOffer.title.contains("Hopscotch", ignoreCase = true) || hopscotchOffer.title.contains("Dress", ignoreCase = true))
+        
+        // Lowest price in Meesho is ₹449.0, BuyWise is ₹499.0
+        val minLowest = lowestPriceOffers.minOf { it.price }
+        assertEquals("Lowest price girl dress should be 449.0 on Meesho", 449.0, minLowest, 0.01)
+
+        val stores = result.stores.map { it.store }.toSet()
+        assertTrue("Must include Amazon India", stores.contains("Amazon India"))
+        assertTrue("Must include Flipkart", stores.contains("Flipkart"))
+        assertTrue("Must include Meesho", stores.contains("Meesho"))
+        assertTrue("Must include Myntra", stores.contains("Myntra"))
+    }
+
+    @Test
+    fun testWomensDressesReturnsWesternDresses() {
+        val result = SmartMarketIntelligence.generateMarketComparison("dress")
+        assertTrue("Stores must not be empty for dress", result.stores.isNotEmpty())
+
+        val lowestPriceOffers = result.stores.filter { it.matchType == "LOWEST_PRICE" }
+        assertTrue("Must include Lowest Price Found offers for dress", lowestPriceOffers.isNotEmpty())
+        val lowest = lowestPriceOffers.first()
+        assertTrue("Title should contain dress: ${lowest.title}", lowest.title.contains("Dress", ignoreCase = true))
+        
+        val minLowest = lowestPriceOffers.minOf { it.price }
+        assertEquals("Lowest price women dress should be 649.0 on Meesho", 649.0, minLowest, 0.01)
+    }
 }
+
+

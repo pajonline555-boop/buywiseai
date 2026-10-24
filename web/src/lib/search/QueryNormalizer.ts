@@ -153,13 +153,21 @@ export function normalizeSearchQuery(rawQuery: string): NormalizedQueryIntent {
     return intent;
   }
 
-  // 6. FASHION & APPAREL (red saree, running shoes, jeans)
   if (lower.includes('saree') || lower.includes('sari')) {
     intent.category = 'FASHION';
     intent.subcategory = 'ETHNIC_WEAR';
     intent.productType = 'SAREE';
     if (lower.includes('red')) intent.attributes.push('color:red');
     intent.normalizedQuery = 'Designer Festive Saree';
+    return intent;
+  }
+
+  if (lower.includes('dress') || lower.includes('frock') || lower.includes('gown') || lower.includes('kurti')) {
+    intent.category = 'FASHION';
+    intent.subcategory = lower.includes('girl') || lower.includes('kid') ? 'KIDS_WEAR' : 'WESTERN_WEAR';
+    intent.productType = 'DRESS';
+    if (lower.includes('cotton')) intent.attributes.push('fabric:cotton');
+    intent.normalizedQuery = lower.includes('girl') ? "Girls Cotton A-Line Dress" : "Women Casual Dress";
     return intent;
   }
 

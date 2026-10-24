@@ -67,10 +67,18 @@ export async function GET(request: NextRequest) {
   }
 
   const cleanQuery = sanitizeQuery(rawQuery!);
+  const paramMaxPrice = url.searchParams.get('maxPrice') ? parseInt(url.searchParams.get('maxPrice')!, 10) : undefined;
+  const paramFabric = url.searchParams.get('fabric') || undefined;
+  const paramMode = (url.searchParams.get('mode') as 'exact' | 'similar') || 'exact';
 
   try {
-    const comparisonResult = await executeComparison(cleanQuery);
+    const canonical = normalizeTextQueryToCanonical(cleanQuery);
+    if (paramMaxPrice) canonical.maxPrice = paramMaxPrice;
+    if (paramFabric) canonical.fabric = paramFabric;
+
+    const comparisonResult = await executeCanonicalComparison(canonical, paramMode);
     const durationMs = Date.now() - startTime;
+
 
     emitTelemetryEvent({
       eventName: 'comparison.completed',
@@ -175,10 +183,13 @@ export async function POST(request: Request) {
         similarSearchQueries: Array.isArray(canonical.similarSearchQueries) && canonical.similarSearchQueries.length > 0
           ? canonical.similarSearchQueries
           : base.similarSearchQueries,
+        maxPrice: canonical.maxPrice !== undefined ? canonical.maxPrice : (body.maxPrice || base.maxPrice),
+        fabric: canonical.fabric !== undefined ? canonical.fabric : (body.fabric || base.fabric),
       };
 
       loggedSku = safeCanonical.title;
       comparisonResult = await executeCanonicalComparison(safeCanonical, searchMode);
+
     } else {
       const cleanQuery = sanitizeQuery(queryString!);
       if (!isValidQuery(cleanQuery)) {

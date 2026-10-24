@@ -71,6 +71,18 @@ export function normalizeTextQueryToCanonical(rawQuery: string): CanonicalProduc
     subcategory: intent.subcategory,
   });
 
+  // Extract budget constraints: e.g. "under 500", "under ₹500", "below 1000"
+  const priceMatch = trimmed.match(/(?:under|below|less than|within)\s*(?:rs\.?|inr|₹)?\s*(\d{2,6})/i);
+  const maxPrice = priceMatch ? parseInt(priceMatch[1], 10) : null;
+
+  // Extract fabric / material
+  const fabricMatch = trimmed.match(/\b(cotton|pure cotton|crepe|georgette|silk|banarasi silk|linen|denim|chiffon|polyester|rayon|velvet|satin)\b/i);
+  const fabric = fabricMatch ? fabricMatch[1].toLowerCase() : null;
+
+  // Extract gender
+  const genderMatch = trimmed.match(/\b(girls?|boys?|women|men|kids?|baby|toddler)\b/i);
+  const gender = genderMatch ? genderMatch[1].toLowerCase() : null;
+
   return {
     id,
     sourceType: 'text',
@@ -81,14 +93,16 @@ export function normalizeTextQueryToCanonical(rawQuery: string): CanonicalProduc
     brand: intent.brand || null,
     model: null,
     productName: intent.productType,
-    gender: null,
+    gender,
     colors: [],
-    materials: [],
+    materials: fabric ? [fabric] : [],
     styles: [],
     visualFeatures: [],
     observedAttributes: {},
     inferredAttributes: {},
     visibleText: [],
+    maxPrice,
+    fabric,
     confidence: {
       category: parsed.confidence,
       brand: intent.brand ? 0.9 : null,
@@ -102,3 +116,6 @@ export function normalizeTextQueryToCanonical(rawQuery: string): CanonicalProduc
     createdAt: timestamp,
   };
 }
+
+export const normalizeQuery = normalizeTextQueryToCanonical;
+

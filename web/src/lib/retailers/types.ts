@@ -19,6 +19,7 @@ export interface StoreOffer {
   retailerId: string;
   store: string;
   title: string;
+  productTitle?: string;
   url: string;
   price: number;
   currency: string;
@@ -66,7 +67,15 @@ export interface StoreOffer {
     size?: string;
     color?: string;
     packQty?: number;
+    fabric?: string;
   };
+  fabric?: string;
+  style?: string;
+  occasion?: string;
+  ageGroup?: string;
+  packQty?: number;
+  sourceLabel?: string;
+  isSearchLinkOnly?: boolean;
   directProductUrl?: string;
   affiliateUrl?: string;
   isDirectProductLink?: boolean;
@@ -109,6 +118,21 @@ export interface RetailerAdapter {
   search(query: string): Promise<RetailerSearchResult>;
 }
 
+export interface SameProductGroup {
+  id: string;
+  productTitle: string;
+  brand?: string;
+  model?: string;
+  fabric?: string;
+  style?: string;
+  variantInfo?: string;
+  primaryImageUrl?: string;
+  lowestPrice: number;
+  highestPrice: number;
+  storeCount: number;
+  offers: StoreOffer[];
+}
+
 export interface GroupedOffers {
   exact: StoreOffer[];
   variant: StoreOffer[];
@@ -120,7 +144,7 @@ export interface GroupedOffers {
 export interface ProviderStatusInfo {
   retailerId: string;
   retailerName: string;
-  status: 'LIVE' | 'CREDENTIALS_REQUIRED' | 'API_UNAVAILABLE' | 'RATE_LIMITED' | 'FAILED' | 'PARTNER_LIVE';
+  status: 'LIVE' | 'CREDENTIALS_REQUIRED' | 'API_UNAVAILABLE' | 'RATE_LIMITED' | 'FAILED' | 'PARTNER_LIVE' | 'SEARCH_LINK_ONLY';
   message?: string;
 }
 
@@ -146,6 +170,11 @@ export interface ComparisonResponse {
   query: string;
   timestamp: string;
   stores: StoreOffer[];
+  bestMatches?: StoreOffer[];
+  sameProductComparisons?: SameProductGroup[];
+  filterCategory?: string;
+  filterMaxPrice?: number;
+  filterFabric?: string;
   groupedOffers?: GroupedOffers;
   summary: ComparisonSummary;
   recommendation: string;
@@ -153,3 +182,4 @@ export interface ComparisonResponse {
   errors: Array<{ retailer: string; error: string }>;
   providerStatuses?: ProviderStatusInfo[];
 }
+
