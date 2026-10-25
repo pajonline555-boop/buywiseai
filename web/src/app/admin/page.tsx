@@ -23,6 +23,7 @@ import {
   CompetitionSubmission,
 } from "@/lib/competition/store";
 import RulesAndRegulationsModal from "@/components/competition/RulesAndRegulationsModal";
+import GrantPartnerPermissionModal from "@/components/GrantPartnerPermissionModal";
 import { useAuth, checkIsAdminUser } from "@/lib/AuthContext";
 import {
   getPartnerProducts,
@@ -565,9 +566,9 @@ export default function AdminDashboard() {
 
         {/* Live System Metrics Bar */}
         <div className="comparison-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: '40px' }}>
-          <StatCard title="Active Shoppers" value={stats.users.toLocaleString()} icon="👥" change={`${stats.users} Registered Accounts`} />
+          <StatCard title="Active Shoppers" value={Number(stats.users || 0).toLocaleString('en-IN')} icon="👥" change={`${stats.users || 0} Registered Accounts`} />
           <StatCard title="Tracked Price Alerts" value={stats.alerts} icon="🔔" change="Firestore Live" />
-          <StatCard title="Partner Commission" value={`₹${stats.commission.toLocaleString()}`} icon="💰" change={`GMV: ₹${stats.gmv.toLocaleString()} • ${stats.ordersCount} Orders`} />
+          <StatCard title="Partner Commission" value={`₹${Number(stats.commission || 0).toLocaleString('en-IN')}`} icon="💰" change={`GMV: ₹${Number(stats.gmv || 0).toLocaleString('en-IN')} • ${stats.ordersCount || 0} Orders`} />
           <StatCard title="Inventory SKUs" value={stats.inventoryCount} icon="📊" change="Real-Time Sync" />
         </div>
 
@@ -1050,8 +1051,8 @@ function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <div>
-                      <div style={{ fontWeight: 900, color: '#00ff88', fontSize: '15px' }}>₹{p.sellingPrice.toLocaleString()}</div>
-                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>MRP ₹{p.mrp.toLocaleString()}</div>
+                      <div style={{ fontWeight: 900, color: '#00ff88', fontSize: '15px' }}>₹{Number(p.sellingPrice || 0).toLocaleString('en-IN')}</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>MRP ₹{Number(p.mrp || 0).toLocaleString('en-IN')}</div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1152,8 +1153,8 @@ function AdminInventoryPanel({ onOpenAddModal, onStatsUpdate }: { onOpenAddModal
                         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>{p.brand || p.partnerName}</div>
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 900, color: '#00ff88' }}>₹{p.sellingPrice.toLocaleString()}</div>
-                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString()}</div>
+                        <div style={{ fontWeight: 900, color: '#00ff88' }}>₹{Number(p.sellingPrice || 0).toLocaleString('en-IN')}</div>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>₹{Number(p.mrp || 0).toLocaleString('en-IN')}</div>
                       </td>
                       <td style={{ padding: '14px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1629,7 +1630,7 @@ function AdminCompetitionManager({
               </div>
               <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'white', margin: '2px 0 6px 0' }}>{activeComp.title}</h3>
               <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.7)' }}>
-                Featured: <strong>{activeComp.featuredProductTitle}</strong> (₹{activeComp.featuredProductPrice.toLocaleString()}) • Retailer: <strong>{activeComp.retailer}</strong>
+                Featured: <strong>{activeComp.featuredProductTitle}</strong> (₹{Number(activeComp.featuredProductPrice || 0).toLocaleString('en-IN')}) • Retailer: <strong>{activeComp.retailer}</strong>
               </div>
             </div>
 
@@ -1725,7 +1726,7 @@ function AdminCompetitionManager({
                       </td>
 
                       <td style={{ padding: '14px 18px', fontWeight: 900, color: '#ffd700' }}>
-                        ₹{comp.featuredProductPrice.toLocaleString()}
+                        ₹{Number(comp.featuredProductPrice || 0).toLocaleString('en-IN')}
                       </td>
 
                       <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
@@ -2109,16 +2110,25 @@ function AdminMerchandisingPanel() {
 
 function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) {
   const [partners, setPartners] = useState<Partner[]>(() => getCachedPartners());
+  const [isGrantModalOpen, setIsGrantModalOpen] = useState(false);
+
+  const refreshPartners = async () => {
+    const updated = await getPartners();
+    setPartners(updated);
+  };
 
   useEffect(() => {
-    getPartners().then(setPartners);
+    refreshPartners();
   }, []);
 
   const handleTogglePartner = async (partnerId: string, currentStatus: string) => {
     const nextStatus = currentStatus === 'APPROVED' ? 'SUSPENDED' : 'APPROVED';
-    await approvePartner(partnerId, nextStatus);
-    const updated = await getPartners();
-    setPartners(updated);
+    try {
+      await approvePartner(partnerId, nextStatus);
+      await refreshPartners();
+    } catch (err: any) {
+      alert(`Authorization Error: ${err.message || 'Failed to update partner status.'}`);
+    }
   };
 
   return (
@@ -2129,10 +2139,29 @@ function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) 
             🏪 Connected Merchant &amp; Partner Network
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 0 0' }}>
-            Direct partner seller accounts, commission agreements &amp; payout settlements.
+            Direct partner seller accounts, selling permissions, commission agreements &amp; payout settlements.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setIsGrantModalOpen(true)}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '14px',
+              fontSize: '13px',
+              fontWeight: 900,
+              background: 'linear-gradient(90deg, #ffd700, #ff8800)',
+              color: '#080612',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 15px rgba(255, 215, 0, 0.35)'
+            }}
+          >
+            👑 + Grant Partner Permission
+          </button>
           <button onClick={onOpenAddModal} className="btn-primary" style={{ padding: '10px 18px', borderRadius: '14px', fontSize: '13px', fontWeight: 900 }}>
             + Onboard Product
           </button>
@@ -2164,12 +2193,19 @@ function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <strong style={{ fontSize: '16px', color: 'white' }}>{p.brandName}</strong>
-                <span style={{ fontSize: '11px', fontWeight: 900, padding: '3px 8px', borderRadius: '8px', background: p.status === 'APPROVED' ? 'rgba(0,255,136,0.15)' : 'rgba(255,215,0,0.15)', color: p.status === 'APPROVED' ? '#00ff88' : '#ffd700' }}>
-                  {p.status}
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 900,
+                  padding: '3px 8px',
+                  borderRadius: '8px',
+                  background: p.status === 'APPROVED' ? 'rgba(0,255,136,0.15)' : p.status === 'PENDING' ? 'rgba(255,215,0,0.15)' : 'rgba(255,77,77,0.15)',
+                  color: p.status === 'APPROVED' ? '#00ff88' : p.status === 'PENDING' ? '#ffd700' : '#ff4d4d'
+                }}>
+                  {p.status === 'APPROVED' ? '✔ AUTHORIZED' : p.status === 'PENDING' ? '⏳ PENDING' : '⛔ SUSPENDED'}
                 </span>
               </div>
               <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                Category: <strong>{p.category}</strong> | Commission: <strong style={{ color: '#00d4ff' }}>{p.commissionValue}%</strong> | {p.city}, {p.state}
+                Category: <strong>{p.category}</strong> | Commission: <strong style={{ color: '#00d4ff' }}>{p.commissionValue}%</strong> | {p.city}, {p.state} {p.email ? `(${p.email})` : ''}
               </div>
             </div>
 
@@ -2186,11 +2222,17 @@ function AdminPartnersPanel({ onOpenAddModal }: { onOpenAddModal: () => void }) 
                 cursor: 'pointer'
               }}
             >
-              {p.status === 'APPROVED' ? 'Suspend' : 'Approve'}
+              {p.status === 'APPROVED' ? '⛔ Revoke Permission' : '✔ Grant Permission'}
             </button>
           </div>
         ))}
       </div>
+
+      <GrantPartnerPermissionModal
+        isOpen={isGrantModalOpen}
+        onClose={() => setIsGrantModalOpen(false)}
+        onSuccess={() => refreshPartners()}
+      />
     </div>
   );
 }
@@ -2257,7 +2299,7 @@ function AdminFulfillmentPanel() {
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 900, color: '#00ff88', fontSize: '15px' }}>₹{o.totalAmount.toLocaleString()}</div>
+              <div style={{ fontWeight: 900, color: '#00ff88', fontSize: '15px' }}>₹{Number(o.totalAmount || 0).toLocaleString('en-IN')}</div>
               <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: 'rgba(0,255,136,0.15)', color: '#00ff88' }}>{o.orderStatus}</span>
             </div>
           </div>

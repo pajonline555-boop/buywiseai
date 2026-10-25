@@ -4,11 +4,16 @@ import {
   PartnerOrder, 
   OrderStatus, 
   PartnerStatus, 
-  PartnerProductStatus 
+  PartnerProductStatus,
+  PartnerReviewStatus,
+  PartnerVerificationStatus,
+  PartnerCategory,
+  ProductVariant,
+  ReviewHistoryEntry
 } from './types';
-import { validateProductPublication } from './partnerValidation';
+import { validateProductPublication, validatePurchaseUrl, calculateDiscountPercent } from './partnerValidation';
 import { BestsellerProduct } from '../categoryData';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { 
   collection, 
   addDoc, 
@@ -81,8 +86,8 @@ export function saveAllLocalProductOverrides(overrides: Record<string, Partial<P
   }
 }
 
-export function getCategoryFallbackImage(category: string, title: string = ''): string {
-  const lower = title.toLowerCase();
+export function getCategoryFallbackImage(category: string = '', title: string = ''): string {
+  const lower = (title || '').toLowerCase();
   
   if (lower.includes('kamarbandh') || lower.includes('gujarati') || lower.includes('etietnic') || lower.includes('waistband') || lower.includes('tagdi')) {
     return '/kamarbandh.png';
@@ -248,6 +253,98 @@ export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[
 // ==========================================
 export const MOCK_PARTNERS: Partner[] = [
   {
+    id: 'partner_silkcraft',
+    companyName: 'SilkCraft Heritage Handlooms Pvt Ltd',
+    brandName: 'SilkCraft Heritage',
+    email: 'contact@silkcraftheritage.in',
+    phone: '+91 98251 44321',
+    category: 'Fashion & Clothing',
+    gstNumber: '24AABCS7821Q1ZN',
+    address: 'Ring Road Textile Market, Surat',
+    city: 'Surat',
+    state: 'Gujarat',
+    pincode: '395002',
+    status: 'APPROVED',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 12,
+    totalProducts: 48,
+    totalOrders: 312,
+    totalRevenue: 894000,
+    buywiseCommissionEarned: 107280,
+    netPayable: 786720,
+    createdAt: '2026-01-15T09:00:00Z',
+    updatedAt: '2026-10-20T14:30:00Z',
+  },
+  {
+    id: 'partner_kundan',
+    companyName: 'Kundan Art & Heritage Jewellers LLP',
+    brandName: 'Kundan Art Jewellers',
+    email: 'sales@kundanartjewellers.com',
+    phone: '+91 94140 88765',
+    category: 'Jewellery',
+    gstNumber: '08AACCK9012D1ZR',
+    address: 'Johari Bazar, Heritage City',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    pincode: '302003',
+    status: 'APPROVED',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 10,
+    totalProducts: 36,
+    totalOrders: 185,
+    totalRevenue: 1420000,
+    buywiseCommissionEarned: 142000,
+    netPayable: 1278000,
+    createdAt: '2026-02-01T10:30:00Z',
+    updatedAt: '2026-10-22T11:15:00Z',
+  },
+  {
+    id: 'partner_etietnic',
+    companyName: 'Etietnic Gujarati Traditional Crafts',
+    brandName: 'Etietnic Gujarati',
+    email: 'care@etietnictradition.com',
+    phone: '+91 98790 12345',
+    category: 'Jewellery',
+    gstNumber: '24AAACE5564K1Z2',
+    address: 'Law Garden Handicraft Market',
+    city: 'Ahmedabad',
+    state: 'Gujarat',
+    pincode: '380006',
+    status: 'APPROVED',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 15,
+    totalProducts: 24,
+    totalOrders: 420,
+    totalRevenue: 378000,
+    buywiseCommissionEarned: 56700,
+    netPayable: 321300,
+    createdAt: '2026-02-10T11:00:00Z',
+    updatedAt: '2026-10-21T16:00:00Z',
+  },
+  {
+    id: 'partner_hopscotch',
+    companyName: 'Hopscotch India Retail Operations',
+    brandName: 'Hopscotch Youth',
+    email: 'partners@hopscotch.in',
+    phone: '+91 80 4680 9000',
+    category: 'Fashion & Clothing',
+    gstNumber: '29AAACH4432P1ZT',
+    address: 'Indiranagar 100ft Road',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    pincode: '560038',
+    status: 'APPROVED',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 15,
+    totalProducts: 62,
+    totalOrders: 540,
+    totalRevenue: 792000,
+    buywiseCommissionEarned: 118800,
+    netPayable: 673200,
+    createdAt: '2026-03-01T08:00:00Z',
+    updatedAt: '2026-10-23T10:00:00Z',
+  },
+  {
     id: 'partner_amazon_india',
     companyName: 'Amazon Retail India Pvt Ltd',
     brandName: 'Amazon India',
@@ -277,15 +374,81 @@ export const MOCK_PARTNERS: Partner[] = [
 // ==========================================
 export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
   {
+    id: 'prod_partner_kanjivaram_1',
+    partnerId: 'partner_silkcraft',
+    partnerName: 'SilkCraft Heritage',
+    title: 'Pure Kanjivaram Soft Silk Saree with Gold Zari Brocade',
+    slug: 'pure-kanjivaram-soft-silk-saree-gold-zari-brocade',
+    description: 'Authentic handwoven Kanjivaram pure mulberry silk saree featuring traditional temple borders and intricate gold zari brocade work. Verified Surat handloom quality.',
+    productUrl: 'https://silkcraftheritage.in/products/kanjivaram-silk-saree',
+    category: 'Fashion & Clothing',
+    brand: 'SilkCraft Heritage',
+    sku: 'SKC-KANJI-ROYAL-RED',
+    mrp: 6999,
+    sellingPrice: 3499,
+    stock: 28,
+    images: ['https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80'],
+    primaryImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'PARTNER',
+    tryOnEnabled: true,
+    garmentCategory: 'saree',
+    returnPolicy: '7 Days Return & Exchange Guaranteed',
+    warranty: 'Silk Mark Certified Pure Silk',
+    gstPercent: 5,
+    status: 'LIVE',
+    reviewStatus: 'APPROVED',
+    verificationStatus: 'verified_live',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 12,
+    rating: 4.9,
+    reviewCount: 86,
+    createdAt: '2026-09-04T08:00:00Z',
+    updatedAt: '2026-10-24T10:00:00Z',
+  },
+  {
+    id: 'prod_partner_kundan_necklace_1',
+    partnerId: 'partner_kundan',
+    partnerName: 'Kundan Art Jewellers',
+    title: 'Heritage Rajasthani Kundan Meenakari Choker Necklace Set',
+    slug: 'rajasthani-kundan-meenakari-choker-necklace-set',
+    description: 'Handcrafted artisan Kundan choker necklace with matching jhumkas and maang tikka, adorned with green Meenakari enameling and cultured pearls from Johari Bazar, Jaipur.',
+    productUrl: 'https://kundanartjewellers.com/collections/heritage-choker',
+    category: 'Jewellery',
+    brand: 'Kundan Art Jewellers',
+    sku: 'KAJ-KUNDAN-CHOKER-01',
+    mrp: 4999,
+    sellingPrice: 2499,
+    stock: 18,
+    images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80'],
+    primaryImage: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'PARTNER',
+    tryOnEnabled: true,
+    garmentCategory: 'accessories',
+    returnPolicy: '7 Days Return & Exchange Guaranteed',
+    warranty: 'BIS Hallmarked & Authenticity Card Included',
+    gstPercent: 3,
+    status: 'LIVE',
+    reviewStatus: 'APPROVED',
+    verificationStatus: 'verified_live',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 10,
+    rating: 4.9,
+    reviewCount: 42,
+    createdAt: '2026-09-04T08:00:00Z',
+    updatedAt: '2026-10-24T10:00:00Z',
+  },
+  {
     id: 'prod_partner_kamarbandh_1',
-    partnerId: 'partner_amazon_india',
-    partnerName: 'BUYWISE VERIFIED PARTNER NETWORK',
+    partnerId: 'partner_etietnic',
+    partnerName: 'Etietnic Gujarati',
     title: 'Etietnic Gujarati Traditional Embroidered Kamarbandh',
     slug: 'etietnic-gujarati-traditional-embroidered-kamarbandh',
-    description: 'Verified Amazon India product: Etietnic Gujarati Traditional Embroidered Kamarbandh. Authentic quality and fast delivery guaranteed across India.',
+    description: 'Verified Etietnic Gujarati traditional Kutchi mirror work embroidered kamarbandh waist belt with vibrant tassels. Handcrafted artisan quality.',
     productUrl: 'https://www.amazon.in/s?k=Etietnic+Gujarati+Traditional+Embroidered+Kamarbandh',
     category: 'Jewellery',
-    brand: 'Amazon India',
+    brand: 'Etietnic',
     sku: 'AMZ-ETIETNIC-KAMAR-01',
     mrp: 1999,
     sellingPrice: 499,
@@ -297,9 +460,11 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     tryOnEnabled: true,
     garmentCategory: 'accessories',
     returnPolicy: '7 Days Return & Refund Guaranteed',
-    warranty: 'Amazon Fulfilled Guaranteed',
+    warranty: 'Authentic Gujarat Handicrafts Quality',
     gstPercent: 5,
     status: 'LIVE',
+    reviewStatus: 'APPROVED',
+    verificationStatus: 'verified_live',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.9,
@@ -914,7 +1079,10 @@ export async function getPartnerProductsByPartnerId(partnerId: string): Promise<
   } catch (err) {
     console.warn('Firestore partner_products by partnerId notice:', err);
   }
-  return [];
+  const all = getCachedPartnerProducts();
+  const matched = all.filter(p => p.partnerId === partnerId);
+  if (matched.length > 0) return matched;
+  return all.slice(0, 8);
 }
 
 export async function getPartnerOrders(partnerId?: string, forceRefresh: boolean = false): Promise<PartnerOrder[]> {
@@ -1209,15 +1377,187 @@ export async function savePartnerProduct(productInput: Omit<PartnerProduct, 'id'
   return newProduct;
 }
 
+/**
+ * Admin Action: Grants selling permission to a merchant, registering or activating their Partner account.
+ * Enforces trusted server-side authorization check via /api/admin/partners in browser runtime.
+ */
+export async function grantPartnerPermission(params: {
+  email: string;
+  brandName: string;
+  companyName?: string;
+  category?: PartnerCategory;
+  commissionValue?: number;
+  phone?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  gstNumber?: string;
+  partnerId?: string;
+  status?: PartnerStatus;
+}): Promise<{ success: boolean; partner: Partner; message: string }> {
+  // If running in browser, delegate to authoritative server-side endpoint
+  if (typeof window !== 'undefined') {
+    let authToken = '';
+    try {
+      if (auth?.currentUser) {
+        authToken = await auth.currentUser.getIdToken();
+      }
+    } catch (e) {}
+
+    const res = await fetch('/api/admin/partners', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+      },
+      body: JSON.stringify({
+        action: 'GRANT_PERMISSION',
+        ...params
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Administrative authorization failed (${res.status}).`);
+    }
+
+    const verifiedPartner: Partner = data.partner;
+    // Update local cache ONLY upon confirmed server success
+    const currentPartners = getCachedPartners();
+    const updatedList = [
+      verifiedPartner,
+      ...currentPartners.filter(p => p.id !== verifiedPartner.id && p.email?.toLowerCase() !== verifiedPartner.email?.toLowerCase())
+    ];
+    cachedPartners = updatedList;
+    lastPartnersFetchTime = Date.now();
+    try {
+      localStorage.setItem('buywise_cached_partners', JSON.stringify(updatedList));
+    } catch (e) {}
+
+    return {
+      success: true,
+      partner: verifiedPartner,
+      message: data.message
+    };
+  }
+
+  // Node / direct emulator execution fallback
+  const timestamp = new Date().toISOString();
+  const cleanEmail = params.email.trim().toLowerCase();
+  const cleanBrand = params.brandName.trim();
+  const normalizedId = params.partnerId?.trim() || `partner_${cleanBrand.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString(36)}`;
+
+  // Strict validation
+  if (params.commissionValue !== undefined && (params.commissionValue < 0 || params.commissionValue > 50)) {
+    throw new Error('Platform commission rate must be between 0% and 50%');
+  }
+
+  const newPartner: Partner = {
+    id: normalizedId,
+    brandName: cleanBrand,
+    companyName: params.companyName?.trim() || cleanBrand,
+    email: cleanEmail,
+    phone: params.phone?.trim() || '+91 9876543210',
+    category: params.category || 'Fashion',
+    gstNumber: params.gstNumber?.trim() || undefined,
+    address: 'Registered Partner Office',
+    city: params.city?.trim() || 'Surat',
+    state: params.state?.trim() || 'Gujarat',
+    pincode: params.pincode?.trim() || '395003',
+    status: params.status || 'APPROVED',
+    commissionType: 'PERCENTAGE',
+    commissionValue: params.commissionValue !== undefined ? Number(params.commissionValue) : 15,
+    totalProducts: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    buywiseCommissionEarned: 0,
+    netPayable: 0,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+
+  // Update in-memory seed list
+  const existingIdx = MOCK_PARTNERS.findIndex(p => p.id === normalizedId || (p.email && p.email.toLowerCase() === cleanEmail));
+  if (existingIdx >= 0) {
+    MOCK_PARTNERS[existingIdx] = { ...MOCK_PARTNERS[existingIdx], ...newPartner, updatedAt: timestamp };
+  } else {
+    MOCK_PARTNERS.unshift(newPartner);
+  }
+
+  const currentPartners = getCachedPartners();
+  const updatedList = [newPartner, ...currentPartners.filter(p => p.id !== normalizedId && p.email?.toLowerCase() !== cleanEmail)];
+  cachedPartners = updatedList;
+
+  // Persist to Firestore (sanitized of undefined fields)
+  const firestoreData = Object.fromEntries(
+    Object.entries(newPartner).filter(([_, v]) => v !== undefined)
+  );
+  await setDoc(doc(db, 'partners', normalizedId), firestoreData, { merge: true });
+
+  return {
+    success: true,
+    partner: newPartner,
+    message: `Partner selling permission granted to "${cleanBrand}" (${cleanEmail}) with status ${newPartner.status}!`
+  };
+}
+
 export async function approvePartner(partnerId: string, status: PartnerStatus = 'APPROVED'): Promise<boolean> {
-  try {
-    await updateDoc(doc(db, 'partners', partnerId), { status, updatedAt: new Date().toISOString() });
-    return true;
-  } catch (err) {
+  // If running in browser, delegate to authoritative server-side endpoint
+  if (typeof window !== 'undefined') {
+    let authToken = '';
+    try {
+      if (auth?.currentUser) {
+        authToken = await auth.currentUser.getIdToken();
+      }
+    } catch (e) {}
+
+    const res = await fetch('/api/admin/partners', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+      },
+      body: JSON.stringify({
+        action: 'UPDATE_STATUS',
+        partnerId,
+        status
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Failed to update partner status. Administrative authorization failed (${res.status}).`);
+    }
+
+    const timestamp = new Date().toISOString();
     const p = MOCK_PARTNERS.find(item => item.id === partnerId);
-    if (p) p.status = status;
+    if (p) {
+      p.status = status;
+      p.updatedAt = timestamp;
+    }
+
+    if (cachedPartners) {
+      cachedPartners = cachedPartners.map(item => item.id === partnerId ? { ...item, status, updatedAt: timestamp } : item);
+      try {
+        localStorage.setItem('buywise_cached_partners', JSON.stringify(cachedPartners));
+      } catch (e) {}
+    }
+
     return true;
   }
+
+  // Node / direct emulator execution fallback
+  const timestamp = new Date().toISOString();
+  await updateDoc(doc(db, 'partners', partnerId), { status, updatedAt: timestamp });
+  const p = MOCK_PARTNERS.find(item => item.id === partnerId);
+  if (p) {
+    p.status = status;
+    p.updatedAt = timestamp;
+  }
+  if (cachedPartners) {
+    cachedPartners = cachedPartners.map(item => item.id === partnerId ? { ...item, status, updatedAt: timestamp } : item);
+  }
+  return true;
 }
 
 export async function approvePartnerProduct(productId: string, status: PartnerProductStatus = 'LIVE'): Promise<{ success: boolean; errors?: string[] }> {
@@ -1256,6 +1596,421 @@ export async function approvePartnerProduct(productId: string, status: PartnerPr
     await logProductAuditAction(productId, `STATUS_CHANGED_${status}`, 'admin');
     return { success: true };
   }
+}
+
+function cleanUndefined<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) {
+      clean[k] = v;
+    }
+  }
+  return clean;
+}
+
+/**
+ * Creates a partner product listing with security validation and review status workflow.
+ * Strictly prevents partners from self-assigning verified_live or isLowest status.
+ */
+export async function createPartnerProductListing(input: {
+  partnerId: string;
+  partnerName: string;
+  title: string;
+  description: string;
+  category: any;
+  subcategory?: string;
+  brand?: string;
+  sku?: string;
+  mrp: number;
+  sellingPrice: number;
+  stock: number;
+  images: string[];
+  primaryImage: string;
+  productUrl?: string;
+  shippingCharges?: number;
+  variants?: ProductVariant[];
+  barcodeGtin?: string;
+  garmentCategory?: any;
+  tryOnEnabled?: boolean;
+  returnPolicy?: string;
+  warranty?: string;
+  isDraft?: boolean;
+}): Promise<{ success: boolean; product?: PartnerProduct; errors?: string[] }> {
+  const timestamp = new Date().toISOString();
+  const errors: string[] = [];
+
+  // 1. Validation
+  if (!input.title || input.title.trim().length < 3) errors.push('Title must be at least 3 characters');
+  if (typeof input.sellingPrice !== 'number' || input.sellingPrice <= 0) errors.push('Selling price must be greater than ₹0');
+  if (input.mrp && input.sellingPrice > input.mrp) errors.push('Selling price cannot exceed MRP');
+  if (typeof input.stock !== 'number' || input.stock < 0) errors.push('Stock cannot be negative');
+
+  if (input.productUrl) {
+    const urlCheck = validatePurchaseUrl(input.productUrl);
+    if (!urlCheck.valid) errors.push(urlCheck.error || 'Invalid product URL');
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+
+  const productId = `prod_${input.partnerId}_${Date.now()}`;
+  const cleanTitle = cleanProductTitle(input.title);
+  const slug = cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  const reviewStatus: PartnerReviewStatus = input.isDraft ? 'DRAFT' : 'PENDING_REVIEW';
+  const status: PartnerProductStatus = input.isDraft ? 'DRAFT' : 'PENDING_APPROVAL';
+
+  const initialHistory: ReviewHistoryEntry[] = [
+    {
+      status: reviewStatus,
+      changedAt: timestamp,
+      actor: input.partnerId,
+      note: input.isDraft ? 'Created as draft' : 'Submitted for BuyWise review and price verification'
+    }
+  ];
+
+  const newProduct: PartnerProduct = {
+    id: productId,
+    partnerId: input.partnerId,
+    partnerName: input.partnerName,
+    title: cleanTitle,
+    description: input.description || cleanTitle,
+    category: input.category || 'Fashion',
+    subcategory: input.subcategory || '',
+    brand: input.brand || input.partnerName,
+    sku: input.sku || `SKU-${Date.now()}`,
+    mrp: input.mrp || input.sellingPrice,
+    sellingPrice: input.sellingPrice,
+    stock: input.stock,
+    images: input.images && input.images.length > 0 ? input.images : [input.primaryImage],
+    primaryImage: input.primaryImage,
+    productUrl: input.productUrl || undefined,
+    shippingCharges: input.shippingCharges || 0,
+    variants: input.variants || [],
+    barcodeGtin: input.barcodeGtin || '',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'PARTNER',
+    tryOnEnabled: input.tryOnEnabled !== false,
+    garmentCategory: input.garmentCategory || 'accessories',
+    returnPolicy: input.returnPolicy || '7 Days Return & Replacement',
+    warranty: input.warranty || 'Authentic Merchant Guarantee',
+    gstPercent: 5,
+    status,
+    reviewStatus,
+    verificationStatus: 'unverified', // Strictly unverified until reviewed & verified
+    reviewHistory: initialHistory,
+    commissionType: 'PERCENTAGE',
+    commissionValue: 15,
+    slug,
+    rating: 4.8,
+    reviewCount: 1,
+    shippingEstimate: '3–5 Business Days',
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+
+  // Instantly reflect in local memory and cache
+  MOCK_PARTNER_PRODUCTS.unshift(newProduct);
+  saveLocalProductOverride(newProduct.id, newProduct);
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = [newProduct, ...cachedPartnerProducts.filter(p => p.id !== newProduct.id)];
+  } else {
+    cachedPartnerProducts = [newProduct, ...MOCK_PARTNER_PRODUCTS.filter(p => p.id !== newProduct.id)];
+  }
+  lastProductsFetchTime = Date.now();
+  if (typeof window !== 'undefined') {
+    try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+  }
+
+  // Attempt Firestore sync
+  try {
+    const docRef = doc(db, 'partner_products', newProduct.id);
+    await setDoc(docRef, cleanUndefined(newProduct), { merge: true });
+  } catch (err) {
+    console.warn('Firestore write notice (product active in session):', err);
+  }
+
+  return { success: true, product: newProduct };
+}
+
+/**
+ * Updates a partner product listing with ownership checking, mass-assignment protection,
+ * and automatic re-verification trigger upon material changes (price/URL/title).
+ */
+export async function updatePartnerProductListing(
+  productId: string,
+  partnerId: string,
+  updates: Partial<PartnerProduct>,
+  isAdminUser: boolean = false
+): Promise<{ success: boolean; product?: PartnerProduct; errors?: string[] }> {
+  const existing = MOCK_PARTNER_PRODUCTS.find(p => p.id === productId);
+  if (!existing) {
+    return { success: false, errors: ['Product listing not found'] };
+  }
+
+  // Ownership security check
+  if (!isAdminUser && existing.partnerId !== partnerId) {
+    return { success: false, errors: ['Unauthorized: You do not own this product listing.'] };
+  }
+
+  const timestamp = new Date().toISOString();
+  const errors: string[] = [];
+
+  // Protect against mass-assignment of privileged fields
+  const safeUpdates = { ...updates };
+  if (!isAdminUser) {
+    delete (safeUpdates as any).verificationStatus;
+    delete (safeUpdates as any).isLowest;
+    delete (safeUpdates as any).partnerBadge;
+    delete (safeUpdates as any).smartValueScore;
+    delete (safeUpdates as any).shoppingTrustScore;
+  }
+
+  if (safeUpdates.sellingPrice && safeUpdates.sellingPrice <= 0) {
+    errors.push('Selling price must be greater than ₹0');
+  }
+  const effectiveMrp = safeUpdates.mrp || existing.mrp;
+  const effectivePrice = safeUpdates.sellingPrice || existing.sellingPrice;
+  if (effectivePrice > effectiveMrp) {
+    errors.push('Selling price cannot exceed MRP');
+  }
+
+  if (safeUpdates.productUrl) {
+    const urlCheck = validatePurchaseUrl(safeUpdates.productUrl);
+    if (!urlCheck.valid) {
+      errors.push(urlCheck.error || 'Invalid product URL');
+    }
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+
+  // Check if material change requires re-verification
+  const priceChanged = safeUpdates.sellingPrice !== undefined && safeUpdates.sellingPrice !== existing.sellingPrice;
+  const urlChanged = safeUpdates.productUrl !== undefined && safeUpdates.productUrl !== existing.productUrl;
+  const titleChanged = safeUpdates.title !== undefined && safeUpdates.title !== existing.title;
+
+  const requiresReverification = !isAdminUser && (priceChanged || urlChanged || titleChanged);
+
+  if (requiresReverification) {
+    safeUpdates.verificationStatus = 'unverified';
+    safeUpdates.reviewStatus = 'PENDING_REVIEW';
+    safeUpdates.status = 'PENDING_APPROVAL';
+
+    const historyEntry: ReviewHistoryEntry = {
+      status: 'PENDING_REVIEW',
+      changedAt: timestamp,
+      actor: partnerId,
+      note: `Material change detected (${[priceChanged ? 'Price' : '', urlChanged ? 'URL' : '', titleChanged ? 'Title' : ''].filter(Boolean).join(', ')}). Queued for re-verification.`
+    };
+    safeUpdates.reviewHistory = [...(existing.reviewHistory || []), historyEntry];
+  }
+
+  if (safeUpdates.title) {
+    safeUpdates.title = cleanProductTitle(safeUpdates.title);
+    safeUpdates.slug = safeUpdates.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  safeUpdates.updatedAt = timestamp;
+
+  Object.assign(existing, safeUpdates);
+  saveLocalProductOverride(productId, safeUpdates);
+
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.map(p => p.id === productId ? { ...p, ...safeUpdates } : p);
+  } else {
+    cachedPartnerProducts = [...MOCK_PARTNER_PRODUCTS];
+  }
+  lastProductsFetchTime = Date.now();
+  if (typeof window !== 'undefined') {
+    try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+  }
+
+  try {
+    const docRef = doc(db, 'partner_products', productId);
+    await setDoc(docRef, cleanUndefined(safeUpdates), { merge: true });
+  } catch (err) {
+    console.warn('Firestore update notice:', err);
+  }
+
+  return { success: true, product: existing };
+}
+
+/**
+ * Archives a partner product listing.
+ */
+export async function archivePartnerProductListing(productId: string, partnerId: string, isAdminUser: boolean = false): Promise<boolean> {
+  const existing = MOCK_PARTNER_PRODUCTS.find(p => p.id === productId);
+  if (!existing) return false;
+  if (!isAdminUser && existing.partnerId !== partnerId) return false;
+
+  const timestamp = new Date().toISOString();
+  const updates: Partial<PartnerProduct> = {
+    status: 'ARCHIVED',
+    reviewStatus: 'ARCHIVED',
+    updatedAt: timestamp,
+    reviewHistory: [
+      ...(existing.reviewHistory || []),
+      {
+        status: 'ARCHIVED',
+        changedAt: timestamp,
+        actor: partnerId,
+        note: 'Listing archived by partner'
+      }
+    ]
+  };
+
+  Object.assign(existing, updates);
+  saveLocalProductOverride(productId, updates);
+
+  try {
+    await setDoc(doc(db, 'partner_products', productId), updates, { merge: true });
+  } catch (e) {}
+
+  return true;
+}
+
+/**
+ * Admin action: Reviews and approves or rejects a partner product listing.
+ */
+export async function adminReviewProduct(
+  productId: string,
+  decision: 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+  rejectionReason?: string,
+  adminActor: string = 'admin'
+): Promise<boolean> {
+  const existing = MOCK_PARTNER_PRODUCTS.find(p => p.id === productId);
+  const timestamp = new Date().toISOString();
+
+  const newStatus: PartnerProductStatus = decision === 'APPROVED' ? 'LIVE' : decision === 'REJECTED' ? 'SUSPENDED' : 'SUSPENDED';
+  const newReviewStatus: PartnerReviewStatus = decision;
+
+  const historyEntry: ReviewHistoryEntry = {
+    status: newReviewStatus,
+    changedAt: timestamp,
+    actor: adminActor,
+    note: decision === 'REJECTED' ? rejectionReason || 'Listing failed policy compliance' : `Listing ${decision} by platform admin`
+  };
+
+  const updates: Partial<PartnerProduct> = {
+    status: newStatus,
+    reviewStatus: newReviewStatus,
+    rejectionReason: decision === 'REJECTED' ? (rejectionReason || 'Listing failed policy compliance') : '',
+    updatedAt: timestamp,
+    reviewHistory: existing ? [...(existing.reviewHistory || []), historyEntry] : [historyEntry]
+  };
+
+  if (existing) Object.assign(existing, updates);
+  saveLocalProductOverride(productId, updates);
+
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.map(p => p.id === productId ? { ...p, ...updates } : p);
+  } else {
+    cachedPartnerProducts = [...MOCK_PARTNER_PRODUCTS];
+  }
+  lastProductsFetchTime = Date.now();
+  if (typeof window !== 'undefined') {
+    try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+  }
+
+  try {
+    await setDoc(doc(db, 'partner_products', productId), cleanUndefined(updates), { merge: true });
+  } catch (e) {}
+
+  return true;
+}
+
+/**
+ * Admin action: Verifies partner product price against live evidence.
+ * Only this method can grant verified_live status.
+ */
+export async function adminVerifyProductPrice(
+  productId: string,
+  verifiedPrice: number,
+  evidenceNote?: string,
+  adminActor: string = 'admin'
+): Promise<boolean> {
+  const existing = MOCK_PARTNER_PRODUCTS.find(p => p.id === productId);
+  const timestamp = new Date().toISOString();
+
+  const updates: Partial<PartnerProduct> = {
+    verificationStatus: 'verified_live',
+    verifiedPrice,
+    priceVerifiedAt: timestamp,
+    updatedAt: timestamp
+  };
+
+  if (existing) Object.assign(existing, updates);
+  saveLocalProductOverride(productId, updates);
+
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.map(p => p.id === productId ? { ...p, ...updates } : p);
+  } else {
+    cachedPartnerProducts = [...MOCK_PARTNER_PRODUCTS];
+  }
+  lastProductsFetchTime = Date.now();
+  if (typeof window !== 'undefined') {
+    try { localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cachedPartnerProducts)); } catch (e) {}
+  }
+
+  try {
+    await setDoc(doc(db, 'partner_products', productId), cleanUndefined(updates), { merge: true });
+    await logProductAuditAction(productId, 'PRICE_VERIFIED_LIVE', adminActor, `Verified at ₹${verifiedPrice}: ${evidenceNote || 'Checked live retailer feed'}`);
+  } catch (e) {}
+
+  return true;
+}
+
+/**
+ * Bulk creates products from validated CSV import rows.
+ */
+export async function bulkCreatePartnerProducts(
+  partnerId: string,
+  partnerName: string,
+  products: Partial<PartnerProduct>[]
+): Promise<{ created: number; failed: number; errors: string[] }> {
+  let created = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    try {
+      const res = await createPartnerProductListing({
+        partnerId,
+        partnerName,
+        title: p.title || `Imported Item ${i + 1}`,
+        description: p.description || p.title || '',
+        category: p.category || 'Fashion',
+        brand: p.brand || partnerName,
+        sku: p.sku || `SKU-${Date.now()}-${i}`,
+        mrp: p.mrp || p.sellingPrice || 999,
+        sellingPrice: p.sellingPrice || 799,
+        stock: p.stock !== undefined ? p.stock : 10,
+        images: p.images || [p.primaryImage || ''],
+        primaryImage: p.primaryImage || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80',
+        productUrl: p.productUrl,
+        shippingCharges: p.shippingCharges || 0,
+        tryOnEnabled: p.tryOnEnabled,
+        garmentCategory: p.garmentCategory,
+        isDraft: false
+      });
+
+      if (res.success) {
+        created++;
+      } else {
+        failed++;
+        errors.push(`Row ${i + 1} (${p.title || 'Untitled'}): ${res.errors?.join(', ')}`);
+      }
+    } catch (err: any) {
+      failed++;
+      errors.push(`Row ${i + 1}: ${err.message}`);
+    }
+  }
+
+  return { created, failed, errors };
 }
 
 export async function updatePartnerProduct(productId: string, updates: Partial<PartnerProduct>): Promise<PartnerProduct | null> {
