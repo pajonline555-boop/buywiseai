@@ -41,10 +41,16 @@ export default function GenGStoreSlideshow() {
     loadData();
   }, []);
 
-  const validProducts = products.filter(
-    p => (p.status === 'LIVE' || (p.status as any) === 'ACTIVE') &&
-         p.primaryImage && typeof p.primaryImage === "string" && p.primaryImage.trim() !== ""
-  );
+  const validProducts = products
+    .filter(
+      p => (p.status === 'LIVE' || (p.status as any) === 'ACTIVE') &&
+           p.primaryImage && typeof p.primaryImage === "string" && p.primaryImage.trim() !== ""
+    )
+    .sort((a, b) => {
+      if (a.showInSlideshow && !b.showInSlideshow) return -1;
+      if (!a.showInSlideshow && b.showInSlideshow) return 1;
+      return 0;
+    });
 
   // Auto-play slideshow timer (3 seconds rotation)
   useEffect(() => {

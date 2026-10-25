@@ -61,7 +61,8 @@ data class PartnerProductSlide(
     val discountPercent: String,
     val imageUrl: String,
     val productUrl: String = "",
-    val slug: String = ""
+    val slug: String = "",
+    val showInSlideshow: Boolean = false
 )
 
 @Composable
@@ -202,6 +203,7 @@ fun GenGStoreShowcase(
                             val discountPct = if (mrpNum > sellingPriceNum) {
                                 "${((mrpNum - sellingPriceNum) * 100 / mrpNum)}% OFF SPECIAL DEAL"
                             } else "SPECIAL DEAL"
+                            val inSlideshow = doc.getBoolean("showInSlideshow") ?: false
                             val prodUrl = doc.getString("productUrl") ?: ""
                             val slug = doc.getString("slug") ?: id
                             
@@ -218,15 +220,18 @@ fun GenGStoreShowcase(
                                     discountPercent = discountPct,
                                     imageUrl = img,
                                     productUrl = prodUrl,
-                                    slug = slug
+                                    slug = slug,
+                                    showInSlideshow = inSlideshow
                                 )
                             )
                         }
                         if (fetchedList.isNotEmpty()) {
-                            val existingIds = fetchedList.map { it.id }.toSet()
-                            val combined = fetchedList + defaultSlides.filter { it.id !in existingIds }
-                            dynamicSlides = combined.sortedByDescending {
-                                it.id.contains("trendy_partywear") || it.title.contains("Partywear", ignoreCase = true)
+                            val combined = fetchedList + defaultSlides
+                            val deduped = combined.distinctBy {
+                                it.title.lowercase().replace(Regex("\\(updated\\)|\\(new\\)|\\(edit\\)"), "").replace(Regex("[^a-z0-9]"), "").trim()
+                            }
+                            dynamicSlides = deduped.sortedByDescending {
+                                it.showInSlideshow || it.id.contains("trendy_partywear") || it.title.contains("Partywear", ignoreCase = true)
                             }
                         }
                     }

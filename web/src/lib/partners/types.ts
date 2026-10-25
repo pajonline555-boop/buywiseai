@@ -145,6 +145,7 @@ export interface PartnerProduct {
   shoppingTrustScore?: number;
   shippingEstimate?: string;
   isIndexable?: boolean;
+  showInSlideshow?: boolean;
   fulfillmentMethod?: 'PARTNER_API' | 'PARTNER_PORTAL' | 'SECURE_EMAIL' | 'MANUAL_ADMIN';
   createdAt: string;
   updatedAt: string;

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth, checkIsAdminUser } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getPartnerProducts, getCachedPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, deletePartnerProduct, cleanProductTitle, getCategoryFallbackImage, getYoutubeEmbedUrl } from "@/lib/partners/partnerService";
+import { getPartnerProducts, getCachedPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, deletePartnerProduct, cleanProductTitle, getCategoryFallbackImage, getYoutubeEmbedUrl, deduplicatePartnerProducts, purgeDuplicateProducts, toggleProductSlideshow } from "@/lib/partners/partnerService";
 import { PartnerProduct, PartnerProductStatus, ProductSource, FulfillmentType } from "@/lib/partners/types";
 import { compressImageForStorage, formatFileSize, CompressionResult } from "@/lib/imageOptimizer";
 import { scrapeProductUrl, parseMeeshoLink } from "@/lib/scrapers/productScraper";
@@ -233,15 +233,36 @@ function InventoryPageContent() {
     setIsSyncing(true);
     try {
       const list = await getPartnerProducts('all', true, force);
-      setProducts(list);
+      setProducts(deduplicatePartnerProducts(list));
     } catch (err) {
       console.warn('Inventory sync notice:', err);
       try {
-        setProducts(getCachedPartnerProducts('all', true));
+        setProducts(deduplicatePartnerProducts(getCachedPartnerProducts('all', true)));
       } catch (e) {}
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleCleanDuplicates = async () => {
+    setBusy('cleaning');
+    try {
+      const { purgedCount, cleanProducts } = await purgeDuplicateProducts(products);
+      setProducts(cleanProducts);
+      setSuccessMessage(`🧹 Cleaned up and removed ${purgedCount} duplicate products!`);
+    } catch (e) {
+      console.error('Failed to clean duplicates:', e);
+      setProducts(prev => deduplicatePartnerProducts(prev));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleToggleSlideshow = async (productId: string, currentVal?: boolean) => {
+    const nextVal = !currentVal;
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, showInSlideshow: nextVal } : p));
+    await toggleProductSlideshow(productId, nextVal);
+    setSuccessMessage(nextVal ? '🌟 Product successfully added to Gen-G Store Slideshow!' : 'Product removed from Slideshow.');
   };
 
   useEffect(() => {
@@ -939,6 +960,26 @@ function InventoryPageContent() {
             >
               ➕ Onboard New Partner Product
             </button>
+            <button
+              onClick={handleCleanDuplicates}
+              disabled={busy === 'cleaning'}
+              style={{
+                padding: '12px 20px',
+                borderRadius: '16px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#f87171',
+                fontWeight: 900,
+                fontSize: '13px',
+                border: '1.5px solid rgba(239, 68, 68, 0.45)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Remove duplicate SKUs and keep only unique products"
+            >
+              {busy === 'cleaning' ? '🧹 Cleaning...' : '🧹 Clean Duplicate SKUs'}
+            </button>
           </div>
         </div>
 
@@ -1054,9 +1095,16 @@ function InventoryPageContent() {
                       <div style={{ fontSize: '10.5px', color: '#00d4ff', fontWeight: 800 }}>⚡ Affiliate Channel</div>
                     </div>
 
-                    <span style={{ fontSize: '11px', fontWeight: 900, padding: '5px 12px', borderRadius: '12px', background: isLive ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 215, 0, 0.15)', color: isLive ? '#00ff88' : '#ffd700', border: isLive ? '1px solid rgba(0, 255, 136, 0.4)' : '1px solid rgba(255, 215, 0, 0.4)' }}>
-                      {isLive ? '● LIVE' : '⏸ PAUSED'}
-                    </span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {p.showInSlideshow && (
+                        <span style={{ fontSize: '10.5px', fontWeight: 900, padding: '4px 8px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', border: '1px solid #10b981' }}>
+                          🌟 IN SLIDESHOW
+                        </span>
+                      )}
+                      <span style={{ fontSize: '11px', fontWeight: 900, padding: '5px 12px', borderRadius: '12px', background: isLive ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 215, 0, 0.15)', color: isLive ? '#00ff88' : '#ffd700', border: isLive ? '1px solid rgba(0, 255, 136, 0.4)' : '1px solid rgba(255, 215, 0, 0.4)' }}>
+                        {isLive ? '● LIVE' : '⏸ PAUSED'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Quick Action Buttons (Row 1: Edit & Status) */}
@@ -1111,6 +1159,42 @@ function InventoryPageContent() {
                       }}
                     >
                       {isLive ? '⏸ Pause' : '▶ Publish'}
+                    </button>
+                  </div>
+
+                  {/* Quick Action Buttons (Row 2: Toggle In Slide Show) */}
+                  <div style={{ marginTop: '8px', position: 'relative', zIndex: 10 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleToggleSlideshow(p.id, p.showInSlideshow);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '11px 16px',
+                        borderRadius: '12px',
+                        background: p.showInSlideshow
+                          ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(6, 182, 212, 0.28))'
+                          : 'rgba(255, 255, 255, 0.06)',
+                        border: p.showInSlideshow
+                          ? '1.5px solid #10b981'
+                          : '1px solid rgba(255, 255, 255, 0.18)',
+                        color: p.showInSlideshow ? '#34d399' : '#e2e8f0',
+                        fontWeight: 900,
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: p.showInSlideshow ? '0 0 16px rgba(16, 185, 129, 0.35)' : 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '15px' }}>{p.showInSlideshow ? '🌟' : '⭐'}</span>
+                      <span>{p.showInSlideshow ? 'Active in Slide Show (Tap to Remove)' : 'Show Product in Slide Show'}</span>
                     </button>
                   </div>
 
@@ -1234,6 +1318,21 @@ function InventoryPageContent() {
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap', position: 'sticky', right: 0, background: '#120e24', zIndex: 1, boxShadow: '-4px 0 10px rgba(0,0,0,0.5)' }}>
                           <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => handleToggleSlideshow(p.id, p.showInSlideshow)}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '10px',
+                                background: p.showInSlideshow ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                                border: p.showInSlideshow ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.2)',
+                                color: p.showInSlideshow ? '#34d399' : '#e2e8f0',
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {p.showInSlideshow ? '🌟 In Slideshow' : '⭐ Show in Slideshow'}
+                            </button>
                             <button
                               onClick={() => handleEditProduct(p)}
                               style={{

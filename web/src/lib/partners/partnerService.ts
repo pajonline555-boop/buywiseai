@@ -891,15 +891,135 @@ let cachedPartnerOrders: PartnerOrder[] | null = null;
 let lastOrdersFetchTime = 0;
 let ordersInFlightPromise: Promise<PartnerOrder[]> | null = null;
 
-function filterPartnerProducts(list: PartnerProduct[], category?: string, includeAllStatuses: boolean = false): PartnerProduct[] {
-  if (includeAllStatuses) {
-    if (!category || category.toLowerCase() === 'all') {
-      return list;
+/**
+ * Deduplicates products by normalized title, primaryImage, or SKU.
+ * Eliminates ghost duplicates from multiple edits/saves.
+ */
+export function deduplicatePartnerProducts(products: PartnerProduct[]): PartnerProduct[] {
+  const seenTitles = new Map<string, PartnerProduct>();
+  const seenImages = new Map<string, PartnerProduct>();
+  const seenSkus = new Map<string, PartnerProduct>();
+  const uniqueList: PartnerProduct[] = [];
+
+  for (const prod of products) {
+    if (!prod || !prod.title) continue;
+    // Normalize title: remove trailing "(updated)", "(new)", "(edit)", and punctuation
+    const baseTitle = prod.title
+      .toLowerCase()
+      .replace(/\(updated\)|\(new\)|\(edit\)/gi, '')
+      .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const imageKey = (prod.primaryImage || '').split('?')[0].trim();
+    const skuKey = (prod.sku || '').trim().toLowerCase();
+
+    // Check if duplicate
+    const matched = seenTitles.get(baseTitle) || 
+      (imageKey && imageKey.length > 20 ? seenImages.get(imageKey) : null) ||
+      (skuKey && skuKey.length > 3 ? seenSkus.get(skuKey) : null);
+
+    if (matched) {
+      // Merge attributes so no data is lost
+      if (prod.showInSlideshow) matched.showInSlideshow = true;
+      if (prod.status === 'LIVE' && matched.status !== 'LIVE') matched.status = 'LIVE';
+      if (prod.sellingPrice && !matched.sellingPrice) matched.sellingPrice = prod.sellingPrice;
+      if (prod.mrp && !matched.mrp) matched.mrp = prod.mrp;
+      continue;
     }
-    return list.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
+
+    seenTitles.set(baseTitle, prod);
+    if (imageKey && imageKey.length > 20) seenImages.set(imageKey, prod);
+    if (skuKey && skuKey.length > 3) seenSkus.set(skuKey, prod);
+    uniqueList.push(prod);
   }
 
-  const live = list.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
+  return uniqueList;
+}
+
+/**
+ * Permanently purges all duplicate products from Firestore and local storage.
+ */
+export async function purgeDuplicateProducts(allProducts: PartnerProduct[]): Promise<{ purgedCount: number; cleanProducts: PartnerProduct[] }> {
+  const seenTitles = new Map<string, string>(); // baseTitle -> keeperId
+  const seenImages = new Map<string, string>(); // imageKey -> keeperId
+  const duplicateIds: string[] = [];
+  const cleanList: PartnerProduct[] = [];
+
+  for (const prod of allProducts) {
+    if (!prod || !prod.title) continue;
+    const baseTitle = prod.title
+      .toLowerCase()
+      .replace(/\(updated\)|\(new\)|\(edit\)/gi, '')
+      .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const imageKey = (prod.primaryImage || '').split('?')[0].trim();
+
+    const existingKeeperId = seenTitles.get(baseTitle) || (imageKey && imageKey.length > 20 ? seenImages.get(imageKey) : null);
+
+    if (existingKeeperId) {
+      duplicateIds.push(prod.id);
+    } else {
+      seenTitles.set(baseTitle, prod.id);
+      if (imageKey && imageKey.length > 20) seenImages.set(imageKey, prod.id);
+      cleanList.push(prod);
+    }
+  }
+
+  // Delete all duplicate IDs
+  for (const dupId of duplicateIds) {
+    saveDeletedProductId(dupId);
+    try {
+      await deleteDoc(doc(db, 'partner_products', dupId));
+    } catch (e) {}
+  }
+
+  cachedPartnerProducts = cleanList;
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('buywise_cached_partner_products', JSON.stringify(cleanList));
+      const overrides = getLocalProductOverrides();
+      for (const dupId of duplicateIds) {
+        delete overrides[dupId];
+      }
+      saveAllLocalProductOverrides(overrides);
+    } catch (e) {}
+  }
+
+  return { purgedCount: duplicateIds.length, cleanProducts: cleanList };
+}
+
+/**
+ * Toggles whether a product is featured in the Gen-G Store slideshow.
+ */
+export async function toggleProductSlideshow(productId: string, showInSlideshow: boolean): Promise<void> {
+  saveLocalProductOverride(productId, { showInSlideshow });
+  if (cachedPartnerProducts) {
+    cachedPartnerProducts = cachedPartnerProducts.map(p => p.id === productId ? { ...p, showInSlideshow } : p);
+  }
+  const idx = MOCK_PARTNER_PRODUCTS.findIndex(p => p.id === productId);
+  if (idx !== -1) {
+    MOCK_PARTNER_PRODUCTS[idx].showInSlideshow = showInSlideshow;
+  }
+  try {
+    const docRef = doc(db, 'partner_products', productId);
+    await setDoc(docRef, { showInSlideshow, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (err) {
+    console.warn('Firestore toggle slideshow notice:', err);
+  }
+}
+
+function filterPartnerProducts(list: PartnerProduct[], category?: string, includeAllStatuses: boolean = false): PartnerProduct[] {
+  const deduped = deduplicatePartnerProducts(list);
+  if (includeAllStatuses) {
+    if (!category || category.toLowerCase() === 'all') {
+      return deduped;
+    }
+    return deduped.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
+  }
+
+  const live = deduped.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE');
   if (!category || category.toLowerCase() === 'all') {
     return live;
   }
