@@ -76,6 +76,7 @@ function InventoryPageContent() {
   const [isDragging, setIsDragging] = useState(false);
   const [optimizationInfo, setOptimizationInfo] = useState<CompressionResult | null>(null);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<{ url: string; title: string } | null>(null);
+  const [previewFullImage, setPreviewFullImage] = useState<{ url: string; title: string } | null>(null);
   const [productToDelete, setProductToDelete] = useState<PartnerProduct | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -293,7 +294,7 @@ function InventoryPageContent() {
   };
 
   useEffect(() => {
-    if (showModal || productToDelete) {
+    if (showModal || productToDelete || previewFullImage || previewVideoUrl) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -301,7 +302,7 @@ function InventoryPageContent() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [showModal, productToDelete]);
+  }, [showModal, productToDelete, previewFullImage, previewVideoUrl]);
 
   const fetchScrapedProductMetadata = async (rawInput: string) => {
     if (!rawInput || !rawInput.trim()) return;
@@ -965,9 +966,46 @@ function InventoryPageContent() {
               return (
                 <div key={p.id} className="glass" style={{ padding: '16px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.12)', background: 'rgba(18, 14, 36, 0.96)', marginBottom: '14px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                    {/* Thumbnail Image */}
-                    <div style={{ width: '64px', height: '64px', borderRadius: '14px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.18)', background: '#0a0814' }}>
-                      <img src={thumbImg} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {/* Thumbnail Image: Full Body with Face Visible */}
+                    <div
+                      onClick={() => setPreviewFullImage({ url: thumbImg, title: displayTitle })}
+                      title="Tap to view full body & face"
+                      style={{
+                        width: '76px',
+                        height: '104px',
+                        borderRadius: '14px',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        border: '1.5px solid rgba(0, 212, 255, 0.4)',
+                        background: '#070512',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.6)'
+                      }}
+                    >
+                      <img
+                        src={thumbImg}
+                        alt={displayTitle}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          objectPosition: 'center top'
+                        }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '2px',
+                        right: '3px',
+                        fontSize: '9px',
+                        background: 'rgba(0,0,0,0.7)',
+                        borderRadius: '4px',
+                        padding: '1px 3px',
+                        color: '#00d4ff'
+                      }}>🔍</span>
                     </div>
 
                     {/* Title, Category & Store */}
@@ -1145,8 +1183,12 @@ function InventoryPageContent() {
                       <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                         <td style={{ padding: '16px 20px', maxWidth: '360px' }}>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ width: '44px', height: '44px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)' }}>
-                              <img src={thumbImg} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div
+                              onClick={() => setPreviewFullImage({ url: thumbImg, title: displayTitle })}
+                              title="Click to view full photo"
+                              style={{ width: '52px', height: '72px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.18)', background: '#070512', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            >
+                              <img src={thumbImg} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center top' }} />
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <Link href={`/product/${slug}`} target="_blank" style={{ textDecoration: 'none', color: '#ffffff', fontWeight: 800, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
@@ -1528,19 +1570,23 @@ function InventoryPageContent() {
                     }}>
                       <div style={{
                         position: 'relative',
-                        width: '70px',
-                        height: '70px',
-                        borderRadius: '10px',
+                        width: '80px',
+                        height: '108px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        background: '#080612',
+                        background: '#070512',
                         flexShrink: 0,
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        border: '1.5px solid rgba(0, 255, 136, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '2px'
                       }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={formData.primaryImage}
                           alt="Preview"
-                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center top' }}
                           onError={(e) => {
                             (e.currentTarget as HTMLImageElement).src = '/kamarbandh.png';
                           }}
@@ -1742,6 +1788,97 @@ function InventoryPageContent() {
           </div>
         )}
 
+        {/* Full Image Preview Lightbox Modal (Full Body & Face Visible) */}
+        {previewFullImage && (
+          <div
+            onClick={() => setPreviewFullImage(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0, 0, 0, 0.92)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 10000,
+              padding: '16px'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'relative',
+                maxWidth: '92vw',
+                maxHeight: '92vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                background: 'rgba(16, 12, 30, 0.95)',
+                border: '1.5px solid rgba(0, 212, 255, 0.5)',
+                borderRadius: '24px',
+                padding: '16px',
+                boxShadow: '0 25px 60px rgba(0, 212, 255, 0.3)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#00d4ff', maxWidth: '80%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  📸 Full Body View: {previewFullImage.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFullImage(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{
+                maxWidth: '85vw',
+                maxHeight: '75vh',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                background: '#05030a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <img
+                  src={previewFullImage.url}
+                  alt={previewFullImage.title}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '75vh',
+                    objectFit: 'contain',
+                    objectPosition: 'center top'
+                  }}
+                />
+              </div>
+
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '10px' }}>
+                Full-length fashion model portrait • Head-to-toe uncropped view
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Delete Product Confirmation Modal */}
         {productToDelete && (
           <div style={{
@@ -1779,11 +1916,11 @@ function InventoryPageContent() {
 
               {/* Product Preview Card */}
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', padding: '14px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                <div style={{ width: '60px', height: '82px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255, 255, 255, 0.15)', background: '#070512', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img
                     src={productToDelete.primaryImage || (productToDelete.images && productToDelete.images[0]) || getCategoryFallbackImage(productToDelete.category, productToDelete.title)}
                     alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center top' }}
                   />
                 </div>
                 <div style={{ minWidth: 0 }}>
