@@ -28,6 +28,8 @@ try {
   console.warn("[Firebase Auth Build Init Notice]:", e);
 }
 
+import { getStorage } from "firebase/storage";
+
 let db: any;
 try {
   db = getFirestore(app);
@@ -35,6 +37,13 @@ try {
   console.warn("[Firestore Build Init Notice]:", e);
 }
 
+let storage: any;
+try {
+  storage = getStorage(app);
+} catch (e) {
+  console.warn("[Firebase Storage Build Init Notice]:", e);
+}
+
 const googleProvider = new GoogleAuthProvider();
 
-export { auth, db, googleProvider };
+export { auth, db, storage, googleProvider };

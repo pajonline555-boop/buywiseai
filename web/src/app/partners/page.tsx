@@ -9,6 +9,7 @@ import { getPartnerProducts, getYoutubeEmbedUrl } from '@/lib/partners/partnerSe
 import { getProxiedImageUrl } from '@/lib/imageUtils';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { buildAffiliateUrl } from '@/lib/affiliate/affiliateLinkBuilder';
+import { trackPartnerEvent } from '@/lib/partners/partnerAnalytics';
 
 const CATEGORY_TABS: { id: string; label: string; icon: string }[] = [
   { id: 'All', label: '⚡ All Gen-G Store Items', icon: '⚡' },
@@ -62,10 +63,26 @@ export default function PartnersStorefront() {
   });
 
   const handleTryOn = (product: PartnerProduct) => {
+    if (product.partnerId) {
+      trackPartnerEvent({
+        partnerId: product.partnerId,
+        productId: product.id,
+        eventType: 'product_detail_view',
+        sourceSurface: 'gen_g_store'
+      }).catch(() => {});
+    }
     router.push(`/try-on?garmentUrl=${encodeURIComponent(product.primaryImage)}&title=${encodeURIComponent(product.title)}`);
   };
 
   const handleBuyNow = (product: PartnerProduct) => {
+    if (product.partnerId) {
+      trackPartnerEvent({
+        partnerId: product.partnerId,
+        productId: product.id,
+        eventType: 'outbound_buy_click',
+        sourceSurface: 'gen_g_store'
+      }).catch(() => {});
+    }
     const targetUrl = product.productUrl && product.productUrl.startsWith('http')
       ? product.productUrl
       : (product.brand || product.partnerName || '').toLowerCase().includes('flipkart')

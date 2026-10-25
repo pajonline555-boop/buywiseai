@@ -11,6 +11,9 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import SafeProductImage from "@/components/SafeProductImage";
 import { parseSearchIntent } from "@/lib/search/ProductIntentParser";
 import { getCategoryCapabilities } from "@/lib/search/CategoryCapabilityMatrix";
+import { trackPartnerEvent } from "@/lib/partners/partnerAnalytics";
+import SearchAutocomplete from "@/components/search/SearchAutocomplete";
+import { saveSearchQuery } from "@/lib/search/searchHistory";
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -38,11 +41,12 @@ function SearchContent() {
   useEffect(() => {
     setSearchInput(searchQuery);
     if (searchQuery) {
+      saveSearchQuery(searchQuery, user?.uid);
       fetchComparison();
     } else {
       setLoading(false);
     }
-  }, [searchQuery, modeParam]);
+  }, [searchQuery, modeParam, user?.uid]);
 
   const fetchComparison = async () => {
     setLoading(true);
@@ -63,10 +67,14 @@ function SearchContent() {
     }
   };
 
-  const handleTextSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchInput.trim())}`);
+  const handleTextSearch = (queryOrEvent?: string | React.FormEvent) => {
+    if (typeof queryOrEvent === "object" && queryOrEvent !== null && "preventDefault" in queryOrEvent) {
+      queryOrEvent.preventDefault();
+    }
+    const targetQuery = typeof queryOrEvent === "string" ? queryOrEvent : searchInput;
+    if (targetQuery.trim()) {
+      saveSearchQuery(targetQuery.trim(), user?.uid);
+      router.push(`/search?q=${encodeURIComponent(targetQuery.trim())}`);
     }
   };
 
@@ -220,59 +228,69 @@ function SearchContent() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <form onSubmit={handleTextSearch} className="glass" style={{ display: "flex", alignItems: "center", padding: "6px 12px", borderRadius: "50px", maxWidth: "680px" }}>
-            <input
-              type="text"
+          {/* Search Bar with Device-Local Autocomplete & Recency Management */}
+          <div className="glass" style={{ borderRadius: "50px", maxWidth: "680px", padding: "4px 8px" }}>
+            <SearchAutocomplete
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={setSearchInput}
+              onSearch={handleTextSearch}
               placeholder="Search Indian products or paste query..."
-              style={{ flex: 1, background: "transparent", border: "none", color: "white", padding: "10px 18px", outline: "none", fontSize: "15px" }}
+              scopeKey={user?.uid}
+              formStyle={{ padding: "4px 6px" }}
+              inputStyle={{ padding: "8px 12px" }}
+              childrenTrailing={
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsVoiceModalOpen(true)}
+                    title="Voice Search"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.08)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "50%",
+                      width: "40px",
+                      height: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontSize: "18px",
+                      cursor: "pointer",
+                      marginRight: "8px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    🎙️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPhotoModalOpen(true)}
+                    title="Search by Photo"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.08)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "50%",
+                      width: "40px",
+                      height: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontSize: "18px",
+                      cursor: "pointer",
+                      marginRight: "8px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    📷
+                  </button>
+                  <button type="submit" className="btn-primary" style={{ padding: "10px 24px", flexShrink: 0 }}>
+                    Search
+                  </button>
+                </>
+              }
             />
-            <button
-              type="button"
-              onClick={() => setIsVoiceModalOpen(true)}
-              title="Voice Search"
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: "50%",
-                width: "40px",
-                height: "40px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "18px",
-                cursor: "pointer",
-                marginRight: "8px",
-              }}
-            >
-              🎙️
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPhotoModalOpen(true)}
-              title="Search by Photo"
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: "50%",
-                width: "40px",
-                height: "40px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "18px",
-                cursor: "pointer",
-                marginRight: "8px",
-              }}
-            >
-              📷
-            </button>
-            <button type="submit" className="btn-primary" style={{ padding: "10px 24px" }}>Search</button>
-          </form>
+          </div>
         </div>
 
         {/* 🌟 CUSTOMER-FACING CATEGORY TABS: PREMIUM VS LUXURY */}
@@ -741,7 +759,22 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
           >
             {alertSaved ? "✅ Saved" : "🔔 Alert"}
           </button>
-          <a href={offer.url} target="_blank" rel="noopener noreferrer" style={{ flex: 2, textDecoration: "none" }}>
+          <a
+            href={offer.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ flex: 2, textDecoration: "none" }}
+            onClick={() => {
+              if (offer.productSource === 'PARTNER' && offer.partnerId) {
+                trackPartnerEvent({
+                  partnerId: offer.partnerId,
+                  productId: offer.id,
+                  eventType: 'outbound_buy_click',
+                  sourceSurface: 'search_comparison_grid'
+                }).catch(() => {});
+              }
+            }}
+          >
             <button className="btn-primary" style={{ width: "100%", padding: "9px", fontSize: "12px", fontWeight: 700 }}>
               {offer.isDirectProductLink && !offer.isSearchLinkOnly ? "View Direct Deal ↗" : `Search ${offer.store} ↗`}
             </button>
@@ -887,7 +920,22 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
           {alertSaved ? "✅ Saved" : "🔔 Alert"}
         </button>
 
-        <a href={offer.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+        <a
+          href={offer.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: "none" }}
+          onClick={() => {
+            if (offer.productSource === 'PARTNER' && offer.partnerId) {
+              trackPartnerEvent({
+                partnerId: offer.partnerId,
+                productId: offer.id,
+                eventType: 'outbound_buy_click',
+                sourceSurface: 'search_comparison_list'
+              }).catch(() => {});
+            }
+          }}
+        >
           <button className="btn-primary" style={{ padding: "8px 18px", fontSize: "13px" }}>
             {offer.isDirectProductLink && !offer.isSearchLinkOnly ? "View Direct Deal ↗" : `Search ${offer.store} ↗`}
           </button>

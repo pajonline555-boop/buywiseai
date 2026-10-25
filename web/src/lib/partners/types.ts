@@ -74,6 +74,29 @@ export interface Partner {
   updatedAt: string;
 }
 
+export type PartnerReviewStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'SUSPENDED' | 'ARCHIVED';
+
+export type PartnerVerificationStatus = 'unverified' | 'verified_live' | 'verification_stale' | 'rejected';
+
+export interface ProductVariant {
+  id: string;
+  size?: string;
+  color?: string;
+  material?: string;
+  model?: string;
+  packQuantity?: number;
+  sku?: string;
+  stock?: number;
+  price?: number;
+}
+
+export interface ReviewHistoryEntry {
+  status: PartnerReviewStatus;
+  changedAt: string;
+  actor: string;
+  note?: string;
+}
+
 export interface PartnerProduct {
   id: string;
   partnerId: string;
@@ -90,6 +113,11 @@ export interface PartnerProduct {
   weightGrams?: number;
   sizes?: string[];
   colors?: string[];
+  variants?: ProductVariant[];
+  barcodeGtin?: string;
+  shippingCharges?: number;
+  taxRate?: number;
+  deliveryDays?: string;
   images: string[];
   primaryImage: string;
   fulfillment: FulfillmentType;
@@ -100,6 +128,12 @@ export interface PartnerProduct {
   warranty: string;
   gstPercent: number;
   status: PartnerProductStatus;
+  reviewStatus?: PartnerReviewStatus;
+  verificationStatus?: PartnerVerificationStatus;
+  priceVerifiedAt?: string;
+  verifiedPrice?: number;
+  rejectionReason?: string;
+  reviewHistory?: ReviewHistoryEntry[];
   commissionType: CommissionType;
   commissionValue: number;
   productUrl?: string;
@@ -114,6 +148,49 @@ export interface PartnerProduct {
   fulfillmentMethod?: 'PARTNER_API' | 'PARTNER_PORTAL' | 'SECURE_EMAIL' | 'MANUAL_ADMIN';
   createdAt: string;
   updatedAt: string;
+}
+
+export type PartnerAnalyticsEventType = 
+  | 'product_impression'
+  | 'product_detail_view'
+  | 'outbound_buy_click'
+  | 'partner_product_created'
+  | 'partner_product_updated'
+  | 'partner_product_submitted'
+  | 'partner_product_approved'
+  | 'partner_product_rejected';
+
+export interface PartnerAnalyticsEvent {
+  eventId: string;
+  timestamp: string;
+  partnerId: string;
+  productId?: string;
+  eventType: PartnerAnalyticsEventType;
+  sourceSurface?: string;
+  sessionId?: string;
+  devicePlatform?: 'web' | 'android' | 'ios';
+  metadata?: Record<string, any>;
+}
+
+export interface PartnerAnalyticsSummary {
+  partnerId: string;
+  dateRange: 'today' | '7d' | '30d' | '90d' | 'all';
+  totalImpressions: number;
+  totalViews: number;
+  totalOutboundClicks: number;
+  clickThroughRate: number; // percentage
+  attributedOrders: number;
+  conversionRate: number; // percentage
+  totalSalesVolume: number;
+  totalCommissionPaid: number;
+  topProducts: Array<{
+    productId: string;
+    title: string;
+    primaryImage: string;
+    views: number;
+    clicks: number;
+    ctr: number;
+  }>;
 }
 
 export interface OrderItem {

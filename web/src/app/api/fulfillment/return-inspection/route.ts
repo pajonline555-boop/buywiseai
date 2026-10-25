@@ -1,11 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { processReturnInspection } from '@/lib/partners/fulfillment/fulfillmentDispatcher';
 import { ReturnCondition } from '@/lib/partners/fulfillment/fulfillmentTypes';
+import { logSecurityEvent } from '@/lib/auth/roleMiddleware';
 
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request) {
+export async function POST(req: Request | NextRequest) {
   try {
+    const authHeader = req.headers.get('Authorization') || req.headers.get('x-admin-authorization');
+    if (!authHeader) {
+      logSecurityEvent({
+        eventType: 'AUTHORIZATION_FAILURE',
+        route: '/api/fulfillment/return-inspection',
+        reason: 'Unauthenticated return inspection submission attempt'
+      });
+      return NextResponse.json({ success: false, code: 'UNAUTHORIZED', message: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { fulfillmentId, productId, quantity, condition, notes, actorId } = body;
 

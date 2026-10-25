@@ -32,49 +32,64 @@ export class BuyWisePartnerAdapter implements RetailerAdapter {
         );
       });
 
-      const offers: StoreOffer[] = matchingProds.map(p => ({
-        id: p.id,
-        retailerId: this.id,
-        store: '🟢 BuyWise Store',
-        title: p.title,
-        url: p.productUrl && p.productUrl.startsWith('http') ? p.productUrl : `https://buywiseai.pajonline.co.in/partners?product=${p.id}`,
-        directProductUrl: `https://buywiseai.pajonline.co.in/partners?product=${p.id}`,
-        price: p.sellingPrice,
-        currency: 'INR',
-        originalPrice: p.mrp,
-        mrp: p.mrp,
-        discount: Math.round(((p.mrp - p.sellingPrice) / p.mrp) * 100),
-        imageUrl: p.primaryImage,
-        logo: '/favicon.ico',
-        rating: p.rating || 4.9,
-        reviewCount: p.reviewCount || 15,
-        availability: p.stock > 0 ? 'in_stock' : 'out_of_stock',
-        sellerName: p.partnerName,
-        deliveryText: 'Fulfilled by Verified Partner (Free Delivery)',
-        isLowest: false,
-        isBestValue: true,
-        matchType: 'exact',
-        matchConfidence: 0.95,
-        identityConfidence: 0.95,
-        attributeMatchScore: 0.90,
-        visualSimilarityScore: 0.90,
-        smartValueScore: 95,
-        trustScore: 98,
-        trustLevel: 'high',
-        dataSource: 'api',
-        verificationStatus: 'verified_live',
-        priceVerifiedAt: checkedAt,
-        sellerVerified: true,
-        staleVerification: false,
-        checkedAt,
-        sourceType: 'api',
-        productSource: 'PARTNER',
-        fulfillmentType: 'PARTNER_FULFILLED',
-        partnerId: p.partnerId,
-        partnerName: p.partnerName,
-        partnerBadge: true,
-        tryOnEnabled: p.tryOnEnabled
-      }));
+      // Filter only live/approved products
+      const liveMatchingProds = matchingProds.filter(p => 
+        (p.status === 'LIVE' || (p.status as any) === 'ACTIVE') && 
+        p.reviewStatus !== 'REJECTED' && 
+        p.reviewStatus !== 'SUSPENDED' && 
+        p.reviewStatus !== 'ARCHIVED'
+      );
+
+      const offers: StoreOffer[] = liveMatchingProds.map(p => {
+        const isVerifiedLive = p.verificationStatus === 'verified_live';
+        const deliveryText = p.shippingCharges && p.shippingCharges > 0 
+          ? `Fulfilled by ${p.partnerName} (+₹${p.shippingCharges} Delivery)`
+          : 'Fulfilled by Partner (Free Delivery)';
+
+        return {
+          id: p.id,
+          retailerId: this.id,
+          store: '🟢 BuyWise Store',
+          title: p.title,
+          url: p.productUrl && p.productUrl.startsWith('http') ? p.productUrl : `https://buywiseai.pajonline.co.in/partners?product=${p.id}`,
+          directProductUrl: `https://buywiseai.pajonline.co.in/partners?product=${p.id}`,
+          price: p.sellingPrice,
+          currency: 'INR',
+          originalPrice: p.mrp,
+          mrp: p.mrp,
+          discount: Math.round(((p.mrp - p.sellingPrice) / p.mrp) * 100),
+          imageUrl: p.primaryImage,
+          logo: '/favicon.ico',
+          rating: p.rating || 4.9,
+          reviewCount: p.reviewCount || 15,
+          availability: p.stock > 0 ? 'in_stock' : 'out_of_stock',
+          sellerName: p.partnerName,
+          deliveryText,
+          isLowest: false,
+          isBestValue: isVerifiedLive,
+          matchType: 'exact',
+          matchConfidence: 0.95,
+          identityConfidence: 0.95,
+          attributeMatchScore: 0.90,
+          visualSimilarityScore: 0.90,
+          smartValueScore: 95,
+          trustScore: isVerifiedLive ? 98 : 85,
+          trustLevel: isVerifiedLive ? 'high' : 'moderate',
+          dataSource: 'api',
+          verificationStatus: isVerifiedLive ? 'verified_live' : 'unverified',
+          priceVerifiedAt: isVerifiedLive ? (p.priceVerifiedAt || checkedAt) : undefined,
+          sellerVerified: isVerifiedLive,
+          staleVerification: false,
+          checkedAt,
+          sourceType: 'api',
+          productSource: 'PARTNER',
+          fulfillmentType: 'PARTNER_FULFILLED',
+          partnerId: p.partnerId,
+          partnerName: p.partnerName,
+          partnerBadge: isVerifiedLive,
+          tryOnEnabled: p.tryOnEnabled
+        };
+      });
 
       return {
         retailer: {

@@ -22,6 +22,9 @@ import {
   Competition,
 } from "@/lib/competition/store";
 import RulesAndRegulationsModal from "@/components/competition/RulesAndRegulationsModal";
+import SearchAutocomplete from "@/components/search/SearchAutocomplete";
+import { saveSearchQuery } from "@/lib/search/searchHistory";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -33,6 +36,7 @@ export default function Home() {
   const [pastComp, setPastComp] = useState<Competition | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   useEffect(() => {
     // Initial fast synchronous load from store / localStorage
@@ -62,10 +66,14 @@ export default function Home() {
     syncRealData();
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query)}`);
+  const handleSearch = (queryOrEvent?: string | React.FormEvent) => {
+    if (typeof queryOrEvent === "object" && queryOrEvent !== null && "preventDefault" in queryOrEvent) {
+      queryOrEvent.preventDefault();
+    }
+    const targetQuery = typeof queryOrEvent === "string" ? queryOrEvent : query;
+    if (targetQuery.trim()) {
+      saveSearchQuery(targetQuery.trim(), user?.uid);
+      router.push(`/search?q=${encodeURIComponent(targetQuery.trim())}`);
     }
   };
 
@@ -135,64 +143,89 @@ export default function Home() {
             {t('hero_desc')}
           </p>
           
-          <form onSubmit={handleSearch} className="glass" style={{ display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '50px', maxWidth: '540px', marginBottom: '28px', background: 'rgba(18, 14, 36, 0.95)', border: '1px solid rgba(255, 255, 255, 0.25)' }}>
-            <input 
-              type="text" 
+          {/* Hero Search Bar with Device-Local Autocomplete & History */}
+          <div
+            className="glass"
+            style={{
+              borderRadius: "50px",
+              maxWidth: "540px",
+              marginBottom: "28px",
+              background: "rgba(18, 14, 36, 0.95)",
+              border: "1px solid rgba(255, 255, 255, 0.25)",
+              padding: "4px 8px",
+            }}
+          >
+            <SearchAutocomplete
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('search_placeholder')}
-              style={{ flex: 1, background: 'transparent', border: 'none', color: '#ffffff', padding: '10px 16px', outline: 'none', fontSize: '15px', fontWeight: 600, minWidth: '0' }}
+              onChange={setQuery}
+              onSearch={handleSearch}
+              placeholder={t("search_placeholder")}
+              scopeKey={user?.uid}
+              formStyle={{ padding: "4px 6px" }}
+              inputStyle={{ padding: "8px 12px", fontWeight: 600 }}
+              childrenTrailing={
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsVoiceModalOpen(true)}
+                    title="Voice Search (Speech Recognition)"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.12)",
+                      border: "1px solid rgba(255, 255, 255, 0.3)",
+                      borderRadius: "50%",
+                      width: "40px",
+                      height: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ffffff",
+                      fontSize: "18px",
+                      cursor: "pointer",
+                      marginRight: "6px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    🎙️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPhotoModalOpen(true)}
+                    title="Search by Photo (BuyWise AI Vision)"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.12)",
+                      border: "1px solid rgba(255, 255, 255, 0.3)",
+                      borderRadius: "50%",
+                      width: "40px",
+                      height: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ffffff",
+                      fontSize: "18px",
+                      cursor: "pointer",
+                      marginRight: "6px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    📷
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{
+                      borderRadius: "50px",
+                      padding: "10px 22px",
+                      fontWeight: 800,
+                      fontSize: "14px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {t("compare_btn")}
+                  </button>
+                </>
+              }
             />
-            
-            <button
-              type="button"
-              onClick={() => setIsVoiceModalOpen(true)}
-              title="Voice Search (Speech Recognition)"
-              style={{
-                background: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontSize: '18px',
-                cursor: 'pointer',
-                marginRight: '6px',
-                flexShrink: 0
-              }}
-            >
-              🎙️
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPhotoModalOpen(true)}
-              title="Search by Photo (BuyWise AI Vision)"
-              style={{
-                background: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontSize: '18px',
-                cursor: 'pointer',
-                marginRight: '6px',
-                flexShrink: 0
-              }}
-            >
-              📷
-            </button>
-
-            <button type="submit" className="btn-primary" style={{ borderRadius: '50px', padding: '10px 22px', fontWeight: 800, fontSize: '14px', flexShrink: 0 }}>
-              {t('compare_btn')}
-            </button>
-          </form>
+          </div>
 
           <div className="hero-action-buttons">
             <button

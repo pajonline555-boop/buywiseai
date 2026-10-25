@@ -5,12 +5,29 @@ service firebase.storage {
     // Global Server-Authoritative Admin Check via Firebase Custom Claims
     function isAdmin() {
       return request.auth != null && (
-        request.auth.token.admin == true || 
-        request.auth.token.role == 'ADMIN'
+        ('admin' in request.auth.token && request.auth.token.admin == true) || 
+        ('role' in request.auth.token && request.auth.token.role == 'ADMIN')
       );
     }
 
-    // Helper: Validate image content-type and file size (Max 10MB)
+    // Helper: Exact Partner Ownership Verification (No Cross-Partner Leaks)
+    function isPartnerOwner(partnerId) {
+      return request.auth != null && (
+        request.auth.uid == partnerId ||
+        ('partnerId' in request.auth.token && request.auth.token.partnerId == partnerId)
+      );
+    }
+
+    // Helper: Safe verification of approved/published media
+    function isApprovedMedia() {
+      return resource != null && resource.metadata != null && (
+        ('published' in resource.metadata && resource.metadata.published == 'true') ||
+        ('status' in resource.metadata && resource.metadata.status == 'APPROVED') ||
+        ('visibility' in resource.metadata && resource.metadata.visibility == 'public')
+      );
+    }
+
+    // Helper: Validate general image upload (Max 10MB)
     function isValidImageUpload() {
       return request.resource.size <= 10 * 1024 * 1024
         && (request.resource.contentType.matches('image/jpeg')
@@ -18,27 +35,56 @@ service firebase.storage {
             || request.resource.contentType.matches('image/webp'));
     }
 
-    // User Avatar & Profile Photos (/users/{userId}/*)
+    // Helper: Validate partner product image upload (Max 5MB)
+    function isValidPartnerImageUpload() {
+      return request.resource.size <= 5 * 1024 * 1024
+        && (request.resource.contentType.matches('image/jpeg')
+            || request.resource.contentType.matches('image/png')
+            || request.resource.contentType.matches('image/webp'));
+    }
+
+    // 1. User Avatar & Profile Photos (/users/{userId}/*)
     match /users/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if (request.auth != null && request.auth.uid == userId && isValidImageUpload()) || isAdmin();
-      allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId && isValidImageUpload());
+      allow delete: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
 
-    // VTO User Input & Try-On Photo Studio Uploads (/try-on/{userId}/*)
+    // 2. VTO User Input & Try-On Photos (/try-on/{userId}/*)
     match /try-on/{userId}/{allPaths=**} {
-      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
-      allow write: if (request.auth != null && request.auth.uid == userId && isValidImageUpload()) || isAdmin();
-      allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId && isValidImageUpload());
+      allow delete: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
 
-    // Static Merchant & Product Media (/products/*)
+    // 3. Approved / Published Partner Media Path (/partner-uploads/{partnerId}/published/*)
+    match /partner-uploads/{partnerId}/published/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() || (isPartnerOwner(partnerId) && isValidPartnerImageUpload());
+      allow delete: if isAdmin() || isPartnerOwner(partnerId);
+    }
+
+    // 4. Partner Product Media Uploads (/partner-uploads/{partnerId}/*)
+    match /partner-uploads/{partnerId}/{allPaths=**} {
+      // Consumers can ONLY view published or approved product media; unpublished/draft media is restricted to the owning partner and admin
+      allow read: if isAdmin() || isPartnerOwner(partnerId) || isApprovedMedia();
+
+      // Partner can ONLY upload to their own partnerId path with 5MB validation
+      allow write: if isAdmin() || (
+        isPartnerOwner(partnerId) && isValidPartnerImageUpload()
+      );
+
+      // Partner can ONLY delete their own uploaded files
+      allow delete: if isAdmin() || isPartnerOwner(partnerId);
+    }
+
+    // 5. Approved Static Merchant & Catalog Media (/products/*)
     match /products/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Default Deny All Unmatched Storage Paths
+    // STRICT DEFAULT DENY: All unlisted paths are completely blocked
     match /{allPaths=**} {
       allow read, write: if false;
     }

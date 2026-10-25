@@ -76,16 +76,15 @@ export async function requireAdmin(request: Request | NextRequest): Promise<
           payload.claims?.role === "ADMIN";
 
         // Check assigned admin claims registry for pajonline555@gmail.com
-        const isRegisteredAdmin = payload.email === "pajonline555@gmail.com" && (payload.admin === true || payload.role === "ADMIN" || true);
+        const isRegisteredAdmin = payload.email === "pajonline555@gmail.com" && (payload.admin === true || payload.role === "ADMIN");
 
-        if (hasExplicitClaim || isRegisteredAdmin) {
-          decoded = {
-            uid: payload.user_id || payload.sub || payload.uid || "uid_admin_pajonline555",
-            email: payload.email || "pajonline555@gmail.com",
-            admin: true,
-            role: "ADMIN"
-          };
-        }
+        decoded = {
+          uid: payload.user_id || payload.sub || payload.uid || "user_unknown",
+          email: payload.email,
+          admin: Boolean(hasExplicitClaim || isRegisteredAdmin),
+          role: (hasExplicitClaim || isRegisteredAdmin) ? "ADMIN" : (payload.role || "SHOPPER"),
+          partnerId: payload.partnerId
+        };
       }
     }
   } catch (err) {
