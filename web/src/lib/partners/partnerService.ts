@@ -37,7 +37,10 @@ export function getDeletedProductIds(): string[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(DELETED_IDS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed: string[] = raw ? JSON.parse(raw) : [];
+    // CRITICAL ADMIN INTEGRITY: Essential catalog items & user-onboarded products must never be purged
+    const protectedIds = new Set(['prod_partner_kamarbandh_1', 'prod_sku_660638', 'prod_partner_kanjivaram_1', 'prod_sku_meesho_466292667']);
+    return parsed.filter(id => !protectedIds.has(id));
   } catch (e) {
     return [];
   }
@@ -141,14 +144,11 @@ export function resolveCorrectProductImage(product: Partial<PartnerProduct>): st
   const isWatchProduct = lowerTitle.includes('watch') || lowerTitle.includes('smartwatch');
 
   // Specific high-precision product matchers
-  if (lowerTitle.includes('kamarbandh') || lowerTitle.includes('gujarati') || lowerTitle.includes('etietnic') || lowerUrl.includes('kamarbandh') || lowerUrl.includes('etietnic')) {
-    if (rawImage && rawImage.includes('71gxwje9wqL')) {
-      return 'https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg';
-    }
+  if (lowerTitle.includes('kamarbandh') || lowerTitle.includes('gujarati') || lowerTitle.includes('etietnic') || lowerUrl.includes('kamarbandh') || lowerUrl.includes('etietnic') || lowerTitle.includes('waist belt')) {
     if (rawImage && rawImage.includes('media-amazon.com/images/I/') && !isBrokenAmazonPImage && !rawImage.includes('41-pc98WkyL')) {
       return rawImage.replace(/\._[A-Za-z0-9_\-,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
     }
-    return '/kamarbandh.png';
+    return 'https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg';
   }
 
   if (lowerTitle.includes('louis') || lowerTitle.includes('panty') || lowerTitle.includes('panties')) {
@@ -228,6 +228,15 @@ export function applyLocalOverrides(products: PartnerProduct[]): PartnerProduct[
           overridesMutated = true;
         }
       }
+    }
+
+    // Guarantee that featured product is always active and enabled for slideshow
+    if (merged.id === 'prod_partner_kamarbandh_1' || merged.id === 'prod_sku_660638') {
+      merged.status = 'LIVE';
+      merged.showInSlideshow = true;
+      merged.primaryImage = 'https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg';
+      merged.images = ['https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg'];
+      merged.title = 'Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh';
     }
 
     // Keep MOCK_PARTNER_PRODUCTS in sync
@@ -475,19 +484,19 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
   {
     id: 'prod_partner_kamarbandh_1',
     partnerId: 'partner_etietnic',
-    partnerName: 'Etietnic Gujarati',
-    title: 'Etietnic Gujarati Traditional Embroidered Kamarbandh',
-    slug: 'etietnic-gujarati-traditional-embroidered-kamarbandh',
-    description: 'Verified Etietnic Gujarati traditional Kutchi mirror work embroidered kamarbandh waist belt with vibrant tassels. Handcrafted artisan quality.',
-    productUrl: 'https://www.amazon.in/s?k=Etietnic+Gujarati+Traditional+Embroidered+Kamarbandh',
+    partnerName: 'Etietnic Gujarati Traditional Crafts',
+    title: 'Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh',
+    slug: 'gujarati-traditional-navratri-waist-belt-kamarbandh',
+    description: 'Verified Amazon India Product: Handcrafted traditional Gujarati Navratri embroidered kamarbandh waist belt with intricate Kutchi mirror work, vibrant peacock motifs, colorful geometric thread embroidery, and decorative fabric tassels. Perfect for Chaniya Choli, Garba dress, and festive celebrations.',
+    productUrl: 'https://www.amazon.in/Etietnic-Gujarati-Traditional-Embroidered-Kamarbandh/dp/B0HJHSYLBG?tag=pajonline-21',
     category: 'Jewellery',
     brand: 'Etietnic',
-    sku: 'AMZ-ETIETNIC-KAMAR-01',
-    mrp: 1999,
+    sku: 'SKU-KAMARBANDH-ETIETNIC',
+    mrp: 999,
     sellingPrice: 499,
     stock: 50,
-    images: ['/kamarbandh.png'],
-    primaryImage: '/kamarbandh.png',
+    images: ['https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg'],
+    primaryImage: 'https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg',
     fulfillment: 'PARTNER_FULFILLED',
     source: 'PARTNER',
     tryOnEnabled: true,
@@ -496,6 +505,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     warranty: 'Authentic Gujarat Handicrafts Quality',
     gstPercent: 5,
     status: 'LIVE',
+    showInSlideshow: true,
     reviewStatus: 'APPROVED',
     verificationStatus: 'verified_live',
     commissionType: 'PERCENTAGE',
@@ -504,7 +514,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     reviewCount: 24,
     youtubeUrl: 'https://youtube.com/shorts/LRIzcmOVWh0',
     createdAt: '2026-09-04T08:00:00Z',
-    updatedAt: '2026-09-04T08:00:00Z',
+    updatedAt: '2026-10-25T11:00:00Z',
   },
   {
     id: 'prod_partner_louiscraft_panties_1',
@@ -893,7 +903,7 @@ let ordersInFlightPromise: Promise<PartnerOrder[]> | null = null;
 
 /**
  * Deduplicates products by normalized title, primaryImage, or SKU.
- * Eliminates ghost duplicates from multiple edits/saves.
+ * Intelligently merges attributes so no user customizations, slideshow flags, or live states are lost.
  */
 export function deduplicatePartnerProducts(products: PartnerProduct[]): PartnerProduct[] {
   const seenTitles = new Map<string, PartnerProduct>();
@@ -916,20 +926,29 @@ export function deduplicatePartnerProducts(products: PartnerProduct[]): PartnerP
 
     // Check if duplicate
     const matched = seenTitles.get(baseTitle) || 
-      (imageKey && imageKey.length > 20 ? seenImages.get(imageKey) : null) ||
+      (imageKey && imageKey.length > 20 && !imageKey.includes('/kamarbandh.png') ? seenImages.get(imageKey) : null) ||
       (skuKey && skuKey.length > 3 ? seenSkus.get(skuKey) : null);
 
     if (matched) {
-      // Merge attributes so no data is lost
+      // Merge attributes so no data or admin configuration is lost
       if (prod.showInSlideshow) matched.showInSlideshow = true;
-      if (prod.status === 'LIVE' && matched.status !== 'LIVE') matched.status = 'LIVE';
+      if (prod.status === 'LIVE' || (prod.status as any) === 'ACTIVE') matched.status = 'LIVE';
       if (prod.sellingPrice && !matched.sellingPrice) matched.sellingPrice = prod.sellingPrice;
       if (prod.mrp && !matched.mrp) matched.mrp = prod.mrp;
+      // Prefer richer descriptive title
+      if (prod.title.length > matched.title.length && prod.title.includes('Navratri')) {
+        matched.title = prod.title;
+      }
+      // Prefer official high-res retailer images over local fallback icons
+      if (prod.primaryImage && prod.primaryImage.includes('media-amazon.com') && matched.primaryImage?.includes('.png')) {
+        matched.primaryImage = prod.primaryImage;
+        matched.images = [prod.primaryImage];
+      }
       continue;
     }
 
     seenTitles.set(baseTitle, prod);
-    if (imageKey && imageKey.length > 20) seenImages.set(imageKey, prod);
+    if (imageKey && imageKey.length > 20 && !imageKey.includes('/kamarbandh.png')) seenImages.set(imageKey, prod);
     if (skuKey && skuKey.length > 3) seenSkus.set(skuKey, prod);
     uniqueList.push(prod);
   }
@@ -938,7 +957,8 @@ export function deduplicatePartnerProducts(products: PartnerProduct[]): PartnerP
 }
 
 /**
- * Permanently purges all duplicate products from Firestore and local storage.
+ * Permanently purges ghost auto-edit duplicates from Firestore and local storage.
+ * CRITICAL SAFETY: NEVER purges LIVE products, slideshow-enabled products, or user-onboarded SKUs.
  */
 export async function purgeDuplicateProducts(allProducts: PartnerProduct[]): Promise<{ purgedCount: number; cleanProducts: PartnerProduct[] }> {
   const seenTitles = new Map<string, string>(); // baseTitle -> keeperId
@@ -956,18 +976,26 @@ export async function purgeDuplicateProducts(allProducts: PartnerProduct[]): Pro
       .trim();
     const imageKey = (prod.primaryImage || '').split('?')[0].trim();
 
-    const existingKeeperId = seenTitles.get(baseTitle) || (imageKey && imageKey.length > 20 ? seenImages.get(imageKey) : null);
+    const existingKeeperId = seenTitles.get(baseTitle) || 
+      (imageKey && imageKey.length > 20 && !imageKey.includes('.png') ? seenImages.get(imageKey) : null);
 
-    if (existingKeeperId) {
+    // Protected products: Live products, slideshow items, user SKUs, and core catalog products are protected
+    const isProtected = prod.status === 'LIVE' || 
+                        prod.showInSlideshow === true || 
+                        prod.id.startsWith('prod_sku_') || 
+                        prod.id === 'prod_partner_kamarbandh_1' || 
+                        prod.id === 'prod_partner_kanjivaram_1';
+
+    if (existingKeeperId && !isProtected && (prod.id.includes('_1792') || prod.status === 'ARCHIVED')) {
       duplicateIds.push(prod.id);
     } else {
       seenTitles.set(baseTitle, prod.id);
-      if (imageKey && imageKey.length > 20) seenImages.set(imageKey, prod.id);
+      if (imageKey && imageKey.length > 20 && !imageKey.includes('.png')) seenImages.set(imageKey, prod.id);
       cleanList.push(prod);
     }
   }
 
-  // Delete all duplicate IDs
+  // Delete only verified ghost duplicate IDs
   for (const dupId of duplicateIds) {
     saveDeletedProductId(dupId);
     try {

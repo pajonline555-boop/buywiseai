@@ -49,6 +49,10 @@ export default function GenGStoreSlideshow() {
     .sort((a, b) => {
       if (a.showInSlideshow && !b.showInSlideshow) return -1;
       if (!a.showInSlideshow && b.showInSlideshow) return 1;
+      const isBeltA = a.id.includes('kamarbandh') || a.title.includes('Navratri') || a.title.includes('Kamarbandh');
+      const isBeltB = b.id.includes('kamarbandh') || b.title.includes('Navratri') || b.title.includes('Kamarbandh');
+      if (isBeltA && !isBeltB) return -1;
+      if (!isBeltA && isBeltB) return 1;
       return 0;
     });
 
