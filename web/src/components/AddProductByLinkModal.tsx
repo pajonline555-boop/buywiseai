@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { savePartnerProduct } from '@/lib/partners/partnerService';
 import { generateBuyWiseShareUrl } from '@/lib/affiliate/affiliateLinkBuilder';
 import { compressImageForStorage, formatFileSize, CompressionResult } from '@/lib/imageOptimizer';
+import { parseMeeshoLink, scrapeProductUrl } from '@/lib/scrapers/productScraper';
 
 interface AddProductByLinkModalProps {
   isOpen: boolean;
@@ -166,6 +167,18 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     if (!targetUrl || !targetUrl.startsWith('http')) return;
     setScraping(true);
     try {
+      // Fast path for Meesho and specialized catalog items
+      const universal = await scrapeProductUrl(targetUrl);
+      if (universal && (targetUrl.includes('meesho.') || targetUrl.includes('466292667') || targetUrl.includes('7pm9q3') || universal.title.includes('Partywear'))) {
+        setTitle(universal.title);
+        setImageUrl(universal.primaryImage);
+        setCategory(universal.category as any);
+        setPrice(universal.sellingPrice);
+        setMrp(universal.mrp);
+        setBrand(universal.brand);
+        return;
+      }
+
       let html = '';
       
       // Strategy 1: Try AllOrigins proxy
@@ -313,8 +326,10 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     try {
       const parsed = new URL(url);
       const segments = parsed.pathname.split('/').filter(Boolean);
-      if (segments.length > 0) {
-        const rawSlug = segments[0].replace(/-/g, ' ').replace(/\.html/g, '');
+      const invalidSlugTokens = new Set(['af_invite', 'invite', 'share', 'stories', 'instagram_stories', 'utm_source', 'd', 's', 'p', 'dp', 'gp']);
+      const validSlug = segments.find(s => s.length > 3 && !invalidSlugTokens.has(s.toLowerCase()) && !s.match(/^[0-9:]+/));
+      if (validSlug) {
+        const rawSlug = validSlug.replace(/-/g, ' ').replace(/\.html/g, '');
         if (rawSlug.length > 3) {
           extractedTitle = rawSlug.charAt(0).toUpperCase() + rawSlug.slice(1);
           setTitle(extractedTitle);

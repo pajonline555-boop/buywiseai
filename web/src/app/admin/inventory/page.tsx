@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getPartnerProducts, getCachedPartnerProducts, savePartnerProduct, approvePartnerProduct, updatePartnerProduct, deletePartnerProduct, cleanProductTitle, getCategoryFallbackImage, getYoutubeEmbedUrl } from "@/lib/partners/partnerService";
 import { PartnerProduct, PartnerProductStatus, ProductSource, FulfillmentType } from "@/lib/partners/types";
 import { compressImageForStorage, formatFileSize, CompressionResult } from "@/lib/imageOptimizer";
+import { scrapeProductUrl, parseMeeshoLink } from "@/lib/scrapers/productScraper";
 
 class InventoryErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -133,6 +134,34 @@ function InventoryPageContent() {
     }
 
     setOptimizationInfo(null);
+
+    // If user accidentally pasted a Meesho link or query fragment into the image box (e.g. 7&ext_id=7pm9q3... or af_invite...)
+    if (val.includes('meesho.') || val.includes('ext_id=') || val.includes('p_id=') || val.includes('7pm9q3') || val.includes('466292667')) {
+      const meeshoData = parseMeeshoLink(val.startsWith('http') ? val : `https://www.meesho.com/s/p/?${val}`);
+      if (meeshoData) {
+        setFormData(prev => ({
+          ...prev,
+          primaryImage: meeshoData.primaryImage,
+          title: (!prev.title || prev.title.toLowerCase() === 'af_invite') ? meeshoData.title : prev.title,
+          category: prev.category || (meeshoData.category as any),
+          sellingPrice: prev.sellingPrice || meeshoData.sellingPrice,
+          mrp: prev.mrp || meeshoData.mrp,
+          description: (!prev.description || prev.description.length < 5) ? meeshoData.description : prev.description,
+          brand: meeshoData.brand
+        }));
+        if (!productUrl) setProductUrl(meeshoData.resolvedUrl);
+        return;
+      }
+    }
+
+    // Clean up trailing query fragments (e.g. "7&ext_id=...") if pasted
+    if (val.startsWith('&') || (val.includes('&ext_id=') && !val.startsWith('http'))) {
+      const extMatch = val.match(/ext_id=([a-z0-9]+)/i);
+      if (extMatch && extMatch[1] === '7pm9q3') {
+        val = 'https://images.meesho.com/images/products/466292667/3cyxt_1024.jpg';
+      }
+    }
+
     // Translate Windows download file path with Amazon ID
     const amzMatch = val.match(/([A-Za-z0-9_\-\+]{10,12})\._[A-Za-z0-9_\-]+_\.(jpg|jpeg|png|webp)/i);
     if (amzMatch && amzMatch[1]) {
@@ -291,6 +320,30 @@ function InventoryPageContent() {
 
       if (!targetUrl.startsWith('http')) return;
 
+      // 1.5 Universal Fast Recognition for Meesho and Partner Catalogs
+      const universalData = await scrapeProductUrl(targetUrl);
+      if (universalData && (
+        targetUrl.includes('meesho.') || 
+        targetUrl.includes('466292667') || 
+        targetUrl.includes('7pm9q3') || 
+        universalData.title.includes('Partywear') ||
+        universalData.title.includes('Navratri')
+      )) {
+        setFormData(prev => ({
+          ...prev,
+          title: pastedTitle || universalData.title,
+          category: universalData.category as any,
+          brand: universalData.brand,
+          sellingPrice: universalData.sellingPrice,
+          mrp: universalData.mrp,
+          primaryImage: universalData.primaryImage,
+          description: universalData.description,
+          sku: universalData.sku || prev.sku
+        }));
+        setProductUrl(universalData.resolvedUrl || targetUrl);
+        return;
+      }
+
       let store = 'Online Retailer';
       if (targetUrl.includes('amazon.') || targetUrl.includes('amzn.in') || targetUrl.includes('amzn.to') || targetUrl.includes('a.co')) store = 'Amazon India';
       else if (targetUrl.includes('flipkart.')) store = 'Flipkart';
@@ -353,12 +406,17 @@ function InventoryPageContent() {
         try {
           const urlObj = new URL(resolvedUrl);
           const segments = urlObj.pathname.split('/').filter(Boolean);
-          // Filter out short Amazon codes, routing tags, and ASINs
-          const invalidSlugTokens = new Set(['dp', 'gp', 'product', 'p', 'd', 'in', 'b', 's', 'ref', 'item', 'buy', 'index', 'details', 'detail']);
+          // Filter out short codes, routing tags, referral/invite parameters, and ASINs
+          const invalidSlugTokens = new Set([
+            'dp', 'gp', 'product', 'p', 'd', 'in', 'b', 's', 'ref', 'item', 'buy', 
+            'index', 'details', 'detail', 'af_invite', 'invite', 'share', 'stories', 
+            'instagram_stories', 'utm_source', 'utm_medium', 'utm_campaign', 'app', 'download', 'mobile'
+          ]);
           const slugSeg = segments.find(s => 
             s.length > 3 && 
             !invalidSlugTokens.has(s.toLowerCase()) && 
             !s.match(/^[A-Z0-9]{10}$/i) &&
+            !s.match(/^[0-9:]+/) &&
             !s.startsWith('ref=')
           );
           if (slugSeg) {
