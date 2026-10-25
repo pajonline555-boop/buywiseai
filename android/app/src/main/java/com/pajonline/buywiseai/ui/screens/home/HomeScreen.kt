@@ -90,7 +90,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.ContextCompat
+import androidx.compose.runtime.LaunchedEffect
+import com.pajonline.buywiseai.data.repository.AuthRepository
+import com.pajonline.buywiseai.data.repository.AuthState
+import com.pajonline.buywiseai.data.repository.SearchHistoryRepository
 import com.pajonline.buywiseai.core.voice.SpeechRecognizerManager
 
 @Composable
@@ -108,7 +118,29 @@ fun HomeScreen(
     val profilePhotoUri = sharedPrefs.getString("profile_photo_uri", null)
     val profileAvatarEmoji = sharedPrefs.getString("profile_avatar_emoji", "🛍️") ?: "🛍️"
 
+    val authRepo = remember { AuthRepository.getInstance() }
+    val authState by authRepo.authState.collectAsState()
+    val activeUserId = (authState as? AuthState.Authenticated)?.userId?.takeIf { it.isNotBlank() }
+        ?: authRepo.getCurrentUserId()
+
     var searchQuery by remember { mutableStateOf("") }
+    val historyRepo = remember { SearchHistoryRepository.getInstance(context) }
+    var historySuggestions by remember(activeUserId) { mutableStateOf(historyRepo.getSuggestions(searchQuery, activeUserId)) }
+    var isHistoryDropdownOpen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(activeUserId) {
+        historySuggestions = historyRepo.getSuggestions(searchQuery, activeUserId)
+    }
+
+    val executeHomeSearch = { text: String ->
+        isHistoryDropdownOpen = false
+        val trimmed = text.trim()
+        if (trimmed.isNotBlank()) {
+            historyRepo.saveSearch(trimmed, activeUserId)
+            onNavigateToSearch(trimmed)
+        }
+    }
+
     var showLangMenu by remember { mutableStateOf(false) }
 
     var voiceState by remember { mutableStateOf(com.pajonline.buywiseai.core.voice.VoiceSearchState.IDLE) }
@@ -139,7 +171,7 @@ fun HomeScreen(
                 searchQuery = text
                 livePartialText = text
                 showVoiceDialog = false
-                onNavigateToSearch(text)
+                executeHomeSearch(text)
             },
             onError = { err ->
                 voiceError = err
@@ -193,11 +225,20 @@ fun HomeScreen(
         color = Color(0xFF0C0A14)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            val homeScrollState = rememberScrollState()
+            val activityIntent = (context as? android.app.Activity)?.intent
+            val scrollTarget = activityIntent?.getStringExtra("scroll_target")
+            LaunchedEffect(scrollTarget) {
+                if (scrollTarget == "geng") {
+                    homeScrollState.animateScrollTo(1920)
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(homeScrollState)
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -404,10 +445,24 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = searchQuery,
-                            onValueChange = { searchQuery = it },
+                            onValueChange = {
+                                searchQuery = it
+                                historySuggestions = historyRepo.getSuggestions(it, activeUserId)
+                                isHistoryDropdownOpen = true
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = { Text(tr("search_placeholder"), color = Color.Gray) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = BuyWiseCyan) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = BuyWiseCyan,
+                                    modifier = Modifier.clickable {
+                                        historySuggestions = historyRepo.getSuggestions(searchQuery, activeUserId)
+                                        isHistoryDropdownOpen = !isHistoryDropdownOpen
+                                    }
+                                )
+                            },
                             trailingIcon = {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -450,6 +505,90 @@ fun HomeScreen(
                             )
                         )
 
+                        // Autocomplete Dropdown on Home
+                        AnimatedVisibility(
+                            visible = isHistoryDropdownOpen && historySuggestions.isNotEmpty(),
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.4f))
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "🕒 " + if (searchQuery.isBlank()) "RECENT SEARCHES" else "MATCHING SEARCHES",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = BuyWiseCyan
+                                        )
+                                        Text(
+                                            text = "Clear all",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Gray,
+                                            modifier = Modifier.clickable {
+                                                historyRepo.clearHistory(activeUserId)
+                                                historySuggestions = emptyList()
+                                                isHistoryDropdownOpen = false
+                                            }
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    historySuggestions.take(5).forEach { suggestion ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    searchQuery = suggestion
+                                                    executeHomeSearch(suggestion)
+                                                }
+                                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("🕒", fontSize = 12.sp, color = Color.Gray)
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = suggestion,
+                                                    fontSize = 13.5.sp,
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            Text(
+                                                text = "✕",
+                                                fontSize = 13.sp,
+                                                color = Color.Gray,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier
+                                                    .padding(start = 8.dp)
+                                                    .clickable {
+                                                        historyRepo.removeSearch(suggestion, activeUserId)
+                                                        historySuggestions = historyRepo.getSuggestions(searchQuery, activeUserId)
+                                                    }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -467,7 +606,7 @@ fun HomeScreen(
                                         .border(1.dp, BuyWiseCyan.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
                                         .clickable {
                                             searchQuery = rawSearch
-                                            onNavigateToSearch(rawSearch)
+                                            executeHomeSearch(rawSearch)
                                         }
                                         .padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {

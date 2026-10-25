@@ -5,6 +5,23 @@ import { buildAffiliateUrl } from '../affiliate/affiliateLinkBuilder';
 // Authoritative candidate feeds from verified live retailer partner catalog
 const VERIFIED_GEN_G_CANDIDATE_POOL: GenGProduct[] = [
   {
+    id: 'geng-msh-trendy-partywear',
+    retailer: 'Meesho / BIG 20shope',
+    retailerId: 'meesho',
+    title: 'Trendy Partywear Women Dress',
+    shortDescription: 'Meesho Trending Outfit: Flared sleeveless floral partywear dress with flattering waist.',
+    imageUrl: 'https://images.meesho.com/images/products/466292667/3cyxt_1024.jpg',
+    currentPrice: 345,
+    previousPrice: 599,
+    discountPercent: 42,
+    rating: 4.9,
+    reviewCount: 3840,
+    availability: 'in_stock',
+    affiliateUrl: buildAffiliateUrl('https://www.meesho.com/s/p/7pm9q3', 'Meesho', 'GEN_G_STORE'),
+    source: 'meesho_feed',
+    lastVerifiedAt: new Date().toISOString(),
+  },
+  {
     id: 'geng-amz-iphone17',
     retailer: 'Amazon India',
     retailerId: 'amazon',
