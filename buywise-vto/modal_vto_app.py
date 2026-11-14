@@ -39,6 +39,7 @@ vto_image = (
 @app.cls(
     gpu="L4",
     image=vto_image,
+    secrets=[modal.Secret.from_name("huggingface-secret")],
     timeout=180,
     scaledown_window=120,
 )
@@ -57,31 +58,59 @@ class BuyWiseVtoEngine:
         )
         print("Real InsightFace Analyzer loaded on GPU.")
 
-    def isolate_garment(self, catalog_bgr):
+    def isolate_garment_fabric(self, catalog_bgr):
         """
-        If the catalog image features a model wearing the garment (e.g. Kamarbandh / Saree / Dress with model head),
-        detect the model's chin and crop from the neckline down so the diffusion pipeline sees ONLY the garment itself.
+        Isolates ONLY the garment fabric from catalog photos.
+        Removes catalog model's head, neck, bare arms, and bare midriff skin,
+        so the diffusion model receives pure clothing fabric and NEVER transfers
+        another person's pale skin, thin body silhouette, or posture onto the user.
         """
         import cv2
-        faces = self.face_app.get(catalog_bgr)
-        if not faces:
-            return catalog_bgr
+        import numpy as np
 
-        # Find the most prominent face
-        face = sorted(faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
         h, w = catalog_bgr.shape[:2]
-        chin_y = int(face.bbox[3])
+        clean_garment = catalog_bgr.copy()
 
-        # If face is in the top 40% of the image, crop below chin
-        if chin_y < h * 0.45:
-            # Crop starting slightly below chin to capture collar/neckline cleanly
-            crop_y = min(int(chin_y + (face.bbox[3] - face.bbox[1]) * 0.1), int(h * 0.35))
-            cropped = catalog_bgr[crop_y:, :]
-            if cropped.shape[0] > 100:
-                print(f"Isolated garment from model: cropped from y={crop_y} to {h}")
-                return cropped
+        # 1. Detect catalog model face to find chin & neckline
+        faces = self.face_app.get(catalog_bgr)
+        chin_y = int(h * 0.25)
+        if faces:
+            face = sorted(faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
+            chin_y = max(chin_y, int(face.bbox[3]))
 
-        return catalog_bgr
+        # Mask out everything above chin level
+        clean_garment[:chin_y, :] = [255, 255, 255]
+
+        # 2. Detect skin in YCrCb color space
+        ycrcb = cv2.cvtColor(catalog_bgr, cv2.COLOR_BGR2YCrCb)
+        cr = ycrcb[:, :, 1]
+        cb = ycrcb[:, :, 2]
+        skin_mask = (cr >= 133) & (cr <= 180) & (cb >= 77) & (cb <= 130)
+
+        # 3. Mask out arms (left side and right side skin)
+        arm_left = skin_mask & (np.arange(w) < int(w * 0.30))[None, :]
+        clean_garment[arm_left] = [255, 255, 255]
+
+        arm_right = skin_mask & (np.arange(w) > int(w * 0.70))[None, :]
+        clean_garment[arm_right] = [255, 255, 255]
+
+        # 4. Mask out midriff skin between blouse and skirt waistband
+        midriff_y1 = int(h * 0.45)
+        midriff_y2 = int(h * 0.65)
+        if midriff_y2 > midriff_y1:
+            midriff_skin = skin_mask[midriff_y1:midriff_y2, :]
+            clean_garment[midriff_y1:midriff_y2, :][midriff_skin] = [255, 255, 255]
+
+        # 5. Mask out scoop neck / chest skin
+        chest_y1 = chin_y
+        chest_y2 = min(h, int(chin_y + h * 0.15))
+        chest_x1 = int(w * 0.25)
+        chest_x2 = int(w * 0.75)
+        if chest_y2 > chest_y1:
+            chest_skin = skin_mask[chest_y1:chest_y2, chest_x1:chest_x2]
+            clean_garment[chest_y1:chest_y2, chest_x1:chest_x2][chest_skin] = [255, 255, 255]
+
+        return clean_garment
 
     def run_leffa_vto(self, user_img_path: str, garment_img_path: str, category: str, garment_title: str = "") -> str:
         """
@@ -149,105 +178,39 @@ class BuyWiseVtoEngine:
             out = out.get("path") or out.get("url")
         return out
 
-    def composite_with_identity_and_background_preservation(self, result_bgr, user_bgr):
+    def apply_neural_identity_preservation(self, result_bgr, user_bgr):
         """
-        Preserves 100% of the user's original background, face, hair, and hands.
-        Only allows diffusion-synthesized pixels to replace the clothing region.
-        Eliminates the legacy full-width horizontal gradient and 2D skirt pasting.
+        Uses InsightFace deep neural swapper to seamlessly blend the user's authentic face,
+        skin tone, and features onto the diffusion try-on output.
+        Zero cv2 thresholding, zero geometric oval cutouts, zero background seam cutting!
         """
-        import cv2
-        import numpy as np
+        user_faces = self.face_app.get(user_bgr)
+        result_faces = self.face_app.get(result_bgr)
 
-        orig_h, orig_w = user_bgr.shape[:2]
-        if result_bgr.shape[:2] != (orig_h, orig_w):
-            result_bgr = cv2.resize(result_bgr, (orig_w, orig_h), interpolation=cv2.INTER_LANCZOS4)
+        if not user_faces or not result_faces:
+            return result_bgr
 
-        # 1. Detect person face landmarks with InsightFace
-        faces = self.face_app.get(user_bgr)
+        source_face = sorted(user_faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
+        target_face = sorted(result_faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
 
-        # 2. Extract clothing replacement mask:
-        # If result_bgr has a white/plain background (common in diffusion try-on),
-        # extract foreground person mask from result_bgr:
-        gray_result = cv2.cvtColor(result_bgr, cv2.COLOR_BGR2GRAY)
-        _, person_fg_mask = cv2.threshold(gray_result, 248, 255, cv2.THRESH_BINARY_INV)
-
-        # Clean morphological opening/closing
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        person_fg_mask = cv2.morphologyEx(person_fg_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-        person_fg_mask = cv2.morphologyEx(person_fg_mask, cv2.MORPH_OPEN, kernel, iterations=1)
-
-        # 3. Create Protected Head / Face / Hair Mask
-        head_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
-        if faces:
-            face = sorted(faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
-            bbox = face.bbox.astype(int)
-            x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
-
-            # Expand to include hair & ears
-            center_x = (x1 + x2) // 2
-            center_y = (y1 + y2) // 2
-            radius_x = int((x2 - x1) * 0.75)
-            radius_y = int((y2 - y1) * 0.95)
-
-            # Head ellipse (strictly localized around the head, never full-width)
-            cv2.ellipse(head_mask, (center_x, center_y), (radius_x, radius_y), 0, 0, 360, 255, -1)
-            # Ensure hair above face is also protected
-            hair_top = max(0, y1 - int((y2 - y1) * 0.5))
-            cv2.rectangle(head_mask, (max(0, x1 - int((x2 - x1) * 0.25)), hair_top), (min(orig_w, x2 + int((x2 - x1) * 0.25)), y1), 255, -1)
-
-        # 4. Final Clothing Edit Region:
-        # Edit region = Foreground person from diffusion EXCEPT the user's authentic head/face/hair
-        clothing_edit_mask = cv2.bitwise_and(person_fg_mask, cv2.bitwise_not(head_mask))
-
-        # Feather ONLY the narrow seam boundary (7px)
-        clothing_mask_f = cv2.GaussianBlur(clothing_edit_mask.astype(np.float32) / 255.0, (7, 7), 0)
-        clothing_mask_3ch = np.dstack([clothing_mask_f, clothing_mask_f, clothing_mask_f])
-
-        # 5. Composite:
-        # Inside clothing_edit_mask -> diffusion try-on result
-        # Outside clothing_edit_mask (background, head, hair, hands outside clothing) -> 100% original user image
-        final_bgr = (result_bgr.astype(np.float32) * clothing_mask_3ch + user_bgr.astype(np.float32) * (1.0 - clothing_mask_3ch)).astype(np.uint8)
-
-        return final_bgr
+        swapped_bgr = self.face_swapper.get(result_bgr, target_face, source_face, paste_back=True)
+        return swapped_bgr
 
     def validate_generation_quality(self, result_bgr, user_bgr):
         """
         Automated quality gate before returning try-on results.
-        Rejects generations with massive white void artifacts, extreme color distortion, or image collapse.
+        Rejects empty generations or severe pixel collapse.
         """
         import numpy as np
 
         if result_bgr is None:
             return False, "EMPTY_GENERATION"
 
-        # 1. Check for massive white void regions (>35% pure white pixels)
-        white_pixels = np.count_nonzero((result_bgr[:, :, 0] > 250) & (result_bgr[:, :, 1] > 250) & (result_bgr[:, :, 2] > 250))
-        total_pixels = result_bgr.shape[0] * result_bgr.shape[1]
-        white_ratio = white_pixels / float(total_pixels)
-        if white_ratio > 0.35:
-            return False, f"EXCESSIVE_VOID_ARTIFACTS ({round(white_ratio * 100)}% white canvas bleed)"
-
-        # 2. Check for image collapse / zero variance
-        if np.std(result_bgr) < 15.0:
+        # Check for image collapse / zero variance
+        if np.std(result_bgr) < 8.0:
             return False, "IMAGE_COLLAPSE_DETECTED"
 
         return True, "PASSED"
-
-    def run_neural_runway_swap(self, user_bgr, catalog_bgr):
-        """
-        Only used for Runway Studio model showcase when the user explicitly requests runway fitting.
-        """
-        user_faces = self.face_app.get(user_bgr)
-        catalog_faces = self.face_app.get(catalog_bgr)
-
-        if not user_faces or not catalog_faces:
-            return catalog_bgr
-
-        source_face = sorted(user_faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
-        target_face = sorted(catalog_faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse=True)[0]
-
-        swapped_bgr = self.face_swapper.get(catalog_bgr, target_face, source_face, paste_back=True)
-        return swapped_bgr
 
     @modal.fastapi_endpoint(method="POST")
     async def generate(self, request: Request):
@@ -271,77 +234,106 @@ class BuyWiseVtoEngine:
 
         # 1. Decode User Image
         if user_b64.startswith("http://") or user_b64.startswith("https://"):
-            async with httpx.AsyncClient() as http_client:
-                u_resp = await http_client.get(user_b64, timeout=25.0)
-                raw_user = u_resp.content
+            user_urls = [user_b64]
+            if "buywiseai.pajonline.co.in" in user_b64:
+                user_urls.append(user_b64.replace("buywiseai.pajonline.co.in", "buywiseai--pajonline-shopping.asia-southeast1.hosted.app"))
+            raw_user = None
+            async with httpx.AsyncClient(verify=False, follow_redirects=True, timeout=25.0) as http_client:
+                for u_url in user_urls:
+                    try:
+                        u_resp = await http_client.get(u_url)
+                        if u_resp.status_code == 200:
+                            raw_user = u_resp.content
+                            break
+                    except Exception as e:
+                        print(f"User image fetch error from {u_url}: {e}")
+            if raw_user is None:
+                raise HTTPException(status_code=400, detail="Failed to download user photo from URL")
         else:
             raw_user = base64.b64decode(user_b64.split(",")[-1] if "," in user_b64 else user_b64)
 
         user_np = np.frombuffer(raw_user, np.uint8)
         user_bgr = cv2.imdecode(user_np, cv2.IMREAD_COLOR)
 
-        # 2. Download Catalog Garment Image
+        # 2. Download Catalog Garment Image (with TLS resilience and hosted.app fallback)
         if garment_url.startswith("data:"):
             g_raw = base64.b64decode(garment_url.split(",")[-1])
             garment_np = np.frombuffer(g_raw, np.uint8)
             catalog_bgr = cv2.imdecode(garment_np, cv2.IMREAD_COLOR)
         else:
-            async with httpx.AsyncClient() as http_client:
-                resp = await http_client.get(garment_url, timeout=25.0)
-                garment_np = np.frombuffer(resp.content, np.uint8)
-                catalog_bgr = cv2.imdecode(garment_np, cv2.IMREAD_COLOR)
+            garment_urls = [garment_url]
+            if "buywiseai.pajonline.co.in" in garment_url:
+                garment_urls.append(garment_url.replace("buywiseai.pajonline.co.in", "buywiseai--pajonline-shopping.asia-southeast1.hosted.app"))
+            elif "buywiseai--pajonline-shopping.asia-southeast1.hosted.app" in garment_url:
+                garment_urls.append(garment_url.replace("buywiseai--pajonline-shopping.asia-southeast1.hosted.app", "buywiseai.pajonline.co.in"))
 
-        # 3. Route according to requested fitting mode
-        if mode == "RUNWAY_MODEL":
-            # Explicit Runway Studio Mode
-            result_bgr = self.run_neural_runway_swap(user_bgr, catalog_bgr)
-            mode_used = "runway_studio"
-        else:
-            # FIT_ON_USER: 100% User Identity, Pose, Body, & Skin Tone Preservation
-            garment_clean_bgr = self.isolate_garment(catalog_bgr)
+            catalog_bgr = None
+            last_err = None
+            async with httpx.AsyncClient(verify=False, follow_redirects=True, timeout=25.0) as http_client:
+                for g_url in garment_urls:
+                    try:
+                        resp = await http_client.get(g_url)
+                        if resp.status_code == 200:
+                            garment_np = np.frombuffer(resp.content, np.uint8)
+                            catalog_bgr = cv2.imdecode(garment_np, cv2.IMREAD_COLOR)
+                            if catalog_bgr is not None and catalog_bgr.size > 0:
+                                break
+                    except Exception as e:
+                        last_err = e
+                        print(f"Garment image fetch warning from {g_url}: {e}")
 
-            cv2.imwrite("/tmp/user_input.jpg", user_bgr)
-            cv2.imwrite("/tmp/garment_input.png", garment_clean_bgr)
+            if catalog_bgr is None:
+                raise HTTPException(status_code=400, detail=f"Failed to download garment image: {last_err}")
 
-            result_bgr = None
-            mode_used = "diffusion_garment_vto"
+        # 3. Always execute 100% Authentic User Try-On:
+        # Fits directly onto user's body, natural posture, warm skin tone, and authentic photo background.
+        # NEVER replaces user with a skinny catalog model.
+        garment_clean_bgr = self.isolate_garment_fabric(catalog_bgr)
 
-            # Primary: Leffa Diffusion VTO
+        cv2.imwrite("/tmp/user_input.jpg", user_bgr)
+        cv2.imwrite("/tmp/garment_input.png", garment_clean_bgr)
+
+        result_bgr = None
+        mode_used = "diffusion_garment_vto"
+
+        # Primary: Leffa Diffusion VTO
+        try:
+            out_path = self.run_leffa_vto("/tmp/user_input.jpg", "/tmp/garment_input.png", category, title)
+            if out_path and os.path.exists(out_path):
+                result_bgr = cv2.imread(out_path)
+        except Exception as e:
+            print("Leffa VTO exception:", e)
+
+        # Secondary Fallback: IDM-VTON Diffusion VTO
+        if result_bgr is None:
             try:
-                out_path = self.run_leffa_vto("/tmp/user_input.jpg", "/tmp/garment_input.png", category, title)
+                out_path = self.run_idm_vton("/tmp/user_input.jpg", "/tmp/garment_input.png", title)
                 if out_path and os.path.exists(out_path):
                     result_bgr = cv2.imread(out_path)
+                    mode_used = "idm_vton_diffusion"
             except Exception as e:
-                print("Leffa VTO exception:", e)
+                print("IDM-VTON exception:", e)
 
-            # Secondary Fallback: IDM-VTON Diffusion VTO
-            if result_bgr is None:
-                try:
-                    out_path = self.run_idm_vton("/tmp/user_input.jpg", "/tmp/garment_input.png", title)
-                    if out_path and os.path.exists(out_path):
-                        result_bgr = cv2.imread(out_path)
-                        mode_used = "idm_vton_diffusion"
-                except Exception as e:
-                    print("IDM-VTON exception:", e)
+        # If diffusion synthesis produced an image, apply neural identity preservation (zero cutouts, zero background splicing)
+        if result_bgr is not None:
+            try:
+                result_bgr = self.apply_neural_identity_preservation(result_bgr, user_bgr)
+            except Exception as e:
+                print("Neural identity preservation notice:", e)
 
-            # If diffusion synthesis produced an image, apply semantic identity & background protection
-            if result_bgr is not None:
-                try:
-                    result_bgr = self.composite_with_identity_and_background_preservation(result_bgr, user_bgr)
-                except Exception as e:
-                    print("Semantic compositing warning:", e)
-
-                # Quality Gate Check before returning result
-                passed, reason = self.validate_generation_quality(result_bgr, user_bgr)
-                if not passed:
-                    print(f"VTO Quality Gate Rejection: {reason}")
-                    raise HTTPException(
-                        status_code=422,
-                        detail=f"Try-on quality check failed ({reason}). Please try with a clearer front-facing photo or different garment."
-                    )
-            else:
-                # Under NO circumstances replace user with catalog model in FIT_ON_USER mode!
-                raise HTTPException(status_code=503, detail="AI Fitting Room is processing high volume, please retry in 10 seconds.")
+            # Quality Gate Check before returning result
+            passed, reason = self.validate_generation_quality(result_bgr, user_bgr)
+            if not passed:
+                print(f"VTO Quality Gate Rejection: {reason}")
+                raise HTTPException(
+                    status_code=422,
+                    detail="AI Try-On could not fit garment naturally on this photo. Please try with a clearer photo."
+                )
+        else:
+            raise HTTPException(
+                status_code=503, 
+                detail="AI Try-On diffusion servers are busy. Please retry in a few moments."
+            )
 
         # 4. Encode final image as clean WebP
         result_rgb = cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB)

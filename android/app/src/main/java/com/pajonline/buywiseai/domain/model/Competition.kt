@@ -38,7 +38,8 @@ data class CompetitionSubmission(
     val rejectionReason: String? = null,
     val submissionType: String = "REAL_DRESSED", // "REAL_DRESSED" or "AI_GENERATED"
     val userPhone: String? = null,
-    val linkedMobile: String? = null
+    val linkedMobile: String? = null,
+    val youtubeUrl: String? = null
 )
 
 data class CompetitionVote(

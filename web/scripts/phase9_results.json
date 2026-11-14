@@ -1,0 +1,979 @@
+[
+  {
+    "query": "girls dresses",
+    "httpStatus": 200,
+    "totalOffers": 10,
+    "bestMatchesCount": 5,
+    "sameProductGroupsCount": 5,
+    "providerStatuses": [
+      {
+        "retailerId": "buywise_partners",
+        "retailerName": "BuyWise Partners",
+        "status": "PARTNER_LIVE"
+      },
+      {
+        "retailerId": "amazon",
+        "retailerName": "Amazon India",
+        "status": "LIVE"
+      },
+      {
+        "retailerId": "flipkart",
+        "retailerName": "Flipkart",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "meesho",
+        "retailerName": "Meesho",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "myntra",
+        "retailerName": "Myntra",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "nykaa",
+        "retailerName": "Nykaa",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Nykaa live API credentials required (NYKAA_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ajio",
+        "retailerName": "AJIO",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "AJIO live API credentials required (AJIO_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "tatacliq",
+        "retailerName": "Tata CLiQ",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Tata CLiQ official API credentials required (TATACLIQ_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "croma",
+        "retailerName": "Croma",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Croma official API credentials required (CROMA_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "etsy",
+        "retailerName": "Etsy",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Etsy API credentials required (ETSY_KEYSTRING). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ebay",
+        "retailerName": "eBay",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "eBay API credentials required."
+      },
+      {
+        "retailerId": "cuelinks",
+        "retailerName": "Cuelinks Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Cuelinks network credentials required (CUELINKS_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "vcommission",
+        "retailerName": "vCommission Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "vCommission network credentials required (VCOMMISSION_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      }
+    ],
+    "retailerBreakdown": [
+      {
+        "store": "Meesho",
+        "count": 2,
+        "sampleTitle": "KidStudio Girls Soft Crepe Digital Print Calf Length Summer Dress",
+        "samplePrice": 299,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.931Z"
+      },
+      {
+        "store": "Amazon India",
+        "count": 2,
+        "sampleTitle": "KidStudio Girls Soft Crepe Digital Print Calf Length Summer Dress",
+        "samplePrice": 349,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.931Z"
+      },
+      {
+        "store": "🟢 BuyWise Store",
+        "count": 2,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 499,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:19.417Z"
+      },
+      {
+        "store": "Flipkart",
+        "count": 2,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 519,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.931Z"
+      },
+      {
+        "store": "Myntra",
+        "count": 2,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 649,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.931Z"
+      }
+    ],
+    "sameProductGroups": [
+      {
+        "id": "spg-1-1792833682946",
+        "productTitle": "KidStudio Girls Soft Crepe Digital Print Calf Length Summer Dress",
+        "brand": "KidStudio",
+        "variantInfo": "Crepe Blend",
+        "lowestPrice": 299,
+        "highestPrice": 349,
+        "stores": [
+          "Meesho",
+          "Amazon India"
+        ]
+      },
+      {
+        "id": "spg-2-1792833682946",
+        "productTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress (Social Deal)",
+        "brand": "Hopscotch",
+        "lowestPrice": 449,
+        "highestPrice": 649,
+        "stores": [
+          "Meesho",
+          "Amazon India",
+          "Flipkart",
+          "Myntra"
+        ]
+      },
+      {
+        "id": "spg-3-1792833682946",
+        "productTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "lowestPrice": 499,
+        "highestPrice": 499,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      },
+      {
+        "id": "spg-4-1792833682946",
+        "productTitle": "Little Bansi Girls Traditional Handblock Festive Cotton Anarkali Dress",
+        "brand": "Little Bansi",
+        "variantInfo": "Handblock Festive Cotton",
+        "lowestPrice": 1299,
+        "highestPrice": 1349,
+        "stores": [
+          "Myntra",
+          "Flipkart"
+        ]
+      },
+      {
+        "id": "spg-5-1792833682947",
+        "productTitle": "Levi's Men's 511 Slim Fit Stretchable Denim Jeans",
+        "variantInfo": "Denim",
+        "lowestPrice": 1899,
+        "highestPrice": 1899,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      }
+    ],
+    "blockedIntegrations": [
+      "Nykaa (CREDENTIALS_REQUIRED)",
+      "AJIO (CREDENTIALS_REQUIRED)",
+      "Tata CLiQ (CREDENTIALS_REQUIRED)",
+      "Croma (CREDENTIALS_REQUIRED)",
+      "Etsy (CREDENTIALS_REQUIRED)",
+      "eBay (CREDENTIALS_REQUIRED)",
+      "Cuelinks Network (CREDENTIALS_REQUIRED)",
+      "vCommission Network (CREDENTIALS_REQUIRED)"
+    ],
+    "authOrTimeoutIssues": []
+  },
+  {
+    "query": "girls cotton dresses under ₹500",
+    "httpStatus": 200,
+    "totalOffers": 10,
+    "bestMatchesCount": 3,
+    "sameProductGroupsCount": 5,
+    "providerStatuses": [
+      {
+        "retailerId": "buywise_partners",
+        "retailerName": "BuyWise Partners",
+        "status": "PARTNER_LIVE"
+      },
+      {
+        "retailerId": "amazon",
+        "retailerName": "Amazon India",
+        "status": "LIVE"
+      },
+      {
+        "retailerId": "flipkart",
+        "retailerName": "Flipkart",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "meesho",
+        "retailerName": "Meesho",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "myntra",
+        "retailerName": "Myntra",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "nykaa",
+        "retailerName": "Nykaa",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Nykaa live API credentials required (NYKAA_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ajio",
+        "retailerName": "AJIO",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "AJIO live API credentials required (AJIO_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "tatacliq",
+        "retailerName": "Tata CLiQ",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Tata CLiQ official API credentials required (TATACLIQ_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "croma",
+        "retailerName": "Croma",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Croma official API credentials required (CROMA_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "etsy",
+        "retailerName": "Etsy",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Etsy API credentials required (ETSY_KEYSTRING). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ebay",
+        "retailerName": "eBay",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "eBay API credentials required."
+      },
+      {
+        "retailerId": "cuelinks",
+        "retailerName": "Cuelinks Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Cuelinks network credentials required (CUELINKS_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "vcommission",
+        "retailerName": "vCommission Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "vCommission network credentials required (VCOMMISSION_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      }
+    ],
+    "retailerBreakdown": [
+      {
+        "store": "Meesho",
+        "count": 2,
+        "sampleTitle": "KidStudio Girls Soft Crepe Digital Print Calf Length Summer Dress",
+        "samplePrice": 299,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.952Z"
+      },
+      {
+        "store": "Amazon India",
+        "count": 2,
+        "sampleTitle": "KidStudio Girls Soft Crepe Digital Print Calf Length Summer Dress",
+        "samplePrice": 349,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.952Z"
+      },
+      {
+        "store": "🟢 BuyWise Store",
+        "count": 2,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 499,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.951Z"
+      },
+      {
+        "store": "Flipkart",
+        "count": 2,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 519,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.952Z"
+      },
+      {
+        "store": "Myntra",
+        "count": 2,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 649,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.952Z"
+      }
+    ],
+    "sameProductGroups": [
+      {
+        "id": "spg-1-1792833682952",
+        "productTitle": "KidStudio Girls Soft Crepe Digital Print Calf Length Summer Dress",
+        "brand": "KidStudio",
+        "variantInfo": "Crepe Blend",
+        "lowestPrice": 299,
+        "highestPrice": 349,
+        "stores": [
+          "Meesho",
+          "Amazon India"
+        ]
+      },
+      {
+        "id": "spg-2-1792833682952",
+        "productTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress (Social Deal)",
+        "brand": "Hopscotch",
+        "lowestPrice": 449,
+        "highestPrice": 649,
+        "stores": [
+          "Meesho",
+          "Amazon India",
+          "Flipkart",
+          "Myntra"
+        ]
+      },
+      {
+        "id": "spg-3-1792833682952",
+        "productTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "lowestPrice": 499,
+        "highestPrice": 499,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      },
+      {
+        "id": "spg-4-1792833682952",
+        "productTitle": "Little Bansi Girls Traditional Handblock Festive Cotton Anarkali Dress",
+        "brand": "Little Bansi",
+        "variantInfo": "Handblock Festive Cotton",
+        "lowestPrice": 1299,
+        "highestPrice": 1349,
+        "stores": [
+          "Myntra",
+          "Flipkart"
+        ]
+      },
+      {
+        "id": "spg-5-1792833682952",
+        "productTitle": "Levi's Men's 511 Slim Fit Stretchable Denim Jeans",
+        "variantInfo": "Denim",
+        "lowestPrice": 1899,
+        "highestPrice": 1899,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      }
+    ],
+    "blockedIntegrations": [
+      "Nykaa (CREDENTIALS_REQUIRED)",
+      "AJIO (CREDENTIALS_REQUIRED)",
+      "Tata CLiQ (CREDENTIALS_REQUIRED)",
+      "Croma (CREDENTIALS_REQUIRED)",
+      "Etsy (CREDENTIALS_REQUIRED)",
+      "eBay (CREDENTIALS_REQUIRED)",
+      "Cuelinks Network (CREDENTIALS_REQUIRED)",
+      "vCommission Network (CREDENTIALS_REQUIRED)"
+    ],
+    "authOrTimeoutIssues": []
+  },
+  {
+    "query": "garba dresses",
+    "httpStatus": 200,
+    "totalOffers": 5,
+    "bestMatchesCount": 2,
+    "sameProductGroupsCount": 2,
+    "providerStatuses": [
+      {
+        "retailerId": "buywise_partners",
+        "retailerName": "BuyWise Partners",
+        "status": "PARTNER_LIVE"
+      },
+      {
+        "retailerId": "amazon",
+        "retailerName": "Amazon India",
+        "status": "LIVE"
+      },
+      {
+        "retailerId": "flipkart",
+        "retailerName": "Flipkart",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "meesho",
+        "retailerName": "Meesho",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "myntra",
+        "retailerName": "Myntra",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "nykaa",
+        "retailerName": "Nykaa",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Nykaa live API credentials required (NYKAA_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ajio",
+        "retailerName": "AJIO",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "AJIO live API credentials required (AJIO_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "tatacliq",
+        "retailerName": "Tata CLiQ",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Tata CLiQ official API credentials required (TATACLIQ_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "croma",
+        "retailerName": "Croma",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Croma official API credentials required (CROMA_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "etsy",
+        "retailerName": "Etsy",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Etsy API credentials required (ETSY_KEYSTRING). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ebay",
+        "retailerName": "eBay",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "eBay API credentials required."
+      },
+      {
+        "retailerId": "cuelinks",
+        "retailerName": "Cuelinks Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Cuelinks network credentials required (CUELINKS_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "vcommission",
+        "retailerName": "vCommission Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "vCommission network credentials required (VCOMMISSION_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      }
+    ],
+    "retailerBreakdown": [
+      {
+        "store": "🟢 BuyWise Store",
+        "count": 1,
+        "sampleTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "samplePrice": 499,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.954Z"
+      },
+      {
+        "store": "Meesho",
+        "count": 1,
+        "sampleTitle": "Rare Women Western Floral Print A-Line Casual Summer Dress (Social Deal)",
+        "samplePrice": 649,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.955Z"
+      },
+      {
+        "store": "Amazon India",
+        "count": 1,
+        "sampleTitle": "Rare Women Western Floral Print A-Line Casual Summer Dress",
+        "samplePrice": 699,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.955Z"
+      },
+      {
+        "store": "Flipkart",
+        "count": 1,
+        "sampleTitle": "Rare Women Western Floral Print A-Line Casual Summer Dress",
+        "samplePrice": 719,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.955Z"
+      },
+      {
+        "store": "Myntra",
+        "count": 1,
+        "sampleTitle": "Rare Women Western Floral Print A-Line Casual Summer Dress",
+        "samplePrice": 909,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.955Z"
+      }
+    ],
+    "sameProductGroups": [
+      {
+        "id": "spg-1-1792833682955",
+        "productTitle": "Hopscotch Girls Floral Print Fit and Flare Party Frock Dress",
+        "lowestPrice": 499,
+        "highestPrice": 499,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      },
+      {
+        "id": "spg-2-1792833682955",
+        "productTitle": "Rare Women Western Floral Print A-Line Casual Summer Dress (Social Deal)",
+        "brand": "Rare",
+        "lowestPrice": 649,
+        "highestPrice": 909,
+        "stores": [
+          "Meesho",
+          "Amazon India",
+          "Flipkart",
+          "Myntra"
+        ]
+      }
+    ],
+    "blockedIntegrations": [
+      "Nykaa (CREDENTIALS_REQUIRED)",
+      "AJIO (CREDENTIALS_REQUIRED)",
+      "Tata CLiQ (CREDENTIALS_REQUIRED)",
+      "Croma (CREDENTIALS_REQUIRED)",
+      "Etsy (CREDENTIALS_REQUIRED)",
+      "eBay (CREDENTIALS_REQUIRED)",
+      "Cuelinks Network (CREDENTIALS_REQUIRED)",
+      "vCommission Network (CREDENTIALS_REQUIRED)"
+    ],
+    "authOrTimeoutIssues": []
+  },
+  {
+    "query": "men's running shoes",
+    "httpStatus": 200,
+    "totalOffers": 5,
+    "bestMatchesCount": 2,
+    "sameProductGroupsCount": 2,
+    "providerStatuses": [
+      {
+        "retailerId": "buywise_partners",
+        "retailerName": "BuyWise Partners",
+        "status": "PARTNER_LIVE"
+      },
+      {
+        "retailerId": "amazon",
+        "retailerName": "Amazon India",
+        "status": "LIVE"
+      },
+      {
+        "retailerId": "flipkart",
+        "retailerName": "Flipkart",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "meesho",
+        "retailerName": "Meesho",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "myntra",
+        "retailerName": "Myntra",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "nykaa",
+        "retailerName": "Nykaa",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Nykaa live API credentials required (NYKAA_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ajio",
+        "retailerName": "AJIO",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "AJIO live API credentials required (AJIO_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "tatacliq",
+        "retailerName": "Tata CLiQ",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Tata CLiQ official API credentials required (TATACLIQ_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "croma",
+        "retailerName": "Croma",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Croma official API credentials required (CROMA_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "etsy",
+        "retailerName": "Etsy",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Etsy API credentials required (ETSY_KEYSTRING). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ebay",
+        "retailerName": "eBay",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "eBay API credentials required."
+      },
+      {
+        "retailerId": "cuelinks",
+        "retailerName": "Cuelinks Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Cuelinks network credentials required (CUELINKS_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "vcommission",
+        "retailerName": "vCommission Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "vCommission network credentials required (VCOMMISSION_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      }
+    ],
+    "retailerBreakdown": [
+      {
+        "store": "Meesho",
+        "count": 1,
+        "sampleTitle": "LANCER Mens Wonder-3 Running Shoes (Social Deal)",
+        "samplePrice": 422,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.957Z"
+      },
+      {
+        "store": "Amazon India",
+        "count": 1,
+        "sampleTitle": "LANCER Mens Wonder-3 Running Shoes",
+        "samplePrice": 472,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.957Z"
+      },
+      {
+        "store": "Flipkart",
+        "count": 1,
+        "sampleTitle": "LANCER Mens Wonder-3 Running Shoes",
+        "samplePrice": 492,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.957Z"
+      },
+      {
+        "store": "Myntra",
+        "count": 1,
+        "sampleTitle": "LANCER Mens Wonder-3 Running Shoes",
+        "samplePrice": 614,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.957Z"
+      },
+      {
+        "store": "🟢 BuyWise Store",
+        "count": 1,
+        "sampleTitle": "Levi's Men's 511 Slim Fit Stretchable Denim Jeans",
+        "samplePrice": 1899,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.957Z"
+      }
+    ],
+    "sameProductGroups": [
+      {
+        "id": "spg-1-1792833682958",
+        "productTitle": "LANCER Mens Wonder-3 Running Shoes (Social Deal)",
+        "brand": "LANCER",
+        "lowestPrice": 422,
+        "highestPrice": 614,
+        "stores": [
+          "Meesho",
+          "Amazon India",
+          "Flipkart",
+          "Myntra"
+        ]
+      },
+      {
+        "id": "spg-2-1792833682958",
+        "productTitle": "Levi's Men's 511 Slim Fit Stretchable Denim Jeans",
+        "variantInfo": "Denim",
+        "lowestPrice": 1899,
+        "highestPrice": 1899,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      }
+    ],
+    "blockedIntegrations": [
+      "Nykaa (CREDENTIALS_REQUIRED)",
+      "AJIO (CREDENTIALS_REQUIRED)",
+      "Tata CLiQ (CREDENTIALS_REQUIRED)",
+      "Croma (CREDENTIALS_REQUIRED)",
+      "Etsy (CREDENTIALS_REQUIRED)",
+      "eBay (CREDENTIALS_REQUIRED)",
+      "Cuelinks Network (CREDENTIALS_REQUIRED)",
+      "vCommission Network (CREDENTIALS_REQUIRED)"
+    ],
+    "authOrTimeoutIssues": []
+  },
+  {
+    "query": "branded smartphone",
+    "httpStatus": 200,
+    "totalOffers": 5,
+    "bestMatchesCount": 3,
+    "sameProductGroupsCount": 3,
+    "providerStatuses": [
+      {
+        "retailerId": "buywise_partners",
+        "retailerName": "BuyWise Partners",
+        "status": "PARTNER_LIVE"
+      },
+      {
+        "retailerId": "amazon",
+        "retailerName": "Amazon India",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "flipkart",
+        "retailerName": "Flipkart",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "meesho",
+        "retailerName": "Meesho",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "myntra",
+        "retailerName": "Myntra",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Myntra live API credentials required (MYNTRA_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "nykaa",
+        "retailerName": "Nykaa",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Nykaa live API credentials required (NYKAA_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ajio",
+        "retailerName": "AJIO",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "AJIO live API credentials required (AJIO_AFFILIATE_ID). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "tatacliq",
+        "retailerName": "Tata CLiQ",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Tata CLiQ official API credentials required (TATACLIQ_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "croma",
+        "retailerName": "Croma",
+        "status": "SEARCH_LINK_ONLY",
+        "message": "Direct retailer search link. Prices and stock verified directly on retailer site."
+      },
+      {
+        "retailerId": "etsy",
+        "retailerName": "Etsy",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Etsy API credentials required (ETSY_KEYSTRING). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "ebay",
+        "retailerName": "eBay",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "eBay API credentials required."
+      },
+      {
+        "retailerId": "cuelinks",
+        "retailerName": "Cuelinks Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "Cuelinks network credentials required (CUELINKS_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      },
+      {
+        "retailerId": "vcommission",
+        "retailerName": "vCommission Network",
+        "status": "CREDENTIALS_REQUIRED",
+        "message": "vCommission network credentials required (VCOMMISSION_API_KEY). Connection status: CREDENTIALS_REQUIRED."
+      }
+    ],
+    "retailerBreakdown": [
+      {
+        "store": "🟢 BuyWise Store",
+        "count": 2,
+        "sampleTitle": "Samsung Galaxy S24 5G (Onyx Black, 256 GB)",
+        "samplePrice": 64999,
+        "priceType": "live",
+        "isSearchLinkOnly": false,
+        "verificationStatus": "verified_live",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.959Z"
+      },
+      {
+        "store": "Amazon India",
+        "count": 1,
+        "sampleTitle": "Samsung Galaxy S24 Ultra 5G (12GB RAM, 256GB)",
+        "samplePrice": 119999,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.960Z"
+      },
+      {
+        "store": "Flipkart",
+        "count": 1,
+        "sampleTitle": "Samsung Galaxy S24 Ultra 5G (12GB RAM, 256GB)",
+        "samplePrice": 120499,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.960Z"
+      },
+      {
+        "store": "Croma",
+        "count": 1,
+        "sampleTitle": "Samsung Galaxy S24 Ultra 5G (12GB RAM, 256GB) (Official Brand Warranty)",
+        "samplePrice": 120999,
+        "priceType": "unverified",
+        "isSearchLinkOnly": true,
+        "verificationStatus": "unverified",
+        "urlMatchesProduct": true,
+        "hasImage": true,
+        "lastVerified": "2026-10-24T09:21:22.960Z"
+      }
+    ],
+    "sameProductGroups": [
+      {
+        "id": "spg-1-1792833682960",
+        "productTitle": "Samsung Galaxy S24 5G (Onyx Black, 256 GB)",
+        "lowestPrice": 64999,
+        "highestPrice": 64999,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      },
+      {
+        "id": "spg-2-1792833682960",
+        "productTitle": "Apple iPhone 17 (256 GB) - Teal / Titanium",
+        "brand": "APPLE",
+        "lowestPrice": 82900,
+        "highestPrice": 82900,
+        "stores": [
+          "🟢 BuyWise Store"
+        ]
+      },
+      {
+        "id": "spg-3-1792833682960",
+        "productTitle": "Samsung Galaxy S24 Ultra 5G (12GB RAM, 256GB)",
+        "brand": "Samsung",
+        "lowestPrice": 119999,
+        "highestPrice": 120999,
+        "stores": [
+          "Amazon India",
+          "Flipkart",
+          "Croma"
+        ]
+      }
+    ],
+    "blockedIntegrations": [
+      "Myntra (CREDENTIALS_REQUIRED)",
+      "Nykaa (CREDENTIALS_REQUIRED)",
+      "AJIO (CREDENTIALS_REQUIRED)",
+      "Tata CLiQ (CREDENTIALS_REQUIRED)",
+      "Etsy (CREDENTIALS_REQUIRED)",
+      "eBay (CREDENTIALS_REQUIRED)",
+      "Cuelinks Network (CREDENTIALS_REQUIRED)",
+      "vCommission Network (CREDENTIALS_REQUIRED)"
+    ],
+    "authOrTimeoutIssues": []
+  }
+]

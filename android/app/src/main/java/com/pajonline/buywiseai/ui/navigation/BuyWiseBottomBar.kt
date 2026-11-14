@@ -44,7 +44,7 @@ fun BuyWiseBottomBar(navController: NavController) {
         it.role == "ADMIN" || authRepo.isEmailAdmin(it.userEmail)
     } ?: authRepo.isEmailAdmin(savedEmail)
 
-    val items = Screen.getNavItems(isAdmin)
+    val items = Screen.getNavItems(isAdmin).filterNotNull()
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry.value?.destination?.route
 

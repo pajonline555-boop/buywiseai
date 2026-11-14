@@ -12,7 +12,8 @@ sealed class AuthState {
     data class Authenticated(
         val userEmail: String,
         val displayName: String = "BuyWise Shopper",
-        val role: String = "shopper"
+        val role: String = "shopper",
+        val userId: String = ""
     ) : AuthState()
     data class Error(val message: String) : AuthState()
 }
@@ -28,6 +29,67 @@ class AuthRepository private constructor() {
                 INSTANCE ?: AuthRepository().also { INSTANCE = it }
             }
         }
+
+        // 🛡️ Disposable & Temporary Email Provider Blocklist
+        private val DISPOSABLE_EMAIL_DOMAINS = setOf(
+            "tempmail.com", "tempmail.net", "tempmail.org", "tempmailo.com",
+            "guerrillamail.com", "guerrillamail.net", "guerrillamail.org",
+            "mailinator.com", "mailinator.net", "10minutemail.com",
+            "yopmail.com", "trashmail.com", "fakemailgenerator.com",
+            "sharklasers.com", "throwawaymail.com", "burnermail.io",
+            "maildrop.cc", "dispostable.com", "getairmail.com", "crazymailing.com",
+            "generator.email", "mohmal.com", "emailondeck.com", "mytemp.email"
+        )
+
+        // 🛡️ Known Malicious & Automated Bot Accounts Blocked Platform-Wide
+        private val BLOCKED_SPAM_EMAILS = setOf(
+            "mirandarivera.40229@gmail.com",
+            "herberttyler.09898@gmail.com"
+        )
+
+        /**
+         * Real-time anti-spam heuristic analyzer.
+         */
+        fun isSpamBotEmail(email: String): Pair<Boolean, String> {
+            val clean = email.lowercase().trim()
+            if (clean.isBlank()) return Pair(true, "Email address cannot be empty.")
+
+            if (BLOCKED_SPAM_EMAILS.contains(clean)) {
+                return Pair(true, "Identified automated spam account blocked platform-wide.")
+            }
+
+            val parts = clean.split("@")
+            if (parts.size != 2) {
+                return Pair(true, "Malformed email address format.")
+            }
+            val handle = parts[0]
+            val domain = parts[1]
+
+            if (DISPOSABLE_EMAIL_DOMAINS.contains(domain)) {
+                return Pair(true, "Disposable and temporary email providers are not permitted ($domain).")
+            }
+
+            // Detect synthetic dot-5-digit bot accounts (e.g. name.40229@gmail.com)
+            val botDot5Pattern = Regex("^[a-z]+(\\.[a-z]+)?\\.[0-9]{4,6}@gmail\\.com$")
+            if (botDot5Pattern.matches(clean)) {
+                val lastPart = handle.substringAfterLast(".", "")
+                if (lastPart.length == 5 && lastPart.all { it.isDigit() }) {
+                    return Pair(true, "Automated synthetic bot account pattern detected.")
+                }
+            }
+
+            // Suspicious excessive random numbers
+            if (Regex("[0-9]{8,}@").containsMatchIn(clean)) {
+                return Pair(true, "Suspicious randomized numeric sequence in email handle.")
+            }
+
+            return Pair(false, "")
+        }
+    }
+
+    fun getCurrentUserId(): String? {
+        val uid = auth?.currentUser?.uid
+        return if (!uid.isNullOrBlank() && !isExplicitSignedOut) uid else null
     }
 
     fun isEmailAdmin(identifier: String?): Boolean {
@@ -60,7 +122,8 @@ class AuthRepository private constructor() {
             val userEmail = user.email ?: user.phoneNumber ?: ""
             val role = determineRole(userEmail)
             val displayName = user.displayName ?: userEmail.substringBefore("@")
-            AuthState.Authenticated(userEmail, displayName, role)
+            val userId = user.uid
+            AuthState.Authenticated(userEmail, displayName, role, userId)
         } ?: AuthState.Unauthenticated
     )
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -76,14 +139,30 @@ class AuthRepository private constructor() {
             val userEmail = currentUser.email ?: currentUser.phoneNumber ?: ""
             var role = determineRole(userEmail)
             val displayName = currentUser.displayName ?: userEmail.substringBefore("@")
-            _authState.value = AuthState.Authenticated(userEmail, displayName, role)
+            val userId = currentUser.uid
+            _authState.value = AuthState.Authenticated(userEmail, displayName, role, userId)
+
+            // 🚫 Real-time Banned Account Enforcement
+            try {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.collection("users").document(userId).get()
+                    .addOnSuccessListener { doc ->
+                        val isBanned = doc.getBoolean("isBanned") ?: (doc.getString("status")?.equals("BANNED", ignoreCase = true) == true)
+                        if (isBanned && !isEmailAdmin(userEmail)) {
+                            android.util.Log.w("BuyWiseAuthRepo", "Banned account detected in session: $userEmail - Revoking auth")
+                            signOut()
+                        }
+                    }
+            } catch (e: Exception) {
+                // Ignore
+            }
 
             // Resolve Firebase Custom Claims (admin=true / role=ADMIN) asynchronously
             try {
                 currentUser.getIdToken(false).addOnSuccessListener { tokenResult ->
                     val hasAdminClaim = tokenResult.claims["admin"] == true || tokenResult.claims["role"] == "ADMIN"
                     if (hasAdminClaim && role != "ADMIN") {
-                        _authState.value = AuthState.Authenticated(userEmail, displayName, "ADMIN")
+                        _authState.value = AuthState.Authenticated(userEmail, displayName, "ADMIN", userId)
                     }
                 }
             } catch (e: Exception) {
@@ -168,6 +247,14 @@ class AuthRepository private constructor() {
         isExplicitSignedOut = false
         val cleanEmail = email.lowercase().trim()
 
+        // 🛡️ Pre-auth anti-spam check
+        val (isSpam, spamReason) = isSpamBotEmail(cleanEmail)
+        if (isSpam && !isEmailAdmin(cleanEmail)) {
+            _authState.value = AuthState.Unauthenticated
+            onResult(false, "⛔ Access Blocked: $spamReason")
+            return
+        }
+
         val targetAuth = auth
         if (targetAuth != null) {
             targetAuth.signInWithEmailAndPassword(cleanEmail, password)
@@ -177,9 +264,33 @@ class AuthRepository private constructor() {
                         val userEmail = user?.email ?: cleanEmail
                         val role = determineRole(userEmail)
                         val displayName = user?.displayName ?: userEmail.substringBefore("@")
-                        _authState.value = AuthState.Authenticated(userEmail, displayName, role)
-                        syncUserProfileToFirestore(userEmail, displayName, role)
-                        onResult(true, "Signed in successfully as $userEmail!")
+                        val userId = user?.uid ?: ""
+
+                        // Check if account is banned in Firestore
+                        try {
+                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            db.collection("users").document(userId).get()
+                                .addOnSuccessListener { doc ->
+                                    val isBanned = doc.getBoolean("isBanned") ?: (doc.getString("status")?.equals("BANNED", ignoreCase = true) == true)
+                                    if (isBanned && !isEmailAdmin(userEmail)) {
+                                        signOut()
+                                        onResult(false, "⛔ Access Denied: This account has been banned due to security or spam policies.")
+                                    } else {
+                                        _authState.value = AuthState.Authenticated(userEmail, displayName, role, userId)
+                                        syncUserProfileToFirestore(userEmail, displayName, role)
+                                        onResult(true, "Signed in successfully as $userEmail!")
+                                    }
+                                }
+                                .addOnFailureListener {
+                                    _authState.value = AuthState.Authenticated(userEmail, displayName, role, userId)
+                                    syncUserProfileToFirestore(userEmail, displayName, role)
+                                    onResult(true, "Signed in successfully as $userEmail!")
+                                }
+                        } catch (e: Exception) {
+                            _authState.value = AuthState.Authenticated(userEmail, displayName, role, userId)
+                            syncUserProfileToFirestore(userEmail, displayName, role)
+                            onResult(true, "Signed in successfully as $userEmail!")
+                        }
                     } else {
                         _authState.value = AuthState.Unauthenticated
                         val errMessage = task.exception?.localizedMessage ?: "Incorrect email or password."
@@ -195,6 +306,15 @@ class AuthRepository private constructor() {
     fun signUpWithEmail(email: String, password: String, name: String, onResult: (Boolean, String) -> Unit) {
         isExplicitSignedOut = false
         val cleanEmail = email.lowercase().trim()
+
+        // 🛡️ Pre-registration anti-spam check
+        val (isSpam, spamReason) = isSpamBotEmail(cleanEmail)
+        if (isSpam && !isEmailAdmin(cleanEmail)) {
+            _authState.value = AuthState.Unauthenticated
+            onResult(false, "⛔ Registration Blocked: $spamReason")
+            return
+        }
+
         val targetAuth = auth
         if (targetAuth != null) {
             targetAuth.createUserWithEmailAndPassword(cleanEmail, password)
@@ -204,7 +324,8 @@ class AuthRepository private constructor() {
                         val userEmail = user?.email ?: cleanEmail
                         val role = determineRole(userEmail)
                         val displayName = if (name.isNotBlank()) name else userEmail.substringBefore("@")
-                        _authState.value = AuthState.Authenticated(userEmail, displayName, role)
+                        val userId = user?.uid ?: ""
+                        _authState.value = AuthState.Authenticated(userEmail, displayName, role, userId)
                         syncUserProfileToFirestore(userEmail, displayName, role)
                         onResult(true, "Account registered successfully for $userEmail!")
                     } else {
@@ -301,7 +422,8 @@ class AuthRepository private constructor() {
                                 val finalEmail = user?.email ?: cleanEmail
                                 val finalName = user?.displayName ?: userDisplayName
                                 val finalRole = determineRole(finalEmail)
-                                _authState.value = AuthState.Authenticated(finalEmail, finalName, finalRole)
+                                val userId = user?.uid ?: ""
+                                _authState.value = AuthState.Authenticated(finalEmail, finalName, finalRole, userId)
                                 syncUserProfileToFirestore(finalEmail, finalName, finalRole)
                             } else {
                                 syncUserProfileToFirestore(cleanEmail, userDisplayName, role)
@@ -327,7 +449,8 @@ class AuthRepository private constructor() {
                             val userEmail = user?.email ?: ""
                             val userDisplayName = user?.displayName ?: userEmail.substringBefore("@")
                             val role = determineRole(userEmail)
-                            _authState.value = AuthState.Authenticated(userEmail, userDisplayName, role)
+                            val userId = user?.uid ?: ""
+                            _authState.value = AuthState.Authenticated(userEmail, userDisplayName, role, userId)
                             onResult(true, "Signed in with Google as $userEmail")
                             syncUserProfileToFirestore(userEmail, userDisplayName, role)
                         } else {

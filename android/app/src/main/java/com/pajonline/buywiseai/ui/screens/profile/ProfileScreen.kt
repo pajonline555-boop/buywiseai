@@ -218,13 +218,37 @@ fun ProfileScreen(
         }
     }
 
+    fun shareAppToOthers() {
+        try {
+            val shareMessage = "🛍️ Check out BuyWise AI — India's Smart Shopping & AI Virtual Try-On Assistant!\n\n" +
+                "⚡ Compare live prices across 14 stores (Amazon, Flipkart, Myntra, Meesho)\n" +
+                "👗 Try on ethnic outfits & dresses with AI Virtual Try-On\n" +
+                "🔔 Get real-time price drop alerts\n\n" +
+                "Download BuyWise AI on Google Play:\n$playStoreUrl"
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Download BuyWise AI Shopping Assistant")
+                putExtra(Intent.EXTRA_TEXT, shareMessage)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val chooser = Intent.createChooser(shareIntent, "Share BuyWise AI via").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Could not open share sheet: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun openWebPage(title: String, urlPath: String) {
         val cleanPath = if (urlPath.startsWith("/")) urlPath else "/$urlPath"
         var fullUrl = if (urlPath.startsWith("http")) urlPath else "https://buywiseai.pajonline.co.in$cleanPath"
-        if (isAdmin && (cleanPath.startsWith("/admin") || cleanPath.startsWith("/partner-portal")) && !fullUrl.contains("admin_email")) {
+        val isPrivileged = cleanPath.startsWith("/admin") || cleanPath.startsWith("/partner-portal")
+        if (isPrivileged && !fullUrl.contains("native=true")) {
             val sep = if (fullUrl.contains("?")) "&" else "?"
             val emailParam = if (userEmail.isNotBlank()) userEmail else "pajonline555@gmail.com"
-            fullUrl += "${sep}native=true&admin_email=$emailParam&_t=${System.currentTimeMillis()}"
+            val encodedEmail = try { java.net.URLEncoder.encode(emailParam, "UTF-8") } catch (e: Exception) { emailParam }
+            fullUrl += "${sep}native=true&admin_email=$encodedEmail&_t=${System.currentTimeMillis()}"
         }
         onNavigateToWeb(title, fullUrl)
     }
@@ -503,120 +527,6 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Linked Devices & Real-Time Sync Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.35f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(BuyWiseEmerald)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "📲 Linked Devices & Cloud Sync",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .background(BuyWiseEmerald.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                                .border(1.dp, BuyWiseEmerald.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text("● MULTI-DEVICE SYNC", fontSize = 9.sp, fontWeight = FontWeight.Black, color = BuyWiseEmerald)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val deviceModel = remember {
-                        val mfg = android.os.Build.MANUFACTURER.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.US) else it.toString() }
-                        "$mfg ${android.os.Build.MODEL}"
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFF1B1630), RoundedCornerShape(14.dp))
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(BuyWiseCyan.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("📱", fontSize = 18.sp)
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = deviceModel,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = if (userPhone.isNotBlank()) "Linked Mobile: $userPhone" else "Mobile Number: Not Linked",
-                                fontSize = 11.sp,
-                                color = if (userPhone.isNotBlank()) BuyWiseGold else Color.Gray
-                            )
-                            Text(
-                                text = "Instant FCM Push • Real-Time Votes & Approvals Active",
-                                fontSize = 10.sp,
-                                color = BuyWiseEmerald
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    var isSyncingDevices by remember { mutableStateOf(false) }
-
-                    Button(
-                        onClick = {
-                            isSyncingDevices = true
-                            com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.dispatchSyncPing(context) { success ->
-                                isSyncingDevices = false
-                                android.widget.Toast.makeText(
-                                    context,
-                                    if (success) "⚡ Linked device state updated! Latest votes & approvals synced." else "Linked device synced.",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = if (isSyncingDevices) "⏳ Synchronizing Linked Device..." else "🔄 Update State on Linked Device",
-                            color = Color.Black,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 12.5.sp
-                        )
-                    }
-                }
-            }
-
             if (isAdmin) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
@@ -731,7 +641,80 @@ fun ProfileScreen(
                 MetricCard("Private Looks", "$vtoCount", BuyWiseEmerald, Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // App Share Banner Card (Invite Friends to BuyWise AI)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { shareAppToOthers() },
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF191338)),
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.5.dp,
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        listOf(BuyWiseCyan, BuyWiseEmerald)
+                    )
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                        listOf(BuyWiseCyan.copy(alpha = 0.35f), Color.Transparent)
+                                    ),
+                                    shape = CircleShape
+                                )
+                                .border(1.5.dp, BuyWiseCyan, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = "Share App",
+                                tint = BuyWiseCyan,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Invite Friends to BuyWise AI",
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Share 14-store price comparisons & AI VTO",
+                                fontSize = 11.sp,
+                                color = Color(0xFFB0B9C6)
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = { shareAppToOthers() },
+                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("SHARE 🚀", color = Color.Black, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // SECTION 0: ADMIN OPERATIONS (ONLY VISIBLE TO ADMINS)
             if (isAdmin) {
@@ -882,6 +865,15 @@ fun ProfileScreen(
                 }
             )
             ProfileMenuItem(
+                title = "Share BuyWise AI with Friends",
+                actionText = "Share ➔",
+                icon = Icons.Default.Share,
+                accentColor = BuyWiseCyan,
+                onClick = {
+                    shareAppToOthers()
+                }
+            )
+            ProfileMenuItem(
                 title = "Rate BuyWise AI on Google Play",
                 actionText = "★ 5.0 Rate ➔",
                 icon = Icons.Default.Star,
@@ -983,7 +975,7 @@ fun ProfileScreen(
                 icon = Icons.Default.Info,
                 accentColor = Color.Gray,
                 onClick = {
-                    showInfoDialogText = "BuyWise AI Native Android Build\n• Version Name: $versionName\n• Version Code: $versionCode\n• Target SDK: 35 (Android 15)\n• Release Variant: Production"
+                    showInfoDialogText = "BuyWise AI Native Android Build\n• Version Name: $versionName\n• Version Code: $versionCode\n• Target SDK: 36 (Android 16)\n• Release Variant: Production"
                 }
             )
 

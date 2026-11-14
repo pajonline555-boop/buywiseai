@@ -16,6 +16,14 @@ service cloud.firestore {
       );
     }
     
+    // Helper: Verify user account is active and not suspended or banned
+    function isNotBanned() {
+      return request.auth != null && (
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned != true
+      );
+    }
+
     // Helper: Valid Partner Ownership
     function isPartnerOwner(partnerId) {
       return request.auth != null && (
@@ -60,7 +68,20 @@ service cloud.firestore {
     // 1. User Profiles (/users/{userId})
     match /users/{userId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow create: if isAdmin() || (
+        request.auth != null && 
+        request.auth.uid == userId && 
+        (!('isBanned' in request.resource.data) || request.resource.data.isBanned == false) && 
+        (!('role' in request.resource.data) || request.resource.data.role != 'ADMIN')
+      );
+      allow update: if isAdmin() || (
+        request.auth != null && 
+        request.auth.uid == userId && 
+        isNotBanned() && 
+        (!('isBanned' in request.resource.data) || request.resource.data.isBanned == resource.data.isBanned) && 
+        (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
+      );
+      allow delete: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
     
     // 2. Price Alerts (/alerts/{alertId})
@@ -356,6 +377,12 @@ service cloud.firestore {
 
       // Immutability: Analytics records cannot be updated or deleted by clients
       allow update, delete: if isAdmin();
+    }
+
+    // 23. System Config (App Updates, Version Gate & Client Environment)
+    match /system_config/app_version {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // STRICT DEFAULT DENY: All unlisted collections are completely blocked

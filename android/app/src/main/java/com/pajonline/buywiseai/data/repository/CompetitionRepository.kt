@@ -103,8 +103,7 @@ object CompetitionRepository {
             val app = com.pajonline.buywiseai.BuyWiseApplication.instance
             val prefs = app.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
             val json = prefs.getString(KEY_VOTES, null) ?: return emptyList()
-            val type = object : com.google.gson.reflect.TypeToken<List<CompetitionVote>>() {}.type
-            gson.fromJson<List<CompetitionVote>>(json, type) ?: emptyList()
+            gson.fromJson(json, Array<CompetitionVote>::class.java)?.toList() ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
@@ -126,16 +125,26 @@ object CompetitionRepository {
             val app = com.pajonline.buywiseai.BuyWiseApplication.instance
             val prefs = app.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
             val json = prefs.getString(KEY_SUBMISSIONS, null) ?: return emptyList()
-            val type = object : com.google.gson.reflect.TypeToken<List<CompetitionSubmission>>() {}.type
-            gson.fromJson<List<CompetitionSubmission>>(json, type) ?: emptyList()
+            gson.fromJson(json, Array<CompetitionSubmission>::class.java)?.toList() ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
     }
 
     private fun restoreMayaEntryIfNeeded() {
-        val hasMaya = initialSubmissions.any { it.userName.equals("Maya", ignoreCase = true) }
-        if (!hasMaya) {
+        val mayaIdx = initialSubmissions.indexOfFirst { it.userName.equals("Maya", ignoreCase = true) || it.id == "sub-user-maya" }
+        val defaultMayaYoutube = "https://www.youtube.com/@BUYWISEAI-u8n/shorts"
+        if (mayaIdx >= 0) {
+            val existingMaya = initialSubmissions[mayaIdx]
+            if (existingMaya.youtubeUrl.isNullOrBlank()) {
+                initialSubmissions[mayaIdx] = existingMaya.copy(youtubeUrl = defaultMayaYoutube)
+                saveSubmissionsLocally()
+                try {
+                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    db.collection("competition_submissions").document(existingMaya.id).update("youtubeUrl", defaultMayaYoutube)
+                } catch (_: Exception) {}
+            }
+        } else {
             try {
                 val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
                 val mayaSub = CompetitionSubmission(
@@ -151,7 +160,8 @@ object CompetitionRepository {
                     shareCount = 0,
                     submissionType = "REAL_DRESSED",
                     userPhone = "+91 98765 43210",
-                    linkedMobile = "+91 98765 43210"
+                    linkedMobile = "+91 98765 43210",
+                    youtubeUrl = defaultMayaYoutube
                 )
                 initialSubmissions.add(0, mayaSub)
                 saveSubmissionsLocally()
@@ -171,6 +181,7 @@ object CompetitionRepository {
                     "submissionType" to mayaSub.submissionType,
                     "userPhone" to (mayaSub.userPhone ?: ""),
                     "linkedMobile" to (mayaSub.linkedMobile ?: ""),
+                    "youtubeUrl" to defaultMayaYoutube,
                     "consentAgreed" to true,
                     "publicationConsentAgreed" to true
                 )
@@ -280,7 +291,8 @@ object CompetitionRepository {
                             submissionType = doc.getString("submissionType") ?: "REAL_DRESSED",
                             rejectionReason = doc.getString("rejectionReason"),
                             userPhone = doc.getString("userPhone"),
-                            linkedMobile = doc.getString("linkedMobile") ?: doc.getString("userPhone")
+                            linkedMobile = doc.getString("linkedMobile") ?: doc.getString("userPhone"),
+                            youtubeUrl = doc.getString("youtubeUrl")
                         )
                     } catch (e: Exception) {
                         null
@@ -381,6 +393,16 @@ object CompetitionRepository {
             saveSubmissionsLocally()
         }
 
+        // Mark that user has voted and silence any future voting reminder for this competition
+        try {
+            val app = com.pajonline.buywiseai.BuyWiseApplication.instance
+            val compPrefs = app.getSharedPreferences("buywise_competition_prefs", android.content.Context.MODE_PRIVATE)
+            compPrefs.edit()
+                .putString("voted_sub_$competitionId", submissionId)
+                .putBoolean("voting_reminder_sent_$competitionId", true)
+                .apply()
+        } catch (_: Exception) {}
+
         try {
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             db.collection("competition_submissions").document(submissionId)
@@ -438,7 +460,8 @@ object CompetitionRepository {
         userPhotoUrl: String?,
         vtoResultImage: String,
         submissionType: String = "REAL_DRESSED",
-        userPhone: String? = null
+        userPhone: String? = null,
+        youtubeUrl: String? = null
     ): Pair<Boolean, String> {
         val existing = initialSubmissions.firstOrNull { it.competitionId == competitionId && it.userId == userId }
         if (existing != null) {
@@ -458,7 +481,8 @@ object CompetitionRepository {
             voteCount = 0,
             submissionType = submissionType,
             userPhone = userPhone,
-            linkedMobile = userPhone
+            linkedMobile = userPhone,
+            youtubeUrl = youtubeUrl?.takeIf { it.isNotBlank() }
         )
         initialSubmissions.add(0, newSub)
         saveSubmissionsLocally()
@@ -478,6 +502,7 @@ object CompetitionRepository {
                 "submissionType" to newSub.submissionType,
                 "userPhone" to (newSub.userPhone ?: ""),
                 "linkedMobile" to (newSub.linkedMobile ?: ""),
+                "youtubeUrl" to (newSub.youtubeUrl ?: ""),
                 "consentAgreed" to true,
                 "publicationConsentAgreed" to true
             )
@@ -514,7 +539,8 @@ object CompetitionRepository {
         newName: String,
         newImageUri: String,
         newType: String,
-        requesterUserId: String
+        requesterUserId: String,
+        newYoutubeUrl: String? = null
     ): Pair<Boolean, String> {
         val target = initialSubmissions.firstOrNull { it.id == submissionId }
             ?: return Pair(false, "Submission not found.")
@@ -528,10 +554,12 @@ object CompetitionRepository {
             return Pair(false, "You can only edit your own submission.")
         }
 
+        val resolvedYoutube = if (newYoutubeUrl != null) newYoutubeUrl.trim().takeIf { it.isNotBlank() } else target.youtubeUrl
         val updated = target.copy(
             userName = newName,
             vtoResultImage = newImageUri,
-            submissionType = newType
+            submissionType = newType,
+            youtubeUrl = resolvedYoutube
         )
         val index = initialSubmissions.indexOf(target)
         if (index >= 0) {
@@ -544,12 +572,49 @@ object CompetitionRepository {
             val updateMap = hashMapOf<String, Any>(
                 "userName" to newName,
                 "vtoResultImage" to newImageUri,
-                "submissionType" to newType
+                "submissionType" to newType,
+                "youtubeUrl" to (resolvedYoutube ?: "")
             )
             db.collection("competition_submissions").document(submissionId).update(updateMap)
         } catch (_: Exception) {}
 
-        return Pair(true, "✅ Your entry has been updated!")
+        // Send instant notification to user's linked mobile that entry & YouTube link have updated
+        try {
+            val app = com.pajonline.buywiseai.BuyWiseApplication.instance
+            val comp = initialCompetitions.firstOrNull { it.id == target.competitionId }
+            val prefs = app.getSharedPreferences("buywise_app_prefs", android.content.Context.MODE_PRIVATE)
+            val fallbackPhone = prefs.getString("saved_user_phone", "")?.takeIf { it.isNotBlank() } ?: "+91 98765 43210"
+            val resolvedMobile = target.linkedMobile ?: target.userPhone ?: fallbackPhone
+
+            com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.dispatchEntryUpdatedNotification(
+                context = app,
+                submissionId = submissionId,
+                recipientUserId = target.userId,
+                recipientUserName = newName,
+                competitionTitle = comp?.featuredProductTitle ?: comp?.title ?: "Weekly Fashion Challenge",
+                youtubeUrl = resolvedYoutube,
+                linkedMobile = resolvedMobile
+            )
+        } catch (e: Throwable) {
+            android.util.Log.w("CompetitionRepo", "Entry update notification note: ${e.message}")
+        }
+
+        return Pair(true, "✅ Your entry and YouTube link have been updated!")
+    }
+
+    fun recordShare(submissionId: String) {
+        val target = initialSubmissions.firstOrNull { it.id == submissionId } ?: return
+        val newShareCount = target.shareCount + 1
+        val index = initialSubmissions.indexOf(target)
+        if (index >= 0) {
+            initialSubmissions[index] = target.copy(shareCount = newShareCount)
+            saveSubmissionsLocally()
+        }
+        try {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            db.collection("competition_submissions").document(submissionId)
+                .update("shareCount", com.google.firebase.firestore.FieldValue.increment(1))
+        } catch (_: Exception) {}
     }
 
     fun deleteSubmission(submissionId: String, requesterUserId: String): Pair<Boolean, String> {

@@ -1,7 +1,10 @@
 package com.pajonline.buywiseai.ui.components
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -72,11 +76,11 @@ fun GenGStoreShowcase(
     onBuyNowClick: (PartnerProductSlide) -> Unit = {},
     onShareClick: (PartnerProductSlide) -> Unit = {}
 ) {
-    // Baseline Verified Product Slides Array
+    // Baseline Verified Inventory Product Slides (Active catalog items only)
     val defaultSlides = remember {
         listOf(
             PartnerProductSlide(
-                id = "prod_partner_meesho_trendy_partywear_1",
+                id = "prod_sku_meesho_466292667",
                 title = "Trendy Partywear Women Dress",
                 description = "Meesho Verified Trending Outfit: Stylish partywear sleeveless flared floral midi dress by BIG 20shope. Premium georgette blend fabric.",
                 retailer = "MEESHO / BIG 20SHOPE",
@@ -91,87 +95,18 @@ fun GenGStoreShowcase(
             ),
             PartnerProductSlide(
                 id = "prod_partner_kamarbandh_1",
-                title = "Etietnic Gujarati Traditional Embroidered Kamarbandh",
-                description = "Verified Amazon India product: Etietnic Gujarati Traditional Embroidered Kamarbandh. Authentic quality and fast delivery guaranteed across India.",
-                retailer = "BUYWISE VERIFIED PARTNER NETWORK",
+                title = "Gujarati Traditional Navratri Waist Belt with Long Tie Hanging",
+                description = "Verified Amazon India product: Handcrafted traditional Gujarati Navratri embroidered kamarbandh waist belt with intricate Kutchi mirror work, vibrant peacock motifs, and decorative fabric tassels.",
+                retailer = "VERIFIED AMAZON INDIA",
                 rating = "4.9",
-                reviewCount = "24",
+                reviewCount = "48",
                 sellingPrice = "₹499",
                 mrp = "₹999",
                 discountPercent = "50% OFF SPECIAL DEAL",
                 imageUrl = "https://m.media-amazon.com/images/I/71gxwje9wqL._SL800_.jpg",
-                productUrl = "https://www.amazon.in/s?k=Etietnic+Gujarati+Traditional+Embroidered+Kamarbandh",
-                slug = "etietnic-gujarati-traditional-embroidered-kamarbandh"
-            ),
-            PartnerProductSlide(
-                id = "prod_partner_flipkart_s24_1",
-                title = "Samsung Galaxy S24 5G (Onyx Black, 256 GB)",
-                description = "Flipkart Big Billion Deal: 8 GB RAM, Galaxy AI Features with Circle to Search, 50MP Pro-Grade Camera.",
-                retailer = "FLIPKART",
-                rating = "4.6",
-                reviewCount = "2890",
-                sellingPrice = "₹64,999",
-                mrp = "₹79,999",
-                discountPercent = "18% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
-                productUrl = "https://www.flipkart.com/samsung-galaxy-s24-5g/p/itm12345",
-                slug = "samsung-s24-ultra"
-            ),
-            PartnerProductSlide(
-                id = "prod_partner_meesho_georgette_1",
-                title = "Meesho Trending Heavy Georgette Sequence Saree with Blouse",
-                description = "Meesho Verified Super Deal: Premium Bollywood style embroidered sequence work Georgette saree.",
-                retailer = "MEESHO",
-                rating = "4.8",
-                reviewCount = "8940",
-                sellingPrice = "₹899",
-                mrp = "₹2,499",
-                discountPercent = "64% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
-                productUrl = "https://www.meesho.com/s/p/trending-georgette-saree-1234",
-                slug = "biba-anarkali-suit"
-            ),
-            PartnerProductSlide(
-                id = "prod_partner_iphone16_1",
-                title = "Apple iPhone 16 (128 GB) - Ultramarine",
-                description = "Amazon India Festival Choice: 6.1-inch Super Retina XDR OLED with A18 Bionic Chip, Camera Control, 48MP Fusion Camera & ₹12,000 Instant Bank Offer.",
-                retailer = "AMAZON INDIA",
-                rating = "4.7",
-                reviewCount = "28400",
-                sellingPrice = "₹67,900",
-                mrp = "₹79,900",
-                discountPercent = "15% OFF FESTIVAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=800&q=80",
-                productUrl = "https://www.amazon.in/s?k=Apple+iPhone+16+128GB",
-                slug = "iphone-16"
-            ),
-            PartnerProductSlide(
-                id = "prod_partner_levis_jeans_1",
-                title = "Levi's Men's 511 Slim Fit Stretchable Denim Jeans",
-                description = "Amazon India Fashion Bestseller: 99% Premium Cotton, 1% Elastane Stretch with Slim Fit Narrow Leg Opening.",
-                retailer = "AMAZON INDIA",
-                rating = "4.7",
-                reviewCount = "5210",
-                sellingPrice = "₹1,899",
-                mrp = "₹3,599",
-                discountPercent = "47% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=800&q=80",
-                productUrl = "https://www.amazon.in/s?k=Levis+511+Slim+Jeans",
-                slug = "levis-slim-jeans"
-            ),
-            PartnerProductSlide(
-                id = "prod_partner_sony_xm5_1",
-                title = "Sony WH-1000XM5 Wireless ANC Headphones",
-                description = "Amazon India Audio Deal: Industry Leading Noise Cancellation with Dual Processor V1 & 30-Hour Battery Life.",
-                retailer = "AMAZON INDIA",
-                rating = "4.8",
-                reviewCount = "4120",
-                sellingPrice = "₹24,990",
-                mrp = "₹34,990",
-                discountPercent = "28% OFF SPECIAL DEAL",
-                imageUrl = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
-                productUrl = "https://www.amazon.in/s?k=Sony+WH-1000XM5",
-                slug = "sony-xm5"
+                productUrl = "https://www.amazon.in/Etietnic-Gujarati-Traditional-Embroidered-Kamarbandh/dp/B0HJHSYLBG?tag=pajonline-21",
+                slug = "gujarati-traditional-navratri-waist-belt-kamarbandh",
+                showInSlideshow = true
             )
         )
     }
@@ -195,7 +130,10 @@ fun GenGStoreShowcase(
                             val id = doc.id
                             val desc = doc.getString("description") ?: "Verified BuyWise Partner Deal"
                             val brand = doc.getString("brand") ?: doc.getString("partnerName") ?: "BUYWISE PARTNER"
-                            val img = doc.getString("primaryImage") ?: continue
+                            val img = doc.getString("primaryImage")
+                                ?: (doc.get("images") as? List<*>)?.firstOrNull()?.toString()
+                                ?: doc.getString("imageUrl")
+                                ?: ""
                             if (img.isBlank()) continue
                             
                             val sellingPriceNum = doc.getLong("sellingPrice") ?: 499L
@@ -226,13 +164,19 @@ fun GenGStoreShowcase(
                             )
                         }
                         if (fetchedList.isNotEmpty()) {
-                            val combined = fetchedList + defaultSlides
-                            val deduped = combined.distinctBy {
+                            // Strictly show ONLY products that are currently LIVE in the inventory!
+                            val deduped = fetchedList.groupBy {
                                 it.title.lowercase().replace(Regex("\\(updated\\)|\\(new\\)|\\(edit\\)"), "").replace(Regex("[^a-z0-9]"), "").trim()
+                            }.values.map { group ->
+                                val main = group.first()
+                                val anyInSlideshow = group.any { it.showInSlideshow }
+                                if (anyInSlideshow) main.copy(showInSlideshow = true) else main
                             }
-                            dynamicSlides = deduped.sortedByDescending {
-                                it.showInSlideshow || it.id.contains("trendy_partywear") || it.title.contains("Partywear", ignoreCase = true)
-                            }
+                            dynamicSlides = deduped.sortedWith(
+                                compareByDescending<PartnerProductSlide> { it.showInSlideshow }
+                                    .thenByDescending { it.id.contains("kamarbandh") || it.title.contains("Navratri", ignoreCase = true) || it.title.contains("Kamarbandh", ignoreCase = true) }
+                                    .thenByDescending { it.id.contains("trendy_partywear") }
+                            )
                         }
                     }
                 }
@@ -244,13 +188,17 @@ fun GenGStoreShowcase(
 
     // Auto-slide interval: 4 seconds (comfortable reading pace)
     LaunchedEffect(key1 = items.size) {
+        if (items.isEmpty()) return@LaunchedEffect
         while (true) {
             delay(4000L) // 4 second interval
             currentIndex = (currentIndex + 1) % items.size
         }
     }
 
-    val currentProd = items[currentIndex]
+    if (items.isEmpty()) return
+
+    val safeIndex = currentIndex.coerceIn(0, items.size - 1)
+    val currentProd = items[safeIndex]
     val context = LocalContext.current
 
     val openProductPage = {
@@ -429,7 +377,7 @@ fun GenGStoreShowcase(
             border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseEmerald.copy(alpha = 0.4f))
         ) {
             Column {
-                // Product Picture & Badges using Coil AsyncImage
+                // Product Picture & Badges using Native Image / Coil AsyncImage
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -437,15 +385,42 @@ fun GenGStoreShowcase(
                         .background(Color(0xFF080612))
                         .clickable { openProductPage() }
                 ) {
-                    AsyncImage(
-                        model = currentProd.imageUrl,
-                        contentDescription = currentProd.title,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(260.dp)
-                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    )
+                    val rawUrl = currentProd.imageUrl.trim()
+                    val decodedBitmap = remember(rawUrl) {
+                        if (rawUrl.startsWith("data:", ignoreCase = true)) {
+                            try {
+                                val commaIdx = rawUrl.indexOf(',')
+                                val b64 = if (commaIdx != -1) rawUrl.substring(commaIdx + 1) else rawUrl
+                                val cleanB64 = b64.replace("\n", "").replace("\r", "").trim()
+                                val bytes = Base64.decode(cleanB64, Base64.DEFAULT)
+                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            } catch (_: Throwable) {
+                                null
+                            }
+                        } else null
+                    }
+
+                    if (decodedBitmap != null) {
+                        Image(
+                            bitmap = decodedBitmap.asImageBitmap(),
+                            contentDescription = currentProd.title,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                        )
+                    } else {
+                        AsyncImage(
+                            model = rawUrl,
+                            contentDescription = currentProd.title,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                        )
+                    }
 
                     // Gen-G Partner Badge Top Left
                     Box(
@@ -775,10 +750,10 @@ fun GenGStoreShowcase(
                         items.indices.forEach { index ->
                             Box(
                                 modifier = Modifier
-                                    .width(if (index == currentIndex) 22.dp else 6.dp)
+                                    .width(if (index == safeIndex) 22.dp else 6.dp)
                                     .height(6.dp)
                                     .background(
-                                        if (index == currentIndex) BuyWiseEmerald else Color.Gray.copy(alpha = 0.4f),
+                                        if (index == safeIndex) BuyWiseEmerald else Color.Gray.copy(alpha = 0.4f),
                                         CircleShape
                                     )
                             )
@@ -786,7 +761,7 @@ fun GenGStoreShowcase(
                     }
 
                     Text(
-                        text = "SLIDE 0${currentIndex + 1} / 0${items.size} • 4s AUTOPLAY",
+                        text = "SLIDE 0${safeIndex + 1} / 0${items.size} • 4s AUTOPLAY",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = BuyWiseEmerald

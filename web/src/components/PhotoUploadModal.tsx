@@ -14,6 +14,7 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -24,10 +25,11 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
     setError(null);
     setStatusMessage(null);
 
-    // Validate image format
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPEG, PNG, or WebP).');
+    // Validate image format - Supports AVIF (e.g. downloaded Meesho dresses), WebP, JPEG, PNG, GIF, BMP
+    const isImageByMime = file.type ? file.type.startsWith('image/') : false;
+    const isImageByExt = /\.(avif|webp|jpe?g|png|gif|bmp|svg)$/i.test(file.name);
+    if (!isImageByMime && !isImageByExt) {
+      setError('Please select a valid image file (AVIF, JPEG, PNG, or WebP).');
       return;
     }
 
@@ -44,6 +46,8 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
@@ -51,6 +55,21 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
   };
 
   const clearSelection = () => {
@@ -153,25 +172,30 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
             style={{
-              border: '2px dashed var(--glass-border)',
+              border: isDragging ? '2px dashed #00ff88' : '2px dashed var(--glass-border)',
               borderRadius: '16px',
               padding: '40px 20px',
               textAlign: 'center',
               cursor: 'pointer',
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: isDragging ? 'rgba(0, 255, 136, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+              transform: isDragging ? 'scale(1.02)' : 'scale(1)',
               marginBottom: '20px',
-              transition: 'all 0.3s ease',
+              transition: 'all 0.25s ease',
             }}
           >
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>📷</div>
-            <div style={{ fontWeight: 600, fontSize: '16px', marginBottom: '6px' }}>Drag & Drop your photo here</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>or click to browse from device (JPEG, PNG, WebP ≤ 5MB)</div>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>{isDragging ? '📥' : '📷'}</div>
+            <div style={{ fontWeight: 600, fontSize: '16px', marginBottom: '6px', color: isDragging ? '#00ff88' : 'white' }}>
+              {isDragging ? 'Drop dress or product photo now!' : 'Drag & Drop your photo here'}
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>or click to browse from device (AVIF, JPEG, PNG, WebP ≤ 5MB)</div>
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*,.avif,.webp,.png,.jpg,.jpeg,.gif,.bmp"
               onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
               style={{ display: 'none' }}
             />

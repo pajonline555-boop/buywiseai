@@ -5,18 +5,35 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { evaluateSignupSubmission } from '@/lib/security/antiSpamShield';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const [pageLoadTime] = useState(() => Date.now());
   const { signInWithGoogle } = useAuth();
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // 🛡️ ANTI-SPAM & BOT SUBMISSION CHECK
+    const spamCheck = evaluateSignupSubmission({
+      email,
+      honeypotTrap: honeypot,
+      pageRenderTimeMs: pageLoadTime,
+      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : ''
+    });
+
+    if (spamCheck.isSpam) {
+      setError(`⛔ Registration Blocked: ${spamCheck.reason || 'Automated activity detected.'}`);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -102,6 +119,18 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* 🛡️ Anti-bot honeypot field - invisible to humans, caught by automated scrapers */}
+          <input
+            type="text"
+            name="company_website_url_trap"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            style={{ display: 'none', position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+          />
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Email Address</label>
             <input 

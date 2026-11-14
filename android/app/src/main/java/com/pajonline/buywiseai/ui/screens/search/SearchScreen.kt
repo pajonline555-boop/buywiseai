@@ -75,6 +75,7 @@ import coil.compose.AsyncImage
 import com.pajonline.buywiseai.core.voice.SpeechRecognizerManager
 import com.pajonline.buywiseai.data.i18n.LanguageManager
 import com.pajonline.buywiseai.data.i18n.tr
+import com.pajonline.buywiseai.data.repository.SearchHistoryRepository
 import com.pajonline.buywiseai.domain.model.StoreOffer
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
@@ -102,7 +103,25 @@ fun SearchScreen(
     val currentViewModelQuery = viewModel.currentQuery
     var query by remember { mutableStateOf(currentViewModelQuery.ifBlank { "samsung tv" }) }
 
+    val authRepo = remember { com.pajonline.buywiseai.data.repository.AuthRepository.getInstance() }
+    val authState by authRepo.authState.collectAsState()
+    val activeUserId = (authState as? com.pajonline.buywiseai.data.repository.AuthState.Authenticated)?.userId?.takeIf { it.isNotBlank() } ?: authRepo.getCurrentUserId()
+
+    val historyRepo = remember { SearchHistoryRepository.getInstance(context) }
+    var historySuggestions by remember { mutableStateOf(historyRepo.getSuggestions(query, activeUserId)) }
+    var isHistoryDropdownOpen by remember { mutableStateOf(false) }
+
+    // Instantly refresh search suggestions when authentication state changes
+    LaunchedEffect(activeUserId) {
+        historySuggestions = historyRepo.getSuggestions(query, activeUserId)
+    }
+
     val executeSearch = { searchStr: String ->
+        isHistoryDropdownOpen = false
+        if (searchStr.isNotBlank()) {
+            historyRepo.saveSearch(searchStr, activeUserId)
+            historySuggestions = historyRepo.getSuggestions(searchStr, activeUserId)
+        }
         isHeaderVisible = true
         selectedTierFilter = "ALL"
         selectedViewMode = "BEST_MATCHES"
@@ -289,10 +308,24 @@ fun SearchScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(
                                 value = query,
-                                onValueChange = { query = it },
+                                onValueChange = {
+                                    query = it
+                                    historySuggestions = historyRepo.getSuggestions(it, activeUserId)
+                                    isHistoryDropdownOpen = true
+                                },
                                 modifier = Modifier.weight(1f),
                                 placeholder = { Text(tr("search_placeholder"), color = Color.Gray) },
-                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = BuyWiseCyan) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        tint = BuyWiseCyan,
+                                        modifier = Modifier.clickable {
+                                            historySuggestions = historyRepo.getSuggestions(query, activeUserId)
+                                            isHistoryDropdownOpen = !isHistoryDropdownOpen
+                                        }
+                                    )
+                                },
                                 trailingIcon = {
                                     Box(
                                         modifier = Modifier
@@ -332,6 +365,90 @@ fun SearchScreen(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(text = tr("compare_btn"), color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // Local Search History Autocomplete Dropdown
+                        AnimatedVisibility(
+                            visible = isHistoryDropdownOpen && historySuggestions.isNotEmpty(),
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+                                border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.4f))
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "🕒 " + if (query.isBlank()) "RECENT SEARCHES" else "MATCHING SEARCHES",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = BuyWiseCyan
+                                        )
+                                        Text(
+                                            text = "Clear all",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Gray,
+                                            modifier = Modifier.clickable {
+                                                historyRepo.clearHistory(activeUserId)
+                                                historySuggestions = emptyList()
+                                                isHistoryDropdownOpen = false
+                                            }
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    historySuggestions.take(6).forEach { suggestion ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    query = suggestion
+                                                    executeSearch(suggestion)
+                                                }
+                                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("🕒", fontSize = 12.sp, color = Color.Gray)
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = suggestion,
+                                                    fontSize = 13.5.sp,
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            Text(
+                                                text = "✕",
+                                                fontSize = 13.sp,
+                                                color = Color.Gray,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier
+                                                    .padding(start = 8.dp)
+                                                    .clickable {
+                                                        historyRepo.removeSearch(suggestion, activeUserId)
+                                                        historySuggestions = historyRepo.getSuggestions(query, activeUserId)
+                                                    }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 

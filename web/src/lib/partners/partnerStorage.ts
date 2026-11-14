@@ -7,8 +7,8 @@ export interface ImageUploadValidationResult {
 }
 
 export const MAX_PARTNER_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
 
 /**
  * Validates partner product image file size, MIME type, and extension.
@@ -28,10 +28,10 @@ export function validatePartnerImageFile(file: File): ImageUploadValidationResul
   }
 
   // MIME type validation
-  if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.type)) {
+  if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
     return { 
       valid: false, 
-      error: `Invalid file type "${file.type}". Only JPEG, PNG, and WebP images are permitted.` 
+      error: `Invalid file type "${file.type}". Only AVIF, JPEG, PNG, and WebP images are permitted.` 
     };
   }
 
@@ -41,7 +41,7 @@ export function validatePartnerImageFile(file: File): ImageUploadValidationResul
   if (!hasValidExt) {
     return { 
       valid: false, 
-      error: `Invalid file extension in "${file.name}". Must end with .jpg, .jpeg, .png, or .webp.` 
+      error: `Invalid file extension in "${file.name}". Must end with .avif, .jpg, .jpeg, .png, or .webp.` 
     };
   }
 

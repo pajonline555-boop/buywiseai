@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -99,6 +101,18 @@ fun CompetitionScreen(
     }
     var votedSubmissionId by remember {
         mutableStateOf(prefs.getString("voted_sub_${activeComp?.id}", null))
+    }
+
+    LaunchedEffect(activeComp?.id) {
+        val comp = activeComp
+        if (comp != null && comp.status == "LIVE") {
+            // Rule: Don't send reminder of voting if already sent, or if user has already voted
+            com.pajonline.buywiseai.core.notifications.BuyWiseNotificationManager.checkAndDispatchVotingReminder(
+                context = context,
+                competitionId = comp.id,
+                competitionTitle = comp.featuredProductTitle ?: comp.title
+            )
+        }
     }
 
     var showSubmitDialog by remember { mutableStateOf(false) }
@@ -522,6 +536,42 @@ fun CompetitionScreen(
                                 }
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             },
+                            onShare = {
+                                CompetitionRepository.recordShare(sub.id)
+                                val compTitle = activeComp?.featuredProductTitle ?: "Weekly BuyWise Fashion Challenge"
+                                val shareText = "🔥 Vote for ${sub.userName}'s entry in the BuyWise AI Fashion Challenge!\n\n" +
+                                        "👗 Look: $compTitle\n" +
+                                        "👉 Cast your vote now to help them win this week's challenge prize:\n" +
+                                        "https://buywiseai.pajonline.co.in/competition?vote_id=${sub.id}\n\n" +
+                                        "Download BuyWise AI to try on outfits with AI & win weekly fashion rewards!"
+                                try {
+                                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                        putExtra(Intent.EXTRA_SUBJECT, "Vote for ${sub.userName} in BuyWise Challenge!")
+                                        type = "text/plain"
+                                    }
+                                    val chooser = Intent.createChooser(sendIntent, "Share with friends to get votes")
+                                    chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(chooser)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Could not open share chooser: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onWatchYoutube = {
+                                val yt = sub.youtubeUrl
+                                if (!yt.isNullOrBlank()) {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(yt)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        onNavigateToWeb("Creator YouTube Reel", yt)
+                                    }
+                                } else {
+                                    Toast.makeText(context, "No YouTube reel link available for this entry.", Toast.LENGTH_SHORT).show()
+                                }
+                            },
                             onEdit = {
                                 submissionToEdit = sub
                             },
@@ -543,7 +593,7 @@ fun CompetitionScreen(
         SubmitEntryDialog(
             activeComp = activeComp,
             onDismiss = { showSubmitDialog = false },
-            onSubmit = { name, imageUri, subType ->
+            onSubmit = { name, imageUri, subType, ytUrl ->
                 if (activeComp != null) {
                     val linkedPhone = prefs.getString("saved_user_phone", "") ?: ""
                     prefs.edit().putString("saved_user_name", name).apply()
@@ -554,7 +604,8 @@ fun CompetitionScreen(
                         userPhotoUrl = null,
                         vtoResultImage = imageUri,
                         submissionType = subType,
-                        userPhone = linkedPhone
+                        userPhone = linkedPhone,
+                        youtubeUrl = ytUrl
                     )
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
@@ -568,13 +619,14 @@ fun CompetitionScreen(
         EditEntryDialog(
             submission = sub,
             onDismiss = { submissionToEdit = null },
-            onSave = { updatedName, updatedImageUri, updatedType ->
+            onSave = { updatedName, updatedImageUri, updatedType, updatedYtUrl ->
                 val (success, msg) = CompetitionRepository.editSubmission(
                     submissionId = sub.id,
                     newName = updatedName,
                     newImageUri = updatedImageUri,
                     newType = updatedType,
-                    requesterUserId = voterId
+                    requesterUserId = voterId,
+                    newYoutubeUrl = updatedYtUrl
                 )
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 submissionToEdit = null
@@ -740,6 +792,8 @@ private fun SubmissionVotingCard(
     isVotedForThis: Boolean,
     isVotingDisabled: Boolean,
     onVote: () -> Unit,
+    onShare: () -> Unit,
+    onWatchYoutube: () -> Unit,
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
@@ -798,27 +852,53 @@ private fun SubmissionVotingCard(
                     )
                 }
 
-                // VOTE COUNT BADGE (TOP-RIGHT)
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xDD000000),
-                    border = BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f)),
+                // VOTE & SHARE COUNT BADGES (TOP-RIGHT)
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(10.dp)
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.5.dp)
+                    if (submission.shareCount > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xDD000000),
+                            border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.6f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.5.dp)
+                            ) {
+                                Text("📤", fontSize = 10.sp)
+                                Text(
+                                    text = "${submission.shareCount}",
+                                    color = BuyWiseCyan,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xDD000000),
+                        border = BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f))
                     ) {
-                        Text("❤️", fontSize = 11.sp)
-                        Text(
-                            text = if (submission.voteCount == 1) "1 Vote" else "${submission.voteCount} Votes",
-                            color = BuyWiseGold,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.5.dp)
+                        ) {
+                            Text("❤️", fontSize = 11.sp)
+                            Text(
+                                text = if (submission.voteCount == 1) "1 Vote" else "${submission.voteCount} Votes",
+                                color = BuyWiseGold,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
             }
@@ -881,6 +961,18 @@ private fun SubmissionVotingCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(
+                            onClick = onShare,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F3D24)),
+                            border = BorderStroke(1.dp, BuyWiseEmerald.copy(alpha = 0.8f)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 9.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = "Share", tint = BuyWiseEmerald, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Share", color = BuyWiseEmerald, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                        }
+
+                        Button(
                             onClick = onEdit,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF251F3D)),
                             border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.6f)),
@@ -901,36 +993,117 @@ private fun SubmissionVotingCard(
                         }
                     }
                 } else {
-                    Button(
-                        onClick = onVote,
-                        enabled = !isVotedForThis && !isVotingDisabled,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isVotedForThis) BuyWiseEmerald.copy(alpha = 0.2f)
-                                else if (isVotingDisabled) Color(0xFF1E1B2E)
-                                else BuyWiseNeonPink,
-                            disabledContainerColor = if (isVotedForThis) BuyWiseEmerald.copy(alpha = 0.2f) else Color(0xFF1B162E),
-                            disabledContentColor = if (isVotedForThis) BuyWiseEmerald else Color.Gray
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            if (isVotedForThis) BuyWiseEmerald else if (isVotingDisabled) Color.Gray.copy(alpha = 0.3f) else BuyWiseNeonPink
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Favorite,
-                            contentDescription = "Vote",
-                            tint = if (isVotedForThis) BuyWiseEmerald else if (isVotingDisabled) Color.Gray else Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Button(
+                            onClick = onShare,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1738)),
+                            border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = "Share", tint = BuyWiseCyan, modifier = Modifier.size(14.dp))
+                        }
+
+                        Button(
+                            onClick = onVote,
+                            enabled = !isVotedForThis && !isVotingDisabled,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isVotedForThis) BuyWiseEmerald.copy(alpha = 0.2f)
+                                    else if (isVotingDisabled) Color(0xFF1E1B2E)
+                                    else BuyWiseNeonPink,
+                                disabledContainerColor = if (isVotedForThis) BuyWiseEmerald.copy(alpha = 0.2f) else Color(0xFF1B162E),
+                                disabledContentColor = if (isVotedForThis) BuyWiseEmerald else Color.Gray
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isVotedForThis) BuyWiseEmerald else if (isVotingDisabled) Color.Gray.copy(alpha = 0.3f) else BuyWiseNeonPink
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Favorite,
+                                contentDescription = "Vote",
+                                tint = if (isVotedForThis) BuyWiseEmerald else if (isVotingDisabled) Color.Gray else Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isVotedForThis) "Voted ❤️" else "Vote",
+                                color = if (isVotedForThis) BuyWiseEmerald else if (isVotingDisabled) Color.Gray else Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // PROMINENT FULL-WIDTH SHARE OPTION FOR VOTING
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = onShare,
+                modifier = Modifier.fillMaxWidth().height(42.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isOwner) BuyWiseGold else Color(0xFF1B1533)
+                ),
+                border = BorderStroke(1.2.dp, if (isOwner) BuyWiseGold else BuyWiseEmerald.copy(alpha = 0.7f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = "Share for votes",
+                    tint = if (isOwner) Color.Black else BuyWiseEmerald,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isOwner) "📤 Share Entry to Get Votes (WhatsApp)" else "📤 Share Look with Friends for Voting",
+                    color = if (isOwner) Color.Black else Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp
+                )
+            }
+
+            // YOUTUBE VIDEO / SHORTS CARD (DREAMZ PROPERTIES APP STYLE)
+            if (!submission.youtubeUrl.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onWatchYoutube() },
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFE50914).copy(alpha = 0.15f),
+                    border = BorderStroke(1.2.dp, Color(0xFFE50914).copy(alpha = 0.65f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(
+                                    brush = Brush.radialGradient(listOf(Color(0xFFFF0033), Color(0xFF990022))),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("▶", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (isVotedForThis) "Voted ❤️" else "Vote",
-                            color = if (isVotedForThis) BuyWiseEmerald else if (isVotingDisabled) Color.Gray else Color.White,
-                            fontWeight = FontWeight.Black,
+                            text = "Watch YouTube Shorts / Video Reel",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("↗", color = Color(0xFFFF4D79), fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
                 }
             }
@@ -942,11 +1115,12 @@ private fun SubmissionVotingCard(
 private fun EditEntryDialog(
     submission: CompetitionSubmission,
     onDismiss: () -> Unit,
-    onSave: (name: String, imageUri: String, subType: String) -> Unit
+    onSave: (name: String, imageUri: String, subType: String, youtubeUrl: String) -> Unit
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(submission.userName) }
     var submissionType by remember { mutableStateOf(submission.submissionType) }
+    var youtubeUrl by remember { mutableStateOf(submission.youtubeUrl ?: "") }
     var selectedImageUri by remember { mutableStateOf(submission.vtoResultImage) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -1065,6 +1239,30 @@ private fun EditEntryDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // YOUTUBE VIDEO / SHORTS URL INPUT (DREAMZ PROPERTIES APP STYLE)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("▶️", fontSize = 14.sp)
+                    Text("YouTube Shorts / Video URL", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = youtubeUrl,
+                    onValueChange = { youtubeUrl = it },
+                    placeholder = { Text("https://www.youtube.com/shorts/...", color = Color.Gray, fontSize = 12.sp) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFFFF0033),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                        cursorColor = Color(0xFFFF0033)
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // PHOTO PREVIEW & CHANGE OPTIONS
                 Text("Challenge Look Photo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(6.dp))
@@ -1138,7 +1336,7 @@ private fun EditEntryDialog(
                             Toast.makeText(context, "Please enter your creator name", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        onSave(name.trim(), selectedImageUri, submissionType)
+                        onSave(name.trim(), selectedImageUri, submissionType, youtubeUrl.trim())
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(14.dp),
@@ -1155,12 +1353,13 @@ private fun EditEntryDialog(
 private fun SubmitEntryDialog(
     activeComp: com.pajonline.buywiseai.domain.model.Competition?,
     onDismiss: () -> Unit,
-    onSubmit: (name: String, imageUri: String, subType: String) -> Unit
+    onSubmit: (name: String, imageUri: String, subType: String, youtubeUrl: String) -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("buywise_competition_prefs", android.content.Context.MODE_PRIVATE) }
     val savedName = remember { prefs.getString("saved_user_name", "") ?: "" }
     var name by remember { mutableStateOf(savedName) }
+    var youtubeUrl by remember { mutableStateOf("") }
     var submissionType by remember { mutableStateOf("REAL_DRESSED") }
     var selectedImageUri by remember {
         mutableStateOf<String?>(
@@ -1367,6 +1566,25 @@ private fun SubmitEntryDialog(
                     )
                 )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // YOUTUBE VIDEO / SHORTS URL INPUT (OPTIONAL)
+                OutlinedTextField(
+                    value = youtubeUrl,
+                    onValueChange = { youtubeUrl = it },
+                    label = { Text("YouTube Shorts / Video URL (Optional)", color = Color.Gray, fontSize = 11.sp) },
+                    placeholder = { Text("https://www.youtube.com/shorts/...", color = Color.DarkGray, fontSize = 11.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFFF0033),
+                        unfocusedBorderColor = Color.DarkGray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1427,7 +1645,7 @@ private fun SubmitEntryDialog(
                 Button(
                     onClick = {
                         val finalUri = selectedImageUri ?: (activeComp?.featuredProductImage ?: "")
-                        onSubmit(name.trim(), finalUri, submissionType)
+                        onSubmit(name.trim(), finalUri, submissionType, youtubeUrl.trim())
                     },
                     enabled = isFormValid,
                     modifier = Modifier.fillMaxWidth().height(46.dp),

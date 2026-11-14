@@ -628,7 +628,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Replacement Guaranteed',
     warranty: '1 Year Apple India Warranty',
     gstPercent: 18,
-    status: 'LIVE',
+    status: 'ARCHIVED',
     commissionType: 'PERCENTAGE',
     commissionValue: 10,
     rating: 4.9,
@@ -658,7 +658,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Easy Return',
     warranty: 'Authentic Levi’s Quality Guaranteed',
     gstPercent: 5,
-    status: 'LIVE',
+    status: 'ARCHIVED',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.7,
@@ -688,7 +688,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Replacement Guaranteed',
     warranty: '1 Year Sony India Warranty',
     gstPercent: 18,
-    status: 'LIVE',
+    status: 'ARCHIVED',
     commissionType: 'PERCENTAGE',
     commissionValue: 12,
     rating: 4.8,
@@ -718,7 +718,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Replacement Guaranteed',
     warranty: '1 Year Brand Warranty',
     gstPercent: 18,
-    status: 'LIVE',
+    status: 'ARCHIVED',
     commissionType: 'PERCENTAGE',
     commissionValue: 12,
     rating: 4.6,
@@ -748,7 +748,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Easy Return & Refund Guaranteed',
     warranty: 'Meesho Quality Assured',
     gstPercent: 5,
-    status: 'LIVE',
+    status: 'ARCHIVED',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.8,
@@ -780,7 +780,7 @@ export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
     returnPolicy: '7 Days Return & Exchange Guaranteed',
     warranty: 'Quality Assured by Brand Partner',
     gstPercent: 5,
-    status: 'LIVE',
+    status: 'ARCHIVED',
     commissionType: 'PERCENTAGE',
     commissionValue: 15,
     rating: 4.8,
@@ -1204,18 +1204,13 @@ export async function getPartnerProducts(
       productsInFlightPromise = null;
     }
 
-    // Safety fallback: if Firestore returned 0, ensure baseline partner products exist
-    if (firestoreProds.length === 0) {
-      firestoreProds = [...MOCK_PARTNER_PRODUCTS];
-    }
-
-    // Combine baseline catalog and Firestore products so no items are missing
+    // Inventory Source of Truth: When Firestore inventory exists, use only live items from the inventory
     const combinedMap = new Map<string, PartnerProduct>();
-    MOCK_PARTNER_PRODUCTS.forEach(p => combinedMap.set(p.id, p));
-    firestoreProds.forEach(p => {
-      const existing = combinedMap.get(p.id) || ({} as PartnerProduct);
-      combinedMap.set(p.id, { ...existing, ...p });
-    });
+    if (firestoreProds.length > 0) {
+      firestoreProds.forEach(p => combinedMap.set(p.id, p));
+    } else {
+      MOCK_PARTNER_PRODUCTS.filter(p => p.status === 'LIVE' || (p.status as any) === 'ACTIVE').forEach(p => combinedMap.set(p.id, p));
+    }
 
     // Auto-sync recovery: if localStorage has onboarded partner products not yet in Firestore, sync them
     if (typeof window !== 'undefined') {

@@ -25,10 +25,10 @@ export async function POST(request: Request) {
     }
 
     // 3. Validation: Allowed MIME types
-    const mimeMatch = image.match(/^data:(image\/(jpeg|jpg|png|webp));base64,/);
+    const mimeMatch = image.match(/^data:(image\/(jpeg|jpg|png|webp|avif|gif|bmp));base64,/i);
     if (!mimeMatch && !image.startsWith('data:image/')) {
       return NextResponse.json(
-        { error: 'Invalid image format. Supported formats: JPEG, PNG, WebP.' },
+        { error: 'Invalid image format. Supported formats: AVIF, JPEG, PNG, WebP.' },
         { status: 400 }
       );
     }

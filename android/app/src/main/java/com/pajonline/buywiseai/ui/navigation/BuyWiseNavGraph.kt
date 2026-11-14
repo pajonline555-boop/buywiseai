@@ -135,8 +135,28 @@ fun BuyWiseNavGraph(
                 onNavigateToChallenge = { navController.navigate(Screen.Competition.route) }
             )
         }
+        composable(
+            route = "admin_dashboard?tab={tab}",
+            arguments = listOf(androidx.navigation.navArgument("tab") { defaultValue = "0" })
+        ) { backStackEntry ->
+            val tabParam = backStackEntry.arguments?.getString("tab")?.toIntOrNull() ?: 0
+            com.pajonline.buywiseai.ui.screens.admin.AdminDashboardScreen(
+                initialTab = tabParam,
+                onBack = { navController.popBackStack() },
+                onNavigateToWeb = { title, url ->
+                    try {
+                        val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                        val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
+                        navController.navigate("web_viewer/$encodedTitle/$encodedUrl")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            )
+        }
         composable(Screen.Admin.route) {
             com.pajonline.buywiseai.ui.screens.admin.AdminDashboardScreen(
+                initialTab = 0,
                 onBack = { navController.popBackStack() },
                 onNavigateToWeb = { title, url ->
                     try {

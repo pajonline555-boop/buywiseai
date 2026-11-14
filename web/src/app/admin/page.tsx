@@ -516,6 +516,12 @@ export default function AdminDashboard() {
               onClick={() => switchTabAndScroll('COUPONS')}
             />
             <QuickActionButton
+              id="qa-users-directory"
+              label="👥 USERS DIRECTORY"
+              color="#00d4ff"
+              href={`/admin/users?admin_email=${encodeURIComponent(sessionAdminEmail || 'pajonline555@gmail.com')}`}
+            />
+            <QuickActionButton
               id="qa-send-notification"
               label="📢 SEND NOTIFICATION"
               color="#00d4ff"
@@ -566,7 +572,9 @@ export default function AdminDashboard() {
 
         {/* Live System Metrics Bar */}
         <div className="comparison-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: '40px' }}>
-          <StatCard title="Active Shoppers" value={Number(stats.users || 0).toLocaleString('en-IN')} icon="👥" change={`${stats.users || 0} Registered Accounts`} />
+          <Link href={`/admin/users?admin_email=${encodeURIComponent(sessionAdminEmail || 'pajonline555@gmail.com')}`} style={{ textDecoration: 'none' }}>
+            <StatCard title="Active Shoppers" value={Number(stats.users || 0).toLocaleString('en-IN')} icon="👥" change={`${stats.users || 0} Registered Accounts ➔`} />
+          </Link>
           <StatCard title="Tracked Price Alerts" value={stats.alerts} icon="🔔" change="Firestore Live" />
           <StatCard title="Partner Commission" value={`₹${Number(stats.commission || 0).toLocaleString('en-IN')}`} icon="💰" change={`GMV: ₹${Number(stats.gmv || 0).toLocaleString('en-IN')} • ${stats.ordersCount || 0} Orders`} />
           <StatCard title="Inventory SKUs" value={stats.inventoryCount} icon="📊" change="Real-Time Sync" />

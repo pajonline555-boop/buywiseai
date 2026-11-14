@@ -19,9 +19,10 @@ export default function PhotoUploadDropzone({ userPhotoUrl, onPhotoSelected, onP
   const validateAndProcessFile = (file: File) => {
     setErrorMessage(null);
 
-    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowedMimeTypes.includes(file.type)) {
-      setErrorMessage(t("Unsupported format. Please upload JPG, JPEG, PNG, or WebP."));
+    const isImageByMime = file.type ? file.type.startsWith("image/") : false;
+    const isImageByExt = /\.(avif|webp|jpe?g|png|gif|bmp|svg)$/i.test(file.name);
+    if (!isImageByMime && !isImageByExt) {
+      setErrorMessage(t("Unsupported format. Please upload AVIF, JPG, JPEG, PNG, or WebP."));
       return;
     }
 
@@ -53,16 +54,20 @@ export default function PhotoUploadDropzone({ userPhotoUrl, onPhotoSelected, onP
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragActive(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setDragActive(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragActive(false);
     if (!hasConsent) {
       setErrorMessage(t("Please accept privacy consent before uploading."));
@@ -84,7 +89,22 @@ export default function PhotoUploadDropzone({ userPhotoUrl, onPhotoSelected, onP
   };
 
   return (
-    <div className="glass" style={{ padding: "20px 24px", borderRadius: "24px", background: "rgba(255, 255, 255, 0.02)", border: "1px dashed var(--primary)", marginBottom: "24px" }}>
+    <div
+      className="glass"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        padding: "20px 24px",
+        borderRadius: "24px",
+        background: dragActive ? "rgba(0, 255, 136, 0.08)" : "rgba(255, 255, 255, 0.02)",
+        border: dragActive ? "2px dashed #00ff88" : "1px dashed var(--primary)",
+        transform: dragActive ? "scale(1.01)" : "scale(1)",
+        transition: "all 0.25s ease",
+        marginBottom: "24px",
+      }}
+    >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         
         {/* Left Side: Photo Avatar & Status */}
@@ -125,7 +145,7 @@ export default function PhotoUploadDropzone({ userPhotoUrl, onPhotoSelected, onP
           <input
             type="file"
             ref={fileInputRef}
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*,.avif,.webp,.png,.jpg,.jpeg,.gif,.bmp"
             onChange={handleFileChange}
             style={{ display: "none" }}
           />

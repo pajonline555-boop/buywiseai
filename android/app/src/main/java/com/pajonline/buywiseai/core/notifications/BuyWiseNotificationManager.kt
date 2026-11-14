@@ -35,6 +35,34 @@ object BuyWiseNotificationManager {
     private var deviceSyncListener: ListenerRegistration? = null
     private val processedNotificationIds = mutableSetOf<String>()
 
+    private const val PREFS_NOTIF = "buywise_processed_notifications"
+    private const val KEY_PROCESSED_SET = "processed_notif_ids"
+
+    fun isNotificationAlreadyProcessed(context: Context, id: String): Boolean {
+        if (processedNotificationIds.contains(id)) return true
+        val prefs = context.getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
+        val saved = prefs.getStringSet(KEY_PROCESSED_SET, emptySet()) ?: emptySet()
+        if (saved.contains(id)) {
+            processedNotificationIds.add(id)
+            return true
+        }
+        return false
+    }
+
+    fun recordProcessedNotificationId(context: Context, id: String) {
+        processedNotificationIds.add(id)
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
+            val saved = prefs.getStringSet(KEY_PROCESSED_SET, emptySet())?.toMutableSet() ?: mutableSetOf()
+            if (saved.size > 200) {
+                val toRemove = saved.take(50)
+                saved.removeAll(toRemove.toSet())
+            }
+            saved.add(id)
+            prefs.edit().putStringSet(KEY_PROCESSED_SET, saved).apply()
+        } catch (_: Exception) {}
+    }
+
     fun init(context: Context) {
         createNotificationChannels(context)
         syncDeviceToken(context)
@@ -186,6 +214,7 @@ object BuyWiseNotificationManager {
             val currentUid = getOrCreateDeviceUid(context)
             val linkedMobile = getLinkedMobile(context)
             val cleanPhone = linkedMobile.filter { it.isDigit() }
+            val listenerStartTime = System.currentTimeMillis()
 
             val db = FirebaseFirestore.getInstance()
             var isFirstSnapshot = true
@@ -200,11 +229,11 @@ object BuyWiseNotificationManager {
                         return@addSnapshotListener
                     }
 
-                    if (snapshot != null && !snapshot.isEmpty) {
-                        // On cold start, record existing IDs so historical items don't trigger loud popups
+                    if (snapshot != null) {
+                        // On cold start, record all existing IDs as processed so historical items NEVER trigger popups
                         if (isFirstSnapshot) {
                             for (doc in snapshot.documents) {
-                                processedNotificationIds.add(doc.id)
+                                recordProcessedNotificationId(context, doc.id)
                             }
                             isFirstSnapshot = false
                             return@addSnapshotListener
@@ -216,8 +245,7 @@ object BuyWiseNotificationManager {
                             ) {
                                 val doc = change.document
                                 val id = doc.id
-                                if (processedNotificationIds.contains(id)) continue
-                                processedNotificationIds.add(id)
+                                if (isNotificationAlreadyProcessed(context, id)) continue
 
                                 val title = doc.getString("title") ?: "BuyWise AI Notification"
                                 val message = doc.getString("message") ?: ""
@@ -227,28 +255,64 @@ object BuyWiseNotificationManager {
                                 val docMobile = doc.getString("linkedMobile") ?: ""
                                 val docCleanMobile = docMobile.filter { it.isDigit() }
                                 val deliveredToMobile = doc.getBoolean("deliveredToMobile") ?: false
+                                val createdAtStr = doc.getString("createdAt")
+
+                                // 1. Always apply state updates to local repository quietly
+                                if (!submissionId.isNullOrBlank()) {
+                                    try {
+                                        val status = doc.getString("status")
+                                        if (status != null) {
+                                            com.pajonline.buywiseai.data.repository.CompetitionRepository.moderateSubmission(submissionId, status)
+                                        }
+                                        val voteCount = doc.getLong("voteCount")
+                                        if (voteCount != null) {
+                                            com.pajonline.buywiseai.data.repository.CompetitionRepository.updateSubmissionVoteCount(submissionId, voteCount.toInt())
+                                        }
+                                    } catch (_: Exception) {}
+                                }
+
+                                // 2. Check if this is a historical item created before this app session started
+                                val isHistorical = if (!createdAtStr.isNullOrBlank()) {
+                                    try {
+                                        val cleanDate = createdAtStr.substringBefore("Z")
+                                        val parsed = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(cleanDate)
+                                        val timeMs = parsed?.time ?: 0L
+                                        timeMs < (listenerStartTime - 10000)
+                                    } catch (_: Exception) {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+
+                                if (isHistorical) {
+                                    recordProcessedNotificationId(context, id)
+                                    continue
+                                }
+
+                                // Rule: Do not send reminder of voting if already sent, or if user already voted
+                                if (notifType == "VOTING_REMINDER") {
+                                    val compId = doc.getString("competitionId") ?: "default_comp"
+                                    val prefs = context.getSharedPreferences("buywise_competition_prefs", Context.MODE_PRIVATE)
+                                    val alreadyVoted = prefs.getString("voted_sub_$compId", null) != null ||
+                                            com.pajonline.buywiseai.data.repository.CompetitionRepository.hasVoted(compId, currentUid)
+                                    val reminderAlreadySent = prefs.getBoolean("voting_reminder_sent_$compId", false)
+                                    if (alreadyVoted || reminderAlreadySent) {
+                                        Log.i(TAG, "Voting reminder already sent or user already voted for $compId. Suppressing.")
+                                        recordProcessedNotificationId(context, id)
+                                        continue
+                                    }
+                                    prefs.edit().putBoolean("voting_reminder_sent_$compId", true).apply()
+                                }
 
                                 // Targeted delivery check
                                 val matchesUser = docUserId.isNotBlank() && (docUserId == currentUid || docUserId == "all" || docUserId == "guest_user")
                                 val matchesPhone = linkedMobile.isNotBlank() && (docMobile == linkedMobile || (cleanPhone.isNotBlank() && docCleanMobile == cleanPhone))
-                                val isDeviceSync = notifType == "DEVICE_STATE_SYNC" || notifType.contains("SYNC")
 
-                                if (matchesUser || matchesPhone || isDeviceSync || deliveredToMobile) {
-                                    // 1. Reactive state update in local repository
-                                    if (!submissionId.isNullOrBlank()) {
-                                        try {
-                                            val status = doc.getString("status")
-                                            if (status != null) {
-                                                com.pajonline.buywiseai.data.repository.CompetitionRepository.moderateSubmission(submissionId, status)
-                                            }
-                                            val voteCount = doc.getLong("voteCount")
-                                            if (voteCount != null) {
-                                                com.pajonline.buywiseai.data.repository.CompetitionRepository.updateSubmissionVoteCount(submissionId, voteCount.toInt())
-                                            }
-                                        } catch (_: Exception) {}
-                                    }
+                                if (matchesUser || matchesPhone || deliveredToMobile) {
+                                    recordProcessedNotificationId(context, id)
 
-                                    // 2. Trigger instant heads-up status bar notification on mobile
+                                    // Trigger instant heads-up status bar notification on mobile ONLY for genuine new real-time events
                                     showNotification(
                                         context = context,
                                         title = title,
@@ -268,7 +332,8 @@ object BuyWiseNotificationManager {
     }
 
     /**
-     * Snapshot listener on `user_devices` to immediately react when Web or Admin clicks "Update State on Linked Mobile"
+     * Snapshot listener on `user_devices` to react ONLY to explicit Admin FORCE_UPDATE clicks
+     * (Never replay stale vote notifications upon app open)
      */
     fun startLinkedDeviceListener(context: Context) {
         try {
@@ -290,20 +355,28 @@ object BuyWiseNotificationManager {
                         return@addSnapshotListener
                     }
 
-                    val lastSynced = snapshot.getString("lastSyncedAt") ?: ""
+                    // Only react to explicit remote FORCE_UPDATE commands from Admin console
                     val command = snapshot.getString("command") ?: ""
-                    val lastNotif = snapshot.get("lastNotification") as? Map<*, *>
+                    if (command != "FORCE_UPDATE") {
+                        return@addSnapshotListener
+                    }
 
-                    Log.i(TAG, "Device state sync detected: $command at $lastSynced")
+                    val syncVersion = snapshot.getLong("syncVersion") ?: 0L
+                    val prefs = context.getSharedPreferences("buywise_app_prefs", Context.MODE_PRIVATE)
+                    val lastProcessedVersion = prefs.getLong("last_processed_sync_version", 0L)
+                    if (syncVersion != 0L && syncVersion <= lastProcessedVersion) {
+                        return@addSnapshotListener
+                    }
+                    if (syncVersion != 0L) {
+                        prefs.edit().putLong("last_processed_sync_version", syncVersion).apply()
+                    }
 
-                    val title = lastNotif?.get("title")?.toString() ?: "⚡ Linked Mobile Updated"
-                    val message = lastNotif?.get("message")?.toString()
-                        ?: "Your mobile device state is synchronized with the latest fashion votes & challenge entries!"
+                    Log.i(TAG, "Explicit Admin FORCE_UPDATE command detected: $command (version: $syncVersion)")
 
                     showNotification(
                         context = context,
-                        title = title,
-                        message = message,
+                        title = "⚡ Linked Mobile Updated",
+                        message = "Your mobile device state is synchronized with the latest fashion votes & challenge entries!",
                         type = "DEVICE_STATE_SYNC",
                         targetRoute = "competition"
                     )
@@ -502,6 +575,60 @@ object BuyWiseNotificationManager {
     /**
      * Dispatch an immediate vote notification to the entry author and their linked mobile
      */
+    /**
+     * Dispatches a reminder to vote in the active competition ONLY IF:
+     * 1. The user has NOT voted yet.
+     * 2. A reminder has NOT already been sent for this competition.
+     * If already sent or already voted, it strictly does not send any reminder.
+     */
+    fun checkAndDispatchVotingReminder(
+        context: Context,
+        competitionId: String,
+        competitionTitle: String = "Weekly Fashion Challenge"
+    ): Boolean {
+        val prefs = context.getSharedPreferences("buywise_competition_prefs", Context.MODE_PRIVATE)
+        val voterId = getOrCreateDeviceUid(context)
+
+        // 1. Check if user already voted in this competition
+        val alreadyVoted = prefs.getString("voted_sub_$competitionId", null) != null ||
+                com.pajonline.buywiseai.data.repository.CompetitionRepository.hasVoted(competitionId, voterId)
+
+        if (alreadyVoted) {
+            Log.i(TAG, "User has already voted in competition $competitionId. Suppressing voting reminder.")
+            return false
+        }
+
+        // 2. Check if reminder was already sent for this competition
+        val reminderSentKey = "voting_reminder_sent_$competitionId"
+        val alreadySent = prefs.getBoolean(reminderSentKey, false)
+        if (alreadySent) {
+            Log.i(TAG, "Voting reminder already sent previously for competition $competitionId. Suppressing duplicate reminder.")
+            return false
+        }
+
+        // 3. Mark as sent immediately to guarantee idempotency (never send again)
+        prefs.edit().putBoolean(reminderSentKey, true).apply()
+
+        // 4. Dispatch the single voting reminder
+        val title = "🗳️ Vote for Your Favorite Look!"
+        val message = "Community voting is live for \"$competitionTitle\". Check out the trending styles and cast your vote today!"
+        val notifId = "notif_vote_remind_${competitionId.hashCode()}"
+
+        recordProcessedNotificationId(context, notifId)
+
+        showNotification(
+            context = context,
+            title = title,
+            message = message,
+            type = "VOTING_REMINDER",
+            targetRoute = "competition",
+            notificationId = notifId.hashCode()
+        )
+
+        Log.i(TAG, "Dispatched initial voting reminder for $competitionId.")
+        return true
+    }
+
     fun dispatchVoteNotification(
         context: Context,
         submissionId: String,
@@ -515,8 +642,14 @@ object BuyWiseNotificationManager {
         val cleanPhone = targetPhone.filter { it.isDigit() }
         val title = "❤️ New Vote Received!"
         val message = "Someone just voted for your look in $competitionTitle! You now have $newVoteCount votes! 🌟"
-        val notifId = "notif_vote_${System.currentTimeMillis()}"
+        val notifId = "notif_vote_${submissionId}_$newVoteCount"
         val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
+
+        if (isNotificationAlreadyProcessed(context, notifId)) {
+            Log.i(TAG, "Vote notification $notifId already processed. Suppressing duplicate message.")
+            return
+        }
+        recordProcessedNotificationId(context, notifId)
 
         val notifData = hashMapOf(
             "id" to notifId,
@@ -544,7 +677,7 @@ object BuyWiseNotificationManager {
                     "status" to "ONLINE",
                     "linkedMobile" to targetPhone,
                     "lastSyncedAt" to now,
-                    "lastNotification" to notifData
+                    "lastVoteNotificationId" to notifId
                 )
                 db.collection("user_devices").document("mobile_$cleanPhone").set(devUpdate, SetOptions.merge())
             }
@@ -611,7 +744,7 @@ object BuyWiseNotificationManager {
                     "status" to "ONLINE",
                     "linkedMobile" to targetPhone,
                     "lastSyncedAt" to now,
-                    "lastNotification" to notifData
+                    "lastVoteNotificationId" to notifId
                 )
                 db.collection("user_devices").document("mobile_$cleanPhone").set(devUpdate, SetOptions.merge())
             }
@@ -627,4 +760,67 @@ object BuyWiseNotificationManager {
             targetRoute = "competition"
         )
     }
+
+    /**
+     * Dispatch an immediate entry & YouTube update notification to the candidate's linked mobile
+     */
+    fun dispatchEntryUpdatedNotification(
+        context: Context,
+        submissionId: String,
+        recipientUserId: String,
+        recipientUserName: String,
+        competitionTitle: String = "Weekly Fashion Challenge",
+        youtubeUrl: String? = null,
+        linkedMobile: String? = null
+    ) {
+        val targetPhone = linkedMobile?.takeIf { it.isNotBlank() } ?: getLinkedMobile(context)
+        val cleanPhone = targetPhone.filter { it.isDigit() }
+        val title = "⚡ Entry & YouTube Video Updated"
+        val message = "$recipientUserName, your challenge look and YouTube reel for \"$competitionTitle\" have been updated and synchronized with your linked mobile!"
+        val notifId = "notif_update_${System.currentTimeMillis()}"
+        val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
+
+        val notifData = hashMapOf(
+            "id" to notifId,
+            "userId" to recipientUserId,
+            "userName" to recipientUserName,
+            "linkedMobile" to targetPhone,
+            "type" to "ENTRY_UPDATED",
+            "title" to title,
+            "message" to message,
+            "submissionId" to submissionId,
+            "youtubeUrl" to (youtubeUrl ?: ""),
+            "status" to "APPROVED",
+            "read" to false,
+            "createdAt" to now,
+            "deliveredToMobile" to true,
+            "channel" to "FCM_MOBILE_PUSH"
+        )
+
+        try {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("user_notifications").document(notifId).set(notifData)
+
+            if (cleanPhone.isNotBlank()) {
+                val devUpdate = hashMapOf(
+                    "status" to "ONLINE",
+                    "linkedMobile" to targetPhone,
+                    "lastSyncedAt" to now,
+                    "lastVoteNotificationId" to notifId
+                )
+                db.collection("user_devices").document("mobile_$cleanPhone").set(devUpdate, SetOptions.merge())
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Firestore notification note: ${e.message}")
+        }
+
+        showNotification(
+            context = context,
+            title = title,
+            message = message,
+            type = "ENTRY_UPDATED",
+            targetRoute = "competition"
+        )
+    }
 }
+

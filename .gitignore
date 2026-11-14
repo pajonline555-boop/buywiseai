@@ -86,3 +86,8 @@ google-services*.json
 *.apk
 *.aab
 
+# Test Screenshots & Diagnostic Screen Captures
+/*.png
+/*.jpg
+/android/*.png
+

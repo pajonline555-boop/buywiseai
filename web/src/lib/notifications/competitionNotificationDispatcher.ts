@@ -6,7 +6,7 @@ export interface CompetitionNotificationPayload {
   userId: string;
   userName: string;
   linkedMobile?: string;
-  type: 'VOTE_RECEIVED' | 'ENTRY_APPROVED' | 'ENTRY_REJECTED' | 'WINNER_DECLARED' | 'DEVICE_STATE_SYNC';
+  type: 'VOTE_RECEIVED' | 'ENTRY_APPROVED' | 'ENTRY_REJECTED' | 'WINNER_DECLARED' | 'DEVICE_STATE_SYNC' | 'VOTING_REMINDER';
   title: string;
   message: string;
   submissionId?: string;
@@ -95,6 +95,44 @@ export async function dispatchCompetitionNotification(
   }
 
   return { success: true, id: notifId };
+}
+
+export async function notifyVotingReminder(params: {
+  competitionId: string;
+  competitionTitle?: string;
+  userId: string;
+  userName?: string;
+  linkedMobile?: string;
+}): Promise<{ success: boolean; id?: string; skipped?: boolean; reason?: string }> {
+  const compId = params.competitionId;
+  const compName = params.competitionTitle || 'Weekly Fashion Challenge';
+  const reminderKey = `reminder_sent_${compId}_${params.userId}`;
+  const votedKey = `voted_${compId}_${params.userId}`;
+
+  // Rule: Do not send reminder of voting if already sent, or if user already voted
+  if (typeof window !== 'undefined') {
+    if (localStorage.getItem(votedKey) === 'true') {
+      console.log(`[VOTING REMINDER]: User ${params.userId} already voted in ${compId}. Suppressing reminder.`);
+      return { success: false, skipped: true, reason: 'ALREADY_VOTED' };
+    }
+    if (localStorage.getItem(reminderKey) === 'true') {
+      console.log(`[VOTING REMINDER]: Reminder already sent previously for ${compId}. Suppressing duplicate.`);
+      return { success: false, skipped: true, reason: 'ALREADY_SENT' };
+    }
+    localStorage.setItem(reminderKey, 'true');
+  }
+
+  const res = await dispatchCompetitionNotification({
+    userId: params.userId,
+    userName: params.userName || 'Fashion Enthusiast',
+    linkedMobile: params.linkedMobile,
+    type: 'VOTING_REMINDER',
+    title: '🗳️ Vote in Weekly Fashion Challenge!',
+    message: `Voting is live for "${compName}". Review this week's community try-on looks and cast your vote!`,
+    competitionId: compId,
+  });
+
+  return { success: true, id: res.id };
 }
 
 export async function notifyVoteReceived(params: {

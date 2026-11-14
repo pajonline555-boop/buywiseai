@@ -9,8 +9,9 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    // Production Canonical Web Endpoint with BuildConfig fallback
-    val BASE_URL: String = if (BuildConfig.BASE_URL.isNotBlank()) BuildConfig.BASE_URL else "https://buywiseai.pajonline.co.in"
+    val BASE_URL: String = (if (BuildConfig.BASE_URL.isNotBlank()) BuildConfig.BASE_URL else "https://buywiseai.pajonline.co.in/").let {
+        if (it.endsWith("/")) it else "$it/"
+    }
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.HEADERS

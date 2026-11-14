@@ -13,6 +13,7 @@ import {
 import { auth, googleProvider, db } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
+import { evaluateEmailAntiSpam } from '@/lib/security/antiSpamShield';
 
 export interface UserShoppingPreferences {
   currency?: string;
@@ -77,6 +78,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userSnap = await getDoc(userRef);
       const isSystemAdmin = checkIsAdminUser(currentUser.email, currentUser.phoneNumber);
 
+      // 🛡️ ANTI-SPAM & BOT SHIELD CHECK
+      const spamCheck = evaluateEmailAntiSpam(currentUser.email || "");
+      if (spamCheck.isSpam && !isSystemAdmin) {
+        console.warn("[ANTI-SPAM SHIELD] Blocked automated/disposable registration:", currentUser.email, spamCheck.reason);
+        await signOut(auth);
+        setUserProfile(null);
+        setIsAdmin(false);
+        if (typeof window !== "undefined") {
+          alert(`⛔ Registration Blocked: ${spamCheck.reason || "Automated or disposable account detected."}`);
+        }
+        return;
+      }
+
       if (!userSnap.exists()) {
         const defaultProfile: UserProfileData = {
           displayName: currentUser.displayName || 'Shopper',
@@ -100,7 +114,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserProfile(defaultProfile);
         setIsAdmin(isSystemAdmin);
       } else {
-        const data = userSnap.data() as UserProfileData;
+        const data = userSnap.data() as UserProfileData & { isBanned?: boolean; status?: string };
+        
+        // 🚫 BANNED ACCOUNT ENFORCEMENT
+        if ((data.isBanned || data.status === "BANNED") && !isSystemAdmin) {
+          console.warn("[SECURITY] Banned account attempted session access:", currentUser.email);
+          await signOut(auth);
+          setUserProfile(null);
+          setIsAdmin(false);
+          if (typeof window !== "undefined") {
+            alert("⛔ Access Denied: Your account has been suspended or banned due to suspicious activity.");
+          }
+          return;
+        }
+
         const effectiveRole = (isSystemAdmin || checkIsAdminUser(data.email, data.phone)) ? 'admin' : (data.role || 'shopper');
         setUserProfile({ ...data, role: effectiveRole });
         setIsAdmin(isSystemAdmin || data.role === 'admin' || checkIsAdminUser(data.email, data.phone));

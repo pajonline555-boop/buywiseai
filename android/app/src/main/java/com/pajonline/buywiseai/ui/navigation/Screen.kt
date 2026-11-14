@@ -20,13 +20,11 @@ sealed class Screen(val route: String, val titleKey: String, val icon: ImageVect
     object Admin : Screen("admin_dashboard", "Admin", Icons.Default.Star)
 
     companion object {
-        val bottomNavItems = listOf(Home, Search, Competition, Vto, Profile)
-
         fun getNavItems(isAdmin: Boolean): List<Screen> {
             return if (isAdmin) {
                 listOf(Home, Search, Competition, Admin, Profile)
             } else {
-                bottomNavItems
+                listOf(Home, Search, Competition, Vto, Profile)
             }
         }
     }

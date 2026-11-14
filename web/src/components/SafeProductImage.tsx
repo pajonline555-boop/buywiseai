@@ -56,10 +56,12 @@ export default function SafeProductImage({
 
   const proxiedUrl = effectiveSrc ? getProxiedImageUrl(effectiveSrc) : "";
 
+  const isDataUri = effectiveSrc.startsWith("data:");
+
   useEffect(() => {
     setHasError(false);
-    setIsLoading(Boolean(effectiveSrc));
-  }, [src, effectiveSrc]);
+    setIsLoading(!isDataUri && Boolean(effectiveSrc));
+  }, [src, effectiveSrc, isDataUri]);
 
   const isFootwear = lowerAlt.includes("shoe") || lowerAlt.includes("sneaker") || lowerAlt.includes("runner") || lowerAlt.includes("footwear") || lowerAlt.includes("lancer") || lowerAlt.includes("asian");
   const isTech = lowerAlt.includes("phone") || lowerAlt.includes("tv") || lowerAlt.includes("laptop") || lowerAlt.includes("macbook") || lowerAlt.includes("headphone");
@@ -130,15 +132,20 @@ export default function SafeProductImage({
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        key={proxiedUrl}
+        ref={(img) => {
+          if (img && img.complete && isLoading) {
+            setIsLoading(false);
+          }
+        }}
+        key={isDataUri ? effectiveSrc.slice(0, 40) + effectiveSrc.length : proxiedUrl}
         src={proxiedUrl}
         alt={alt}
-        loading="lazy"
+        loading={isDataUri ? "eager" : "lazy"}
         decoding="async"
         onLoad={(e) => {
           const img = e.currentTarget;
           // Guard against 1x1 transparent GIFs returned by defective Amazon CDN links
-          if (img.naturalWidth <= 10 && img.naturalHeight <= 10) {
+          if (!isDataUri && img.naturalWidth <= 10 && img.naturalHeight <= 10) {
             setHasError(true);
             setIsLoading(false);
           } else {

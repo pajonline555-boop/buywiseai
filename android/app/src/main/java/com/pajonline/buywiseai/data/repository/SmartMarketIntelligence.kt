@@ -939,45 +939,30 @@ object SmartMarketIntelligence {
     // ==========================================
     private fun isHomeAppliance(q: String): Boolean {
         val appKeywords = listOf(
-            "refrigerator", "fridge", "washing machine", "air conditioner", "split ac", "inverter ac", "window ac",
-            "microwave", "water purifier", "dishwasher", "vacuum cleaner", "geyser", "air cooler", "chimney"
+            "refrigerator", "fridge", "washing machine", "washing", "washer", "front load", "top load",
+            "front-load", "top-load", "fully automatic", "semi automatic", "direct drive", "inverter motor",
+            "air conditioner", "split ac", "inverter ac", "window ac", "microwave", "water purifier",
+            "dishwasher", "vacuum cleaner", "geyser", "air cooler", "chimney"
         )
         val hasAcWord = Regex("""\b(ac|a/c)\b""", RegexOption.IGNORE_CASE).containsMatchIn(q)
-        return hasAcWord || appKeywords.any { q.contains(it) }
+        val hasWashingCapacity = Regex("""\b(6|6\.5|7|7\.5|8|8\.5|9|10)\s*kg\b""", RegexOption.IGNORE_CASE).containsMatchIn(q)
+        return hasAcWord || (hasWashingCapacity && (q.contains("front") || q.contains("top") || q.contains("load") || q.contains("lg") || q.contains("samsung") || q.contains("bosch") || q.contains("machine"))) || appKeywords.any { q.contains(it) }
     }
 
-    private fun buildHomeApplianceComparison(query: String, lower: String): ComparisonResponse {
-        val enc = encode(query)
-        val today = currentDateString()
-
-        val hasAcWord = Regex("""\b(ac|a/c|air conditioner)\b""", RegexOption.IGNORE_CASE).containsMatchIn(lower)
-        val (title, basePrice, mrpPrice, imgUrl) = when {
-            lower.contains("washing") -> {
-                Quad("LG 7 Kg 5 Star Inverter Touch Panel Fully-Automatic Front Load Washing Machine (Middle Black)", 28490.0, 39990.0,
-                    "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80")
-            }
-            lower.contains("refrigerator") || lower.contains("fridge") -> {
-                Quad("Samsung 236 L 3-Star Digital Inverter Frost Free Double Door Refrigerator (Silver Elegance)", 24990.0, 34990.0,
-                    "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=800&auto=format&fit=crop&q=80")
-            }
-            hasAcWord || lower.contains("conditioner") -> {
-                Quad("Daikin 1.5 Ton 5 Star Inverter Split AC (Copper Condenser, PM 2.5 Filter, 2024 Model)", 44990.0, 67200.0,
-                    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80")
-            }
-            else -> {
-                Quad("Home Appliance - Energy Efficient Smart Inverter Model with 10-Year Warranty", 18990.0, 27990.0,
-                    "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80")
-            }
-        }
-
+    private fun createApplianceOffersForModel(
+        title: String,
+        basePrice: Double,
+        mrpPrice: Double,
+        imgUrl: String,
+        idPrefix: String
+    ): List<StoreOffer> {
         val fkPrice = basePrice
         val amzPrice = basePrice + 500.0
         val cromaPrice = basePrice + 1000.0
-        val rdPrice = basePrice + 1200.0
-
-        val stores = listOf(
+        val rdPrice = basePrice + 1500.0
+        return listOf(
             StoreOffer(
-                id = "app_fk",
+                id = "${idPrefix}_fk",
                 store = "Flipkart",
                 title = title,
                 url = buildDirectStoreUrl("Flipkart", title),
@@ -985,16 +970,16 @@ object SmartMarketIntelligence {
                 mrp = mrpPrice,
                 discount = Math.round(((mrpPrice - fkPrice) / mrpPrice) * 100).toDouble(),
                 imageUrl = imgUrl,
-                rating = 4.4,
-                reviewCount = 12400,
+                rating = 4.5,
+                reviewCount = 16400,
                 isLowest = true,
                 isBestValue = false,
-                trustScore = 96,
+                trustScore = 97,
                 verificationStatus = "VERIFIED_TODAY",
-                deliveryText = "Free Professional Installation & Unboxing Included"
+                deliveryText = "Flipkart Assured: Free Brand Installation & Demo Included"
             ),
             StoreOffer(
-                id = "app_amz",
+                id = "${idPrefix}_amz",
                 store = "Amazon India",
                 title = title,
                 url = buildDirectStoreUrl("Amazon India", title),
@@ -1003,48 +988,120 @@ object SmartMarketIntelligence {
                 discount = Math.round(((mrpPrice - amzPrice) / mrpPrice) * 100).toDouble(),
                 imageUrl = imgUrl,
                 rating = 4.4,
-                reviewCount = 16800,
+                reviewCount = 18200,
                 isLowest = false,
                 isBestValue = true,
                 trustScore = 98,
                 verificationStatus = "VERIFIED_TODAY",
-                deliveryText = "Scheduled Delivery Slot & Brand Authorized Technician Demo"
+                deliveryText = "Amazon Fulfilled: Scheduled Delivery Slot & Brand Warranty"
             ),
             StoreOffer(
-                id = "app_crm",
+                id = "${idPrefix}_crm",
                 store = "Croma",
-                title = "$title (Official Store)",
-                url = buildDirectStoreUrl("Croma", "$title (Official Store)"),
+                title = "$title (Croma Official Store)",
+                url = buildDirectStoreUrl("Croma", "$title (Croma Official Store)"),
                 price = cromaPrice,
                 mrp = mrpPrice,
                 discount = Math.round(((mrpPrice - cromaPrice) / mrpPrice) * 100).toDouble(),
                 imageUrl = imgUrl,
                 rating = 4.5,
-                reviewCount = 3800,
+                reviewCount = 4200,
                 isLowest = false,
                 isBestValue = false,
-                trustScore = 95,
-                verificationStatus = "VERIFIED_TODAY"
+                trustScore = 96,
+                verificationStatus = "VERIFIED_TODAY",
+                deliveryText = "Tata Croma Express: Genuine Brand Guarantee"
             ),
             StoreOffer(
-                id = "app_rd",
+                id = "${idPrefix}_rd",
                 store = "Reliance Digital",
-                title = "$title (ResQ Certified)",
-                url = buildDirectStoreUrl("Reliance Digital", "$title (ResQ Certified)"),
+                title = "$title (Reliance Digital ResQ)",
+                url = buildDirectStoreUrl("Reliance Digital", "$title (Reliance Digital ResQ)"),
                 price = rdPrice,
                 mrp = mrpPrice,
                 discount = Math.round(((mrpPrice - rdPrice) / mrpPrice) * 100).toDouble(),
                 imageUrl = imgUrl,
                 rating = 4.3,
-                reviewCount = 2900,
+                reviewCount = 3100,
                 isLowest = false,
                 isBestValue = false,
-                trustScore = 94,
-                verificationStatus = "VERIFIED_TODAY"
+                trustScore = 95,
+                verificationStatus = "VERIFIED_TODAY",
+                deliveryText = "Reliance ResQ: Standard Brand Warranty & Installation"
             )
         )
+    }
 
-        return wrapResponse(query, stores, today, "Flipkart (₹${fkPrice.toInt()}) offers the Lowest Price with free installation demo.")
+    private fun buildHomeApplianceComparison(query: String, lower: String): ComparisonResponse {
+        val today = currentDateString()
+        val isWashing = lower.contains("washing") || lower.contains("washer") || lower.contains("front load") || lower.contains("top load") || (lower.contains("load") && lower.contains("kg"))
+        val isFridge = lower.contains("refrigerator") || lower.contains("fridge")
+        val hasAcWord = Regex("""\b(ac|a/c|air conditioner)\b""", RegexOption.IGNORE_CASE).containsMatchIn(lower) || lower.contains("conditioner")
+
+        val stores = when {
+            isWashing -> {
+                val lg = createApplianceOffersForModel(
+                    "LG 7 Kg 5 Star Inverter Touch Panel Fully-Automatic Front Load Washing Machine with Steam & 6 Motion DD (Middle Black)",
+                    28490.0, 39990.0,
+                    "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80",
+                    "lg_wm"
+                )
+                val samsung = createApplianceOffersForModel(
+                    "Samsung 7 kg 5 Star AI EcoBubble Fully Automatic Front Load Washing Machine with Hygiene Steam (Inox Grey)",
+                    29490.0, 41990.0,
+                    "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=800&auto=format&fit=crop&q=80",
+                    "sam_wm"
+                )
+                val bosch = createApplianceOffersForModel(
+                    "Bosch Series 4 7 kg 5 Star Inverter Touch Control Fully Automatic Front Loading Washing Machine with Anti-Tangle (Silver)",
+                    29990.0, 43990.0,
+                    "https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?w=800&auto=format&fit=crop&q=80",
+                    "bsh_wm"
+                )
+                lg + samsung + bosch
+            }
+            isFridge -> {
+                val sam = createApplianceOffersForModel(
+                    "Samsung 236 L 3-Star Digital Inverter Frost Free Double Door Refrigerator (Silver Elegance)",
+                    24990.0, 34990.0,
+                    "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=800&auto=format&fit=crop&q=80",
+                    "sam_ref"
+                )
+                val lg = createApplianceOffersForModel(
+                    "LG 242 L 3-Star Smart Inverter Frost-Free Double Door Refrigerator (Shiny Steel)",
+                    25990.0, 37090.0,
+                    "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=800&auto=format&fit=crop&q=80",
+                    "lg_ref"
+                )
+                sam + lg
+            }
+            hasAcWord -> {
+                val daikin = createApplianceOffersForModel(
+                    "Daikin 1.5 Ton 5 Star Inverter Split AC (Copper Condenser, PM 2.5 Filter, 2024 Model)",
+                    44990.0, 67200.0,
+                    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80",
+                    "dkn_ac"
+                )
+                val lg = createApplianceOffersForModel(
+                    "LG 1.5 Ton 5 Star AI DUAL Inverter Split AC (Copper, Super Convertible 6-in-1 Cooling)",
+                    46490.0, 75990.0,
+                    "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&auto=format&fit=crop&q=80",
+                    "lg_ac"
+                )
+                daikin + lg
+            }
+            else -> {
+                createApplianceOffersForModel(
+                    "Home Appliance - Energy Efficient Smart Inverter Model with 10-Year Warranty",
+                    18990.0, 27990.0,
+                    "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80",
+                    "gen_app"
+                )
+            }
+        }
+
+        val lowestOffer = stores.minByOrNull { it.price } ?: stores.first()
+        return wrapResponse(query, stores, today, "BuyWise AI recommends ${lowestOffer.store} (₹${lowestOffer.price.toInt()}) offers the Lowest Price with free installation demo.")
     }
 
     // ==========================================
@@ -2116,7 +2173,7 @@ object SmartMarketIntelligence {
 
         val amzPrice = basePrice
         val fkPrice = basePrice + (if (basePrice > 2000) 100.0 else 50.0)
-        val fallbackImg = "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop&q=80"
+        val fallbackImg = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80"
 
         if (!hasSpecificBrand(lower)) {
             val lowestTitle = "$titleCased (Factory Direct Budget Choice)"
@@ -2294,7 +2351,21 @@ object SmartMarketIntelligence {
             com.pajonline.buywiseai.domain.model.SameProductGroup(
                 id = "spg_${title.hashCode()}",
                 productTitle = title,
-                brand = first.store,
+                brand = when {
+                    title.contains("LG", true) -> "LG"
+                    title.contains("Samsung", true) -> "Samsung"
+                    title.contains("Bosch", true) -> "Bosch"
+                    title.contains("Daikin", true) -> "Daikin"
+                    title.contains("Voltas", true) -> "Voltas"
+                    title.contains("Whirlpool", true) -> "Whirlpool"
+                    title.contains("Sony", true) -> "Sony"
+                    title.contains("Apple", true) -> "Apple"
+                    title.contains("OnePlus", true) -> "OnePlus"
+                    title.contains("Nike", true) -> "Nike"
+                    title.contains("Adidas", true) -> "Adidas"
+                    title.contains("Puma", true) -> "Puma"
+                    else -> first.store
+                },
                 fabric = first.fabric,
                 style = first.style,
                 variantInfo = first.fabric,

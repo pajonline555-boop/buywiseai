@@ -297,6 +297,8 @@ export function castVote(competitionId: string, submissionId: string, voterId: s
 
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_VOTES_KEY, JSON.stringify(votes));
+    localStorage.setItem(`voted_${competitionId}_${voterId}`, 'true');
+    localStorage.setItem(`reminder_sent_${competitionId}_${voterId}`, 'true');
   }
 
   const submissions = getSubmissions();
@@ -703,6 +705,10 @@ export async function castVoteInDb(
     });
 
     if (targetSubData) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`voted_${competitionId}_${voterId}`, 'true');
+        localStorage.setItem(`reminder_sent_${competitionId}_${voterId}`, 'true');
+      }
       const fallbackMobile = (typeof window !== 'undefined' ? localStorage.getItem('buywise_user_phone') : null) || '+91 98765 43210';
       const targetMobile = targetSubData.linkedMobile || targetSubData.userPhone || fallbackMobile;
       notifyVoteReceived({

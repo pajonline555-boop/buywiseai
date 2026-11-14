@@ -882,7 +882,7 @@ export function GarmentCanvas({
             📤 Upload Your Styled Look
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*,.avif,.webp,.png,.jpg,.jpeg,.gif,.bmp"
               onChange={handleStyledLookUpload}
               style={{ display: "none" }}
             />

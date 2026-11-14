@@ -80,11 +80,19 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        try {
+            enableEdgeToEdge()
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "Edge-to-edge note: ${e.message}")
+        }
         currentIntentState.value = intent
 
         // Initialize AdMob SDK safely in background
-        AdsManager.initialize(applicationContext)
+        try {
+            AdsManager.initialize(applicationContext)
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "AdsManager init note: ${e.message}")
+        }
 
         setContent {
             val context = LocalContext.current
@@ -391,11 +399,41 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             }
+
+                            // Firebase Realtime Version Configuration & Forced Update Gate (Dreamz Properties Pattern)
+                            val versionManager = remember { com.pajonline.buywiseai.core.update.AppVersionManager.getInstance(context) }
+                            val versionInfo by versionManager.versionInfoState.collectAsState()
+                            var dismissedOptionalUpdate by remember { mutableStateOf(false) }
+
+                            versionInfo?.let { vInfo ->
+                                if (vInfo.isMandatoryUpdate) {
+                                    com.pajonline.buywiseai.ui.components.AppUpdateDialog(
+                                        versionInfo = vInfo,
+                                        onRetry = {
+                                            versionManager.retryVersionCheck()
+                                        }
+                                    )
+                                } else if (vInfo.isOptionalUpdate && !dismissedOptionalUpdate) {
+                                    com.pajonline.buywiseai.ui.components.AppUpdateDialog(
+                                        versionInfo = vInfo,
+                                        onDismissOptional = {
+                                            dismissedOptionalUpdate = true
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            com.pajonline.buywiseai.core.update.AppVersionManager.getInstance(this).stopFirestoreSync()
+        } catch (_: Exception) {}
     }
 }
 

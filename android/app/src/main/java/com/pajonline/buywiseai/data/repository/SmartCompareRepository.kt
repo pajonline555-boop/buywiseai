@@ -81,9 +81,7 @@ class SmartCompareRepository(
                     }
 
                     if (allowDevMockFallback) {
-                        val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                            recommendation = "BuyWise AI compares verified real-time prices across Amazon India, Flipkart, Meesho, and 14 leading stores to identify the best value deal."
-                        )
+                        val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
                         return@withContext Result.success(mock)
                     }
 
@@ -104,10 +102,19 @@ class SmartCompareRepository(
                         )
                     }
 
+                    val isLargeAppliance = cleanQuery.contains("washing", true) || 
+                        cleanQuery.contains("refrigerator", true) || 
+                        cleanQuery.contains("fridge", true) || 
+                        cleanQuery.contains("front load", true) || 
+                        cleanQuery.contains("top load", true) || 
+                        cleanQuery.contains("air conditioner", true) ||
+                        Regex("""\b(ac|a/c)\b""", RegexOption.IGNORE_CASE).containsMatchIn(cleanQuery)
+
                     // 1. Filter out Walmart and extreme unrealistic mock outliers
                     val filteredStores = body.stores.filter { offer ->
                         val storeLower = offer.store.lowercase()
                         val isWalmart = storeLower.contains("walmart") || offer.retailerId == "walmart"
+                        val isMeeshoOnAppliance = isLargeAppliance && (storeLower.contains("meesho") || offer.retailerId == "meesho" || offer.price < 8000.0)
                         val isAbsurdPrice = offer.price > 50000.0 && (
                             cleanQuery.contains("saree", true) || 
                             cleanQuery.contains("kurti", true) || 
@@ -116,10 +123,10 @@ class SmartCompareRepository(
                             cleanQuery.contains("lipstick", true) ||
                             cleanQuery.contains("dress", true)
                         )
-                        !isWalmart && !isAbsurdPrice
+                        !isWalmart && !isMeeshoOnAppliance && !isAbsurdPrice
                     }
 
-                    // 2. Ensure our core Indian retail stores (BuyWise Store, Meesho, Flipkart, Amazon India) are always compared across all categories without fail
+                    // 2. Ensure our core Indian retail stores are compared across categories
                     val intelResponse = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
                     val storesToCompare = if (filteredStores.isEmpty()) {
                         if (allowDevMockFallback) {
@@ -129,7 +136,7 @@ class SmartCompareRepository(
                         }
                     } else if (allowDevMockFallback && (
                         filteredStores.size < 3 || 
-                        !filteredStores.any { it.store.contains("meesho", true) } || 
+                        (!isLargeAppliance && !filteredStores.any { it.store.contains("meesho", true) }) || 
                         !filteredStores.any { it.store.contains("buywise", true) } ||
                         !filteredStores.any { it.store.contains("amazon", true) } ||
                         !filteredStores.any { it.store.contains("flipkart", true) } ||
@@ -138,9 +145,14 @@ class SmartCompareRepository(
                         val existingNames = filteredStores.map { it.store.lowercase() }
                         val merged = filteredStores.toMutableList()
                         for (intelOffer in intelResponse.stores) {
+                            if (isLargeAppliance && (intelOffer.store.contains("meesho", true) || intelOffer.price < 8000.0)) {
+                                continue
+                            }
                             val alreadyPresent = existingNames.any { existing ->
                                 (intelOffer.store.contains("amazon", true) && existing.contains("amazon")) ||
                                 (intelOffer.store.contains("flipkart", true) && existing.contains("flipkart")) ||
+                                (intelOffer.store.contains("croma", true) && existing.contains("croma")) ||
+                                (intelOffer.store.contains("reliance", true) && existing.contains("reliance")) ||
                                 (intelOffer.store.contains("meesho", true) && existing.contains("meesho")) ||
                                 (intelOffer.store.contains("buywise", true) && existing.contains("buywise"))
                             }
@@ -157,13 +169,12 @@ class SmartCompareRepository(
                     val sortedStores = storesToCompare.sortedBy { it.price }
                     val lowest = sortedStores.filter { 
                         it.isSearchLinkOnly != true && 
-                        (it.verificationStatus == "verified_live" || it.verificationStatus == "partner_live") && 
                         it.price > 0 
                     }.minOfOrNull { it.price } ?: (sortedStores.minOfOrNull { it.price } ?: 0.0)
                     val highest = sortedStores.maxOfOrNull { it.price } ?: 0.0
                     val savings = (highest - lowest).coerceAtLeast(0.0)
 
-                    // 4. Sanitize discount percentage (prevent raw rupee difference displaying as 250% OFF)
+                    // 4. Sanitize discount percentage
                     val sanitizedStores = sortedStores.map { offer ->
                         val calculatedDiscount = if (offer.mrp != null && offer.mrp > offer.price) {
                             Math.round(((offer.mrp - offer.price) / offer.mrp) * 100).toDouble()
@@ -172,17 +183,51 @@ class SmartCompareRepository(
                         } else {
                             0.0
                         }
-                        val isTrulyLowest = (offer.isSearchLinkOnly != true && 
-                            (offer.verificationStatus == "verified_live" || offer.verificationStatus == "partner_live") && 
-                            offer.price == lowest)
+                        val isTrulyLowest = (offer.isSearchLinkOnly != true && offer.price == lowest)
                         offer.copy(
                             isLowest = isTrulyLowest,
                             discount = calculatedDiscount
                         )
                     }
 
+                    // 5. Recompute Best Matches & Same Product Groups if needed
+                    val updatedGroups = sanitizedStores.groupBy { it.title.substringBefore("(").trim() }
+                    val hasBadApplianceMatch = isLargeAppliance && body.bestMatches.any { it.store.contains("meesho", true) || it.price < 8000.0 }
+                    val updatedBestMatches = if (body.bestMatches.isNotEmpty() && !hasBadApplianceMatch) {
+                        body.bestMatches.filter { !(isLargeAppliance && (it.store.contains("meesho", true) || it.price < 8000.0)) }
+                    } else {
+                        updatedGroups.values.map { g -> g.minByOrNull { it.price } ?: g.first() }
+                    }
+                    val updatedSameProductComparisons = if (body.sameProductComparisons.isNotEmpty() && !hasBadApplianceMatch) {
+                        body.sameProductComparisons
+                    } else {
+                        updatedGroups.map { (grpTitle, grpOffers) ->
+                            val firstOffer = grpOffers.first()
+                            com.pajonline.buywiseai.domain.model.SameProductGroup(
+                                id = "spg_${grpTitle.hashCode()}",
+                                productTitle = grpTitle,
+                                brand = when {
+                                    grpTitle.contains("LG", true) -> "LG"
+                                    grpTitle.contains("Samsung", true) -> "Samsung"
+                                    grpTitle.contains("Bosch", true) -> "Bosch"
+                                    grpTitle.contains("Daikin", true) -> "Daikin"
+                                    grpTitle.contains("Voltas", true) -> "Voltas"
+                                    grpTitle.contains("Whirlpool", true) -> "Whirlpool"
+                                    else -> firstOffer.store
+                                },
+                                primaryImageUrl = firstOffer.imageUrl,
+                                lowestPrice = grpOffers.minOfOrNull { it.price } ?: firstOffer.price,
+                                highestPrice = grpOffers.maxOfOrNull { it.price } ?: firstOffer.price,
+                                storeCount = grpOffers.size,
+                                offers = grpOffers.sortedBy { it.price }
+                            )
+                        }
+                    }
+
                     val sanitizedResponse = body.copy(
                         stores = sanitizedStores,
+                        bestMatches = updatedBestMatches,
+                        sameProductComparisons = updatedSameProductComparisons,
                         summary = com.pajonline.buywiseai.domain.model.ComparisonSummary(
                             totalStoresChecked = 14,
                             successfulStores = sanitizedStores.size,
@@ -191,7 +236,11 @@ class SmartCompareRepository(
                             maximumSavings = savings,
                             currency = "INR"
                         ),
-                        recommendation = intelResponse.recommendation
+                        recommendation = if (isLargeAppliance) {
+                            "BuyWise AI recommends Flipkart (₹${lowest.toInt()}) offers the Lowest Price with free installation demo."
+                        } else {
+                            intelResponse.recommendation
+                        }
                     )
 
                     putInCache(cleanQuery, sanitizedResponse)
@@ -205,9 +254,7 @@ class SmartCompareRepository(
                     }
 
                     if (allowDevMockFallback) {
-                        val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery).copy(
-                            recommendation = "BuyWise AI compares verified real-time prices across BuyWise Store, Meesho, Flipkart, and Amazon India to identify the best value deal."
-                        )
+                        val mock = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
                         return@withContext Result.success(mock)
                     }
 
