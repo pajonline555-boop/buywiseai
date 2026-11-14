@@ -41,6 +41,7 @@ export interface StoreOffer {
   identityConfidence?: number;
   attributeMatchScore?: number;
   visualSimilarityScore?: number;
+  differenceReason?: string;
   matchExplanation?: {
     categoryMatch: boolean;
     materialMatch: boolean;
