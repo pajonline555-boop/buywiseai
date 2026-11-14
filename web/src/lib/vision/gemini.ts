@@ -104,13 +104,36 @@ Return ONLY a JSON object matching the exact structure requested.`;
         contents.push({ inlineData });
       }
 
-      const response = await ai.models.generateContent({
-        model,
-        contents,
-        config: {
-          responseMimeType: 'application/json',
+      let response: any = null;
+      let lastErr: any = null;
+
+      const candidateModels = [
+        process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash',
+        'gemini-flash-latest',
+        'gemini-2.5-flash-lite',
+      ];
+
+      for (const targetModel of candidateModels) {
+        try {
+          response = await ai.models.generateContent({
+            model: targetModel,
+            contents,
+            config: {
+              responseMimeType: 'application/json',
+            }
+          });
+          if (response?.text) break;
+        } catch (mErr: any) {
+          lastErr = mErr;
+          console.warn(`[GeminiVisionProvider] Model ${targetModel} temporary issue:`, mErr?.message || mErr);
+          // Wait 600ms before attempting next candidate model on 503/429
+          await new Promise(resolve => setTimeout(resolve, 600));
         }
-      });
+      }
+
+      if (!response?.text) {
+        throw lastErr || new Error('All candidate Gemini vision models failed to generate response.');
+      }
 
       const content = response.text;
       if (!content) {
@@ -155,12 +178,26 @@ Return ONLY a JSON object matching the exact structure requested.`;
         timestamp,
       };
     } catch (err: any) {
+      let friendlyError = 'Vision AI analysis is temporarily busy. Please click Analyze & Search Deals again.';
+      try {
+        if (typeof err?.message === 'string') {
+          if (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('UNAVAILABLE')) {
+            friendlyError = 'Vision AI model is experiencing a temporary load spike. Please click Analyze & Search Deals again to retry.';
+          } else if (err.message.startsWith('{') && err.message.includes('"message"')) {
+            const parsed = JSON.parse(err.message);
+            friendlyError = parsed?.error?.message || parsed?.message || friendlyError;
+          } else {
+            friendlyError = err.message;
+          }
+        }
+      } catch {}
+
       return {
         success: false,
         status: 'error',
         mode,
         productDetected: false,
-        error: err?.message || 'Gemini Vision AI analysis failed',
+        error: friendlyError,
         timestamp,
       };
     }

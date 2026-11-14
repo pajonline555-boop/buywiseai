@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface PhotoUploadModalProps {
@@ -19,6 +19,26 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // Support pasting image from clipboard (Ctrl+V)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleFileSelect(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleFileSelect = (file: File) => {
@@ -29,7 +49,7 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
     const isImageByMime = file.type ? (file.type.startsWith('image/') || file.type === 'application/octet-stream') : false;
     const isImageByExt = /\.(avif|webp|jpe?g|png|gif|bmp|svg|jfif)$/i.test(file.name);
     // Allow if mime matches, extension matches, or type is blank (e.g. some browser drag drops)
-    if (!isImageByMime && !isImageByExt && file.type !== '') {
+    if (!isImageByMime && !isImageByExt && file.type !== '' && !file.type.includes('image')) {
       setError('Please select a valid image file (AVIF, JPEG, PNG, WebP, or JFIF).');
       return;
     }
@@ -148,7 +168,19 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          setError(data.error || 'Failed to process image payload.');
+          let errMsg = data.error || 'Failed to process image payload.';
+          try {
+            if (typeof errMsg === 'string') {
+              if (errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE')) {
+                errMsg = 'Vision AI model is experiencing a temporary load spike. Please click Analyze & Search Deals again to retry.';
+              } else if (errMsg.startsWith('{') && errMsg.includes('"message"')) {
+                const parsed = JSON.parse(errMsg);
+                errMsg = parsed?.error?.message || parsed?.message || errMsg;
+              }
+            }
+          } catch {}
+
+          setError(errMsg);
           setStatusMessage(null);
           setLoading(false);
           return;
