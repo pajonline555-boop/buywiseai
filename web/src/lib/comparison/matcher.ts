@@ -10,6 +10,16 @@ export interface MatchClassificationResult {
   tier: 'PREMIUM' | 'LUXURY';
   isSameProductAndVariant: boolean;
   differenceReason?: string;
+  matchExplanation?: {
+    categoryMatch: boolean;
+    materialMatch: boolean;
+    colorMatch: boolean;
+    styleMatch: boolean;
+    brandMatch: boolean;
+    matchingAttributes: string[];
+    differingAttributes: string[];
+    summary: string;
+  };
 }
 
 const LUXURY_BRANDS = new Set([
@@ -93,6 +103,7 @@ export function classifyProductTier(
 
 export function extractFabricFromText(text: string): string | null {
   const lower = (text || '').toLowerCase();
+  if (lower.includes('velvet')) return 'Velvet';
   if (lower.includes('100% cotton') || lower.includes('pure cotton')) return '100% Cotton';
   if (lower.includes('banarasi silk') || lower.includes('banarasi festive silk')) return 'Banarasi Silk';
   if (lower.includes('cotton blend')) return 'Cotton Blend';
@@ -104,9 +115,65 @@ export function extractFabricFromText(text: string): string | null {
   if (lower.includes('denim')) return 'Denim';
   if (lower.includes('linen')) return 'Linen';
   if (lower.includes('polyester')) return 'Polyester';
+  if (lower.includes('organza')) return 'Organza';
+  if (lower.includes('satin')) return 'Satin';
+  if (lower.includes('chanderi')) return 'Chanderi';
   if (lower.includes('net') || lower.includes('tulle')) return 'Net / Tulle';
   if (lower.includes('rayon') || lower.includes('viscose')) return 'Rayon';
   return null;
+}
+
+export function extractGarmentType(text: string): string | null {
+  const lower = (text || '').toLowerCase();
+  if (/\b(salwar\s*(?:kameez|suit)?|straight\s*pant\s*suit|anarkali\s*(?:suit|dress)?|sharara\s*(?:suit|set)?|palazzo\s*suit|punjabi\s*suit|ethnic\s*suit|pant\s*suit|suit\s*set)\b/i.test(lower)) {
+    return 'salwar_suit';
+  }
+  if (/\b(saree|sari)\b/i.test(lower)) return 'saree';
+  if (/\b(lehenga|ghagra|chaniya\s*choli)\b/i.test(lower)) return 'lehenga';
+  if (/\b(kurti|kurta)\b/i.test(lower)) return 'kurti';
+  if (/\b(kamarbandh|waistband|tagdi|belly\s*chain|waist\s*belt)\b/i.test(lower)) return 'waistband_accessory';
+  if (/\b(dress|frock|gown|midi\s*dress|maxi\s*dress)\b/i.test(lower)) return 'dress';
+  if (/\b(jeans|denim|jeggings)\b/i.test(lower)) return 'jeans';
+  if (/\b(t-?shirt|tee)\b/i.test(lower)) return 'tshirt';
+  if (/\b(shirt)\b/i.test(lower)) return 'shirt';
+  if (/\b(jacket|coat|hoodie|bomber|blazer)\b/i.test(lower)) return 'jacket';
+  if (/\b(shoes?|sneakers?|boots?|sandals?|footwear)\b/i.test(lower)) return 'footwear';
+  if (/\b(washing\s*machine|refrigerator|fridge|air\s*conditioner|ac|microwave)\b/i.test(lower)) return 'appliance';
+  if (/\b(phone|smartphone|iphone|mobile)\b/i.test(lower)) return 'phone';
+  if (/\b(laptop|macbook)\b/i.test(lower)) return 'laptop';
+  if (/\b(headphone|earphone|earbuds)\b/i.test(lower)) return 'audio';
+  if (/\b(tv|television)\b/i.test(lower)) return 'tv';
+  if (/\b(lipstick|makeup|cosmetics|serum|sunscreen)\b/i.test(lower)) return 'beauty';
+  return null;
+}
+
+export function extractColorsFromText(text: string): string[] {
+  const lower = (text || '').toLowerCase();
+  const colors: string[] = [];
+  if (/\b(dark\s*teal|teal|peacock\s*blue|cyan)\b/i.test(lower)) colors.push('teal');
+  if (/\b(navy\s*blue|royal\s*blue|sky\s*blue|blue)\b/i.test(lower)) colors.push('blue');
+  if (/\b(emerald\s*green|bottle\s*green|olive\s*green|mint\s*green|green)\b/i.test(lower)) colors.push('green');
+  if (/\b(maroon|burgundy|wine|crimson|ruby|red)\b/i.test(lower)) colors.push('red');
+  if (/\b(pink|magenta|rose|fuchsia)\b/i.test(lower)) colors.push('pink');
+  if (/\b(yellow|mustard|gold|golden)\b/i.test(lower)) colors.push('yellow');
+  if (/\b(black|charcoal)\b/i.test(lower)) colors.push('black');
+  if (/\b(white|ivory|cream|off-?white)\b/i.test(lower)) colors.push('white');
+  if (/\b(purple|violet|lavender)\b/i.test(lower)) colors.push('purple');
+  if (/\b(orange|peach|coral|rust)\b/i.test(lower)) colors.push('orange');
+  return Array.from(new Set(colors));
+}
+
+export function extractEmbroideryStyle(text: string): string[] {
+  const lower = (text || '').toLowerCase();
+  const styles: string[] = [];
+  if (/\b(embroidered|embroidery|thread\s*work)\b/i.test(lower)) styles.push('embroidered');
+  if (/\b(zari|zari\s*work|tilla)\b/i.test(lower)) styles.push('zari');
+  if (/\b(sequin|sequins|sequence)\b/i.test(lower)) styles.push('sequin');
+  if (/\b(gotta\s*patti|gota\s*patti)\b/i.test(lower)) styles.push('gotta_patti');
+  if (/\b(mirror\s*work|kutchi\s*mirror)\b/i.test(lower)) styles.push('mirror_work');
+  if (/\b(printed|floral\s*print|digital\s*print|handblock)\b/i.test(lower)) styles.push('printed');
+  if (/\b(solid|plain)\b/i.test(lower)) styles.push('solid');
+  return Array.from(new Set(styles));
 }
 
 export function extractPackCountFromText(text: string): number {

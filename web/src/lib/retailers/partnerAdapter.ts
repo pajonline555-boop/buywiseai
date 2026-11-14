@@ -17,19 +17,41 @@ export class BuyWisePartnerAdapter implements RetailerAdapter {
       const tokens = queryLower.split(/\s+/).filter(t => t.length > 2);
 
       // Filter products by search relevance (exact substring or keyword token match)
+      const STOP_WORDS = new Set([
+        'women', 'womens', "women's", 'men', 'mens', "men's", 'ladies', 'girl', 'girls',
+        'for', 'with', 'and', 'the', 'in', 'a', 'an', 'at', 'by', 'of', 'to', 'deal', 'deals', 'online'
+      ]);
+
+      const significantTokens = tokens.filter(t => !STOP_WORDS.has(t) && t.length > 2);
+
+      const isApparelQuery = /\b(salwar|kameez|suit|saree|kurti|kurta|lehenga|dress|gown|frock|top|jeans|shirt)\b/i.test(queryLower);
+
       const matchingProds = partnerProds.filter(p => {
         const titleLower = p.title.toLowerCase();
         const descLower = p.description.toLowerCase();
         const catLower = p.category.toLowerCase();
         const subcatLower = (p.subcategory || '').toLowerCase();
-        const brandLower = p.brand.toLowerCase();
+        const combined = `${titleLower} ${descLower} ${catLower} ${subcatLower}`;
 
-        if (titleLower.includes(queryLower) || descLower.includes(queryLower) || catLower.includes(queryLower)) {
+        // Reject accessory / jewelry / hardware if query is explicitly apparel
+        const isAccessoryProduct = /\b(kamarbandh|waistband|belly\s*chain|belt|ring|earring|necklace|watch|smartwatch|shoes|sneakers)\b/i.test(combined);
+        if (isApparelQuery && isAccessoryProduct) {
+          return false;
+        }
+
+        // Exact full phrase match
+        if (titleLower.includes(queryLower) || catLower.includes(queryLower)) {
           return true;
         }
-        return tokens.length > 0 && tokens.some(tok => 
-          titleLower.includes(tok) || descLower.includes(tok) || catLower.includes(tok) || subcatLower.includes(tok) || brandLower.includes(tok)
-        );
+
+        // Significant token match (require at least 2 tokens, or 1 if only 1 exists)
+        if (significantTokens.length > 0) {
+          const matchedCount = significantTokens.filter(tok => combined.includes(tok)).length;
+          const minRequired = significantTokens.length === 1 ? 1 : 2;
+          return matchedCount >= minRequired;
+        }
+
+        return false;
       });
 
       // Filter only live/approved products
@@ -66,13 +88,13 @@ export class BuyWisePartnerAdapter implements RetailerAdapter {
           sellerName: p.partnerName,
           deliveryText,
           isLowest: false,
-          isBestValue: isVerifiedLive,
-          matchType: 'exact',
-          matchConfidence: 0.95,
-          identityConfidence: 0.95,
-          attributeMatchScore: 0.90,
-          visualSimilarityScore: 0.90,
-          smartValueScore: 95,
+          isBestValue: false, // Calculated dynamically during match evaluation
+          matchType: 'similar',
+          matchConfidence: 0.60,
+          identityConfidence: 0.50,
+          attributeMatchScore: 0.50,
+          visualSimilarityScore: 0.50,
+          smartValueScore: 75,
           trustScore: isVerifiedLive ? 98 : 85,
           trustLevel: isVerifiedLive ? 'high' : 'moderate',
           dataSource: 'api',

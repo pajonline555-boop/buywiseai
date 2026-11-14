@@ -25,17 +25,18 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
     setError(null);
     setStatusMessage(null);
 
-    // Validate image format - Supports AVIF (e.g. downloaded Meesho dresses), WebP, JPEG, PNG, GIF, BMP
-    const isImageByMime = file.type ? file.type.startsWith('image/') : false;
-    const isImageByExt = /\.(avif|webp|jpe?g|png|gif|bmp|svg)$/i.test(file.name);
-    if (!isImageByMime && !isImageByExt) {
-      setError('Please select a valid image file (AVIF, JPEG, PNG, or WebP).');
+    // Validate image format - Supports AVIF, WebP, JPEG, PNG, GIF, BMP, JFIF, and octet-stream
+    const isImageByMime = file.type ? (file.type.startsWith('image/') || file.type === 'application/octet-stream') : false;
+    const isImageByExt = /\.(avif|webp|jpe?g|png|gif|bmp|svg|jfif)$/i.test(file.name);
+    // Allow if mime matches, extension matches, or type is blank (e.g. some browser drag drops)
+    if (!isImageByMime && !isImageByExt && file.type !== '') {
+      setError('Please select a valid image file (AVIF, JPEG, PNG, WebP, or JFIF).');
       return;
     }
 
-    // Validate size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image size exceeds 5MB limit. Please choose a smaller image.');
+    // Validate size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image size exceeds 10MB limit. Please choose a smaller image.');
       return;
     }
 
@@ -44,12 +45,52 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
     setPreviewUrl(url);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+
+    // 1. Check for standard dropped files
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileSelect(e.dataTransfer.files[0]);
+      return;
+    }
+
+    // 2. Check for drag-and-drop items (items API)
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      for (let i = 0; i < e.dataTransfer.items.length; i++) {
+        const item = e.dataTransfer.items[i];
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file) {
+            handleFileSelect(file);
+            return;
+          }
+        }
+      }
+    }
+
+    // 3. Check for dropped web image URLs (dragging directly from another website / browser tab)
+    const uriList = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+    const htmlData = e.dataTransfer.getData('text/html');
+
+    let imageUrl = uriList;
+    if (!imageUrl && htmlData) {
+      const match = htmlData.match(/src=["'](https?:\/\/[^"']+)["']/i);
+      if (match) imageUrl = match[1];
+    }
+
+    if (imageUrl && /^https?:\/\//i.test(imageUrl.trim())) {
+      try {
+        setStatusMessage('Loading dropped web image...');
+        const res = await fetch(imageUrl.trim());
+        const blob = await res.blob();
+        const file = new File([blob], 'dropped-image.jpg', { type: blob.type || 'image/jpeg' });
+        handleFileSelect(file);
+      } catch (err) {
+        setError('Could not download image from the dragged web link. Try saving it to your computer first.');
+        setStatusMessage(null);
+      }
     }
   };
 
@@ -122,10 +163,24 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
         const topQuery = data.suggestedQuery || 'Product Match';
         setStatusMessage(`Product identified: "${topQuery}"`);
 
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('buywise_active_photo_search', JSON.stringify({
+              image: base64Data,
+              analysis: data.primaryProduct || null,
+              suggestedQuery: topQuery,
+              mode,
+              timestamp: Date.now(),
+            }));
+          }
+        } catch (e) {
+          console.warn('Failed to store photo search session', e);
+        }
+
         setTimeout(() => {
           onClose();
           router.push(`/search?mode=${mode}&visionQuery=${encodeURIComponent(topQuery)}`);
-        }, 1200);
+        }, 1000);
       };
     } catch (err: any) {
       setError(err?.message || 'Error uploading image.');
@@ -191,11 +246,11 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
             <div style={{ fontWeight: 600, fontSize: '16px', marginBottom: '6px', color: isDragging ? '#00ff88' : 'white' }}>
               {isDragging ? 'Drop dress or product photo now!' : 'Drag & Drop your photo here'}
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>or click to browse from device (AVIF, JPEG, PNG, WebP ≤ 5MB)</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>or click to browse from device (AVIF, JPEG, PNG, WebP ≤ 10MB or paste with Ctrl+V)</div>
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/*,.avif,.webp,.png,.jpg,.jpeg,.gif,.bmp"
+              accept="image/*,.avif,.webp,.png,.jpg,.jpeg,.gif,.bmp,.jfif"
               onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
               style={{ display: 'none' }}
             />

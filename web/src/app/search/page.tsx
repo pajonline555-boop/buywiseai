@@ -37,6 +37,26 @@ function SearchContent() {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [photoSearchContext, setPhotoSearchContext] = useState<{
+    image?: string;
+    analysis?: any;
+    suggestedQuery?: string;
+    mode?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("buywise_active_photo_search");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setPhotoSearchContext(parsed);
+        }
+      } catch (e) {
+        console.warn("Could not load photo search context", e);
+      }
+    }
+  }, [visionQueryParam]);
 
   useEffect(() => {
     setSearchInput(searchQuery);
@@ -293,6 +313,69 @@ function SearchContent() {
           </div>
         </div>
 
+        {/* 📷 VISUAL PRODUCT DISCOVERY PROFILE BANNER (SEARCH BY PHOTO) */}
+        {(photoSearchContext || visionQueryParam) && (
+          <div className="glass" style={{
+            padding: "20px 24px",
+            borderRadius: "20px",
+            marginBottom: "28px",
+            border: "1.5px solid var(--accent)",
+            background: "linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(138, 43, 226, 0.08))",
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+            flexWrap: "wrap",
+          }}>
+            {photoSearchContext?.image && (
+              <div style={{ position: "relative", width: "90px", height: "90px", borderRadius: "14px", overflow: "hidden", border: "2px solid #00d4ff", flexShrink: 0 }}>
+                <img src={photoSearchContext.image} alt="Uploaded Reference Dress" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.8)", fontSize: "9px", textAlign: "center", padding: "2px 0", color: "#00d4ff", fontWeight: 800 }}>
+                  REFERENCE
+                </div>
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: "260px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <span style={{ fontSize: "16px" }}>📷</span>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "var(--accent)", letterSpacing: "1px" }}>
+                  VISUAL PRODUCT DISCOVERY PROFILE
+                </span>
+                <span style={{ fontSize: "11px", background: "rgba(0, 255, 136, 0.2)", color: "#00ff88", padding: "2px 8px", borderRadius: "8px", fontWeight: 700 }}>
+                  Active Photo Match
+                </span>
+              </div>
+              <div style={{ fontSize: "15px", fontWeight: 700, color: "white", marginBottom: "8px" }}>
+                Extracted visual features for: &quot;{photoSearchContext?.suggestedQuery || searchQuery}&quot;
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {photoSearchContext?.analysis?.materials && photoSearchContext.analysis.materials.length > 0 && (
+                  <span style={{ fontSize: "11px", background: "rgba(255, 255, 255, 0.08)", padding: "4px 10px", borderRadius: "12px", color: "#e2e8f0" }}>
+                    🧵 Fabric: <strong style={{ color: "white" }}>{photoSearchContext.analysis.materials.join(", ")}</strong>
+                  </span>
+                )}
+                {photoSearchContext?.analysis?.colors && photoSearchContext.analysis.colors.length > 0 && (
+                  <span style={{ fontSize: "11px", background: "rgba(255, 255, 255, 0.08)", padding: "4px 10px", borderRadius: "12px", color: "#e2e8f0" }}>
+                    🎨 Color: <strong style={{ color: "white" }}>{photoSearchContext.analysis.colors.join(", ")}</strong>
+                  </span>
+                )}
+                {photoSearchContext?.analysis?.subcategory && (
+                  <span style={{ fontSize: "11px", background: "rgba(255, 255, 255, 0.08)", padding: "4px 10px", borderRadius: "12px", color: "#e2e8f0" }}>
+                    🏷️ Garment: <strong style={{ color: "white" }}>{String(photoSearchContext.analysis.subcategory).replace("_", " ")}</strong>
+                  </span>
+                )}
+                {photoSearchContext?.analysis?.styles && photoSearchContext.analysis.styles.length > 0 && (
+                  <span style={{ fontSize: "11px", background: "rgba(255, 255, 255, 0.08)", padding: "4px 10px", borderRadius: "12px", color: "#e2e8f0" }}>
+                    ✨ Work: <strong style={{ color: "white" }}>{photoSearchContext.analysis.styles.join(", ")}</strong>
+                  </span>
+                )}
+                <span style={{ fontSize: "11px", background: "rgba(0, 212, 255, 0.15)", padding: "4px 10px", borderRadius: "12px", color: "#00d4ff" }}>
+                  🎯 Mode: <strong style={{ color: "white" }}>{photoSearchContext?.mode === "similar" ? "Similar Style" : "Exact Product"}</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 🌟 CUSTOMER-FACING CATEGORY TABS: PREMIUM VS LUXURY */}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
           <button
@@ -453,6 +536,30 @@ function SearchContent() {
                     {bestValueOffer.isDirectProductLink && !bestValueOffer.isSearchLinkOnly ? "View Direct Deal ↗" : `Search ${bestValueOffer.store} ↗`}
                   </button>
                 </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Exact Match Status Notice */}
+        {exactOffers.length === 0 && (
+          <div className="glass" style={{
+            marginBottom: "30px",
+            padding: "18px 22px",
+            borderRadius: "16px",
+            border: "1px solid rgba(255, 170, 0, 0.4)",
+            background: "rgba(255, 170, 0, 0.08)",
+            display: "flex",
+            alignItems: "center",
+            gap: "14px"
+          }}>
+            <span style={{ fontSize: "24px" }}>ℹ️</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "15px", color: "#ffaa00", marginBottom: "2px" }}>
+                No Verified Exact Match Found
+              </div>
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                We couldn&apos;t verify an identical model or SKU in retailer feeds. Exploring high-confidence visual alternatives and similar styles below.
               </div>
             </div>
           </div>
@@ -699,6 +806,24 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
             </span>
           )}
         </div>
+
+        {/* Match Breakdown Pills */}
+        {offer.matchExplanation && (offer.matchExplanation.matchingAttributes.length > 0 || offer.matchExplanation.differingAttributes.length > 0) && (
+          <div style={{ marginBottom: "14px", padding: "8px 10px", background: "rgba(255, 255, 255, 0.03)", borderRadius: "10px", border: "1px solid var(--glass-border)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+              {offer.matchExplanation.matchingAttributes.slice(0, 3).map((attr, idx) => (
+                <span key={idx} style={{ fontSize: "10px", background: "rgba(0, 255, 136, 0.12)", color: "#00ff88", padding: "2px 6px", borderRadius: "6px", fontWeight: 700 }}>
+                  ✓ {attr}
+                </span>
+              ))}
+              {offer.matchExplanation.differingAttributes.slice(0, 2).map((diff, idx) => (
+                <span key={idx} style={{ fontSize: "10px", background: "rgba(255, 170, 0, 0.12)", color: "#ffaa00", padding: "2px 6px", borderRadius: "6px" }}>
+                  • {diff}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div>
@@ -880,6 +1005,20 @@ function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
           <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", maxWidth: "480px" }}>
             {offer.title}
           </div>
+          {offer.matchExplanation && (offer.matchExplanation.matchingAttributes.length > 0 || offer.matchExplanation.differingAttributes.length > 0) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+              {offer.matchExplanation.matchingAttributes.slice(0, 3).map((attr, idx) => (
+                <span key={idx} style={{ fontSize: "9.5px", background: "rgba(0, 255, 136, 0.12)", color: "#00ff88", padding: "1px 6px", borderRadius: "6px" }}>
+                  ✓ {attr}
+                </span>
+              ))}
+              {offer.matchExplanation.differingAttributes.slice(0, 2).map((diff, idx) => (
+                <span key={idx} style={{ fontSize: "9.5px", background: "rgba(255, 170, 0, 0.12)", color: "#ffaa00", padding: "1px 6px", borderRadius: "6px" }}>
+                  • {diff}
+                </span>
+              ))}
+            </div>
+          )}
           {offer.variant?.size && (
             <div style={{ fontSize: "11px", color: "#00d4ff", marginTop: "2px" }}>
               Size: {offer.variant.size}

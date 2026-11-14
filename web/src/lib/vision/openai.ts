@@ -47,6 +47,12 @@ STRICT INSTRUCTIONS:
    - "observedAttributes": Attributes DIRECTLY visible in the image.
    - "inferredAttributes": Reasonably deduced attributes.
 6. ZERO HALLUCINATION: Do NOT invent brand names or model names if not clearly visible. Set "brand": null or "model": null when uncertain.
+7. CLOTHING & ETHNIC WEAR SPECIALIZATION:
+   - Identify exact garment type (e.g. Salwar Kameez Suit, Straight Pant Suit, Saree, Kurti, Lehenga, Gown, Dress).
+   - Accurately detect fabric/material (e.g. Velvet, Silk, Georgette, Chanderi, Cotton, Rayon, Satin).
+   - Accurately detect main colour and nuance shade (e.g. Dark Teal, Peacock Blue, Emerald Green, Wine/Maroon, Navy Blue).
+   - Accurately detect embroidery and embellishment work (e.g. Zari embroidery, Sequins work, Gota Patti, Resham thread work).
+   - In "searchQueries", generate rich, identifying e-commerce search queries (e.g., "Dark teal velvet embroidered salwar kameez suit", "Women dark teal velvet ethnic suit with embroidery"). NEVER dilute into generic words like "dress" or "fashion".
 
 Return ONLY a JSON object matching this exact structure:
 {

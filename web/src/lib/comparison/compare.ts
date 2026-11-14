@@ -108,6 +108,10 @@ export async function executeCanonicalComparison(
             normalized.attributeMatchScore = classification.attributeMatchScore;
             normalized.visualSimilarityScore = classification.visualSimilarityScore;
             normalized.tier = classification.tier;
+            normalized.matchExplanation = classification.matchExplanation;
+            if (classification.differenceReason) {
+              normalized.differenceReason = classification.differenceReason;
+            }
 
             rawOffers.push(normalized);
             recordPriceHistory(normalized, canonical.id);
@@ -182,16 +186,28 @@ export async function executeCanonicalComparison(
   });
 
   // Determine Best Value & Best Match
+  // Rule: An offer can ONLY be isBestValue if matchConfidence >= 0.70!
+  // Weak or unrelated items (<0.70 match) must NEVER be crowned Best Value.
   let maxScore = -1;
   let maxMatch = -1;
   allOffers.forEach((o) => {
-    if ((o.smartValueScore || 0) > maxScore) maxScore = o.smartValueScore || 0;
-    if ((o.matchConfidence || 0) > maxMatch) maxMatch = o.matchConfidence || 0;
+    if ((o.matchConfidence || 0) >= 0.70 && (o.smartValueScore || 0) > maxScore) {
+      maxScore = o.smartValueScore || 0;
+    }
+    if ((o.matchConfidence || 0) > maxMatch) {
+      maxMatch = o.matchConfidence || 0;
+    }
   });
 
   allOffers.forEach((o) => {
-    if (o.smartValueScore === maxScore && maxScore > 0) o.isBestValue = true;
-    if (o.matchConfidence === maxMatch && maxMatch > 0) o.isBestMatch = true;
+    if (maxScore > 0 && o.smartValueScore === maxScore && (o.matchConfidence || 0) >= 0.70) {
+      o.isBestValue = true;
+    } else {
+      o.isBestValue = false;
+    }
+    if (maxMatch >= 0.65 && o.matchConfidence === maxMatch) {
+      o.isBestMatch = true;
+    }
   });
 
   // --- PHASE 5: TRUE LOWEST PRICE COMPARISON ---
@@ -328,10 +344,17 @@ function generateRecommendation(
     return 'No verified live retailer listings were found for this query. Check retailer API credentials.';
   }
 
-  const bestValueOffer = offers.find((o) => o.isBestValue) || offers[0];
+  const exactOffers = offers.filter((o) => o.matchType === 'exact' && (o.matchConfidence || 0) >= 0.78);
+  const bestValueOffer = offers.find((o) => o.isBestValue && (o.matchConfidence || 0) >= 0.70);
   const lowestVerifiedOffer = offers.find((o) => o.isLowest && !o.isSearchLinkOnly && o.verificationStatus === 'verified_live');
 
-  let text = `BuyWise AI identifies ${bestValueOffer.store} as the Best Value deal at ₹${bestValueOffer.price.toLocaleString()} with a Smart Value Score of ${bestValueOffer.smartValueScore || 85}/100.`;
+  // If no verified exact match was found, state it clearly as required by guidelines
+  if (exactOffers.length === 0 && !bestValueOffer) {
+    return 'No verified exact match found. Explore similar alternatives and close visual matches below.';
+  }
+
+  const leadOffer = bestValueOffer || exactOffers[0] || offers[0];
+  let text = `BuyWise AI identifies ${leadOffer.store} as the Best Value deal at ₹${leadOffer.price.toLocaleString()} with a Smart Value Score of ${leadOffer.smartValueScore || 85}/100.`;
 
   if (tierSummary.premiumCount > 0 && tierSummary.luxuryCount > 0) {
     text += ` Available in Premium (Value) from ₹${tierSummary.lowestPremiumPrice.toLocaleString()} and Luxury (Branded) from ₹${tierSummary.lowestLuxuryPrice.toLocaleString()}.`;

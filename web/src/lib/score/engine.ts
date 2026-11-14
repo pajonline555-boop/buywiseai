@@ -58,7 +58,17 @@ export function calculateSmartValueScore(
     }
   });
 
-  const totalScore = availableMax > 0 ? Math.round((availableSum / availableMax) * 100) : 50;
+  let totalScore = availableMax > 0 ? Math.round((availableSum / availableMax) * 100) : 50;
+
+  // SMART VALUE SCORE CAPPING FOR WEAK / UNVERIFIED MATCHES:
+  // If an offer is a poor match (matchConfidence < 0.65), it CANNOT receive an artificially inflated score
+  // simply because it is cheap. Cap the total score to at most matchConfidence * 100.
+  if (matchConfidenceRaw < 0.65) {
+    const maxAllowed = Math.max(10, Math.round(matchConfidenceRaw * 100));
+    if (totalScore > maxAllowed) {
+      totalScore = maxAllowed;
+    }
+  }
 
   // 3. Score Reasoning Explanation
   const isLowest = offer.price === minPrice;

@@ -41,6 +41,16 @@ export interface StoreOffer {
   identityConfidence?: number;
   attributeMatchScore?: number;
   visualSimilarityScore?: number;
+  matchExplanation?: {
+    categoryMatch: boolean;
+    materialMatch: boolean;
+    colorMatch: boolean;
+    styleMatch: boolean;
+    brandMatch: boolean;
+    matchingAttributes: string[];
+    differingAttributes: string[];
+    summary: string;
+  };
   smartValueScore?: number;
   scoreBreakdown?: SmartValueScoreBreakdown;
   trustScore?: number;
