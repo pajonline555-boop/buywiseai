@@ -280,15 +280,60 @@ export default function CompetitionPage() {
           boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
         }}
       >
-        <div style={{ position: 'relative', width: '100%', height: '280px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
-          <Image
-            src={competition.featuredProductImage || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'}
-            alt={competition.featuredProductTitle}
-            fill
-            unoptimized
-            style={{ objectFit: 'cover' }}
-          />
-          <div style={{ position: 'absolute', top: '16px', left: '16px', padding: '6px 14px', borderRadius: '12px', background: 'rgba(0,0,0,0.85)', color: '#ffd700', fontWeight: 900, fontSize: '12px', border: '1px solid rgba(255, 215, 0, 0.5)' }}>
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '380px',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 215, 0, 0.35)',
+            background: '#0d0b18',
+            boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)',
+          }}
+        >
+          {/* Ambient blurred backdrop for seamless color blending */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: '-10px',
+              overflow: 'hidden',
+              filter: 'blur(20px) brightness(0.4)',
+              opacity: 0.85,
+              pointerEvents: 'none',
+            }}
+          >
+            <Image
+              src={competition.featuredProductImage || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'}
+              alt=""
+              fill
+              unoptimized
+              style={{ objectFit: 'cover' }}
+            />
+          </div>
+
+          {/* Main crisp product image with contain so the full dress is visible from head to toe */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              zIndex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Image
+              src={competition.featuredProductImage || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'}
+              alt={competition.featuredProductTitle}
+              fill
+              unoptimized
+              style={{ objectFit: 'contain', padding: '12px' }}
+            />
+          </div>
+
+          <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 2, padding: '6px 14px', borderRadius: '12px', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', color: '#ffd700', fontWeight: 900, fontSize: '12px', border: '1px solid rgba(255, 215, 0, 0.5)' }}>
             FEATURED CHALLENGE PRODUCT
           </div>
         </div>

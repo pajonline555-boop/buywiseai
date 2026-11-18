@@ -366,9 +366,77 @@ export default function Home() {
                   Featured: <strong>{activeComp.featuredProductTitle}</strong> (₹{activeComp.featuredProductPrice.toLocaleString()})
                 </p>
 
-                <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '18px', overflow: 'hidden', marginBottom: '20px' }}>
-                  <Image src={activeComp.featuredProductImage} alt={activeComp.featuredProductTitle} fill unoptimized style={{ objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', bottom: '12px', left: '12px', padding: '4px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.8)', color: '#00ff88', fontWeight: 900, fontSize: '11px' }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '380px',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    marginBottom: '20px',
+                    background: '#0d0b18',
+                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                    boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)',
+                  }}
+                >
+                  {/* Ambient blurred backdrop for seamless color blending */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '-10px',
+                      overflow: 'hidden',
+                      filter: 'blur(20px) brightness(0.4)',
+                      opacity: 0.85,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Image
+                      src={activeComp.featuredProductImage}
+                      alt=""
+                      fill
+                      unoptimized
+                      style={{ objectFit: 'cover' }}
+                    />
+                  </div>
+
+                  {/* Main crisp product image with contain so the full dress is visible from head to toe */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '100%',
+                      zIndex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Image
+                      src={activeComp.featuredProductImage}
+                      alt={activeComp.featuredProductTitle}
+                      fill
+                      unoptimized
+                      style={{ objectFit: 'contain', padding: '10px' }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '12px',
+                      left: '12px',
+                      zIndex: 2,
+                      padding: '6px 14px',
+                      borderRadius: '12px',
+                      background: 'rgba(0,0,0,0.85)',
+                      backdropFilter: 'blur(10px)',
+                      color: '#00ff88',
+                      fontWeight: 900,
+                      fontSize: '12px',
+                      border: '1px solid rgba(0, 255, 136, 0.35)',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                    }}
+                  >
                     🎁 Prize: {activeComp.prizeDescription}
                   </div>
                 </div>
@@ -444,9 +512,75 @@ export default function Home() {
                     Winner of <strong>{pastComp.title}</strong> with <strong>{winner.voteCount.toLocaleString()} votes</strong>!
                   </p>
 
-                  <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '18px', overflow: 'hidden', marginBottom: '20px' }}>
-                    <Image src={winner.vtoResultImage} alt={winner.userName} fill unoptimized style={{ objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', top: '12px', right: '12px', padding: '4px 12px', borderRadius: '10px', background: '#ffd700', color: '#000', fontWeight: 900, fontSize: '11px' }}>
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '380px',
+                      borderRadius: '20px',
+                      overflow: 'hidden',
+                      marginBottom: '20px',
+                      background: '#091510',
+                      border: '1px solid rgba(0, 255, 136, 0.35)',
+                      boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    {/* Ambient blurred backdrop */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: '-10px',
+                        overflow: 'hidden',
+                        filter: 'blur(20px) brightness(0.4)',
+                        opacity: 0.85,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <Image
+                        src={winner.vtoResultImage}
+                        alt=""
+                        fill
+                        unoptimized
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </div>
+
+                    {/* Main crisp winner image */}
+                    <div
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '100%',
+                        zIndex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Image
+                        src={winner.vtoResultImage}
+                        alt={winner.userName}
+                        fill
+                        unoptimized
+                        style={{ objectFit: 'contain', padding: '10px' }}
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        zIndex: 2,
+                        padding: '6px 14px',
+                        borderRadius: '12px',
+                        background: '#ffd700',
+                        color: '#000',
+                        fontWeight: 900,
+                        fontSize: '12px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                      }}
+                    >
                       ❤️ {winner.voteCount} Votes
                     </div>
                   </div>
