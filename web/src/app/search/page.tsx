@@ -2,15 +2,15 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import PhotoUploadModal from "@/components/PhotoUploadModal";
 import VoiceSearchModal from "@/components/VoiceSearchModal";
 import { ComparisonResponse, StoreOffer } from "@/lib/retailers/types";
+import { VisionProductAnalysis } from "@/lib/vision/types";
 import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import SafeProductImage from "@/components/SafeProductImage";
-import { parseSearchIntent } from "@/lib/search/ProductIntentParser";
-import { getCategoryCapabilities } from "@/lib/search/CategoryCapabilityMatrix";
 import { trackPartnerEvent } from "@/lib/partners/partnerAnalytics";
 import SearchAutocomplete from "@/components/search/SearchAutocomplete";
 import { saveSearchQuery } from "@/lib/search/searchHistory";
@@ -39,7 +39,7 @@ function SearchContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [photoSearchContext, setPhotoSearchContext] = useState<{
     image?: string;
-    analysis?: any;
+    analysis?: VisionProductAnalysis | null;
     suggestedQuery?: string;
     mode?: string;
   } | null>(null);
@@ -79,7 +79,7 @@ function SearchContent() {
       } else {
         setData(result);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Fetch comparison error:", err);
       setError("Network error while connecting to comparison engine.");
     } finally {
@@ -312,6 +312,25 @@ function SearchContent() {
             />
           </div>
         </div>
+
+        {/* Comparison Fetch Error */}
+        {error && (
+          <div className="glass" style={{
+            padding: "16px 20px",
+            borderRadius: "16px",
+            marginBottom: "24px",
+            background: "rgba(255, 68, 68, 0.1)",
+            border: "1px solid rgba(255, 68, 68, 0.4)",
+            color: "#ff8888",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            fontSize: "14px"
+          }}>
+            <span style={{ fontSize: "18px" }}>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* 📷 VISUAL PRODUCT DISCOVERY PROFILE BANNER (SEARCH BY PHOTO) */}
         {(photoSearchContext || visionQueryParam) && (
@@ -642,13 +661,47 @@ function SearchContent() {
 
         {/* Empty Result State */}
         {!loading && sortedOffers.length === 0 && (
-          <div className="glass" style={{ padding: "60px 20px", textAlign: "center", borderRadius: "24px" }}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔍</div>
-            <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>No Verified Store Offers Found</h3>
-            <p style={{ color: "var(--text-secondary)", maxWidth: "520px", margin: "0 auto 24px auto" }}>
-              We couldn&apos;t retrieve live store listings for this product under the selected filters. BuyWise AI strictly does not fabricate prices or results when live feeds are unavailable.
+          <div className="glass" style={{ padding: "60px 24px", textAlign: "center", borderRadius: "24px", marginBottom: "40px", border: data?.providerStatuses?.some((p) => (p.retailerId === 'amazon' || p.retailerId === 'flipkart') && p.status === 'CREDENTIALS_REQUIRED') ? "1px solid rgba(255, 170, 0, 0.4)" : undefined }}>
+            <div style={{ fontSize: "48px", marginBottom: "16px" }}>
+              {data?.providerStatuses?.some((p) => (p.retailerId === 'amazon' || p.retailerId === 'flipkart') && p.status === 'CREDENTIALS_REQUIRED') ? "🔌" : "🔍"}
+            </div>
+            <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "12px", color: data?.providerStatuses?.some((p) => (p.retailerId === 'amazon' || p.retailerId === 'flipkart') && p.status === 'CREDENTIALS_REQUIRED') ? "#ffaa00" : "#ffffff" }}>
+              {data?.providerStatuses?.some((p) => (p.retailerId === 'amazon' || p.retailerId === 'flipkart') && p.status === 'CREDENTIALS_REQUIRED')
+                ? "Retailer product search is temporarily unavailable."
+                : "No Verified Store Offers Found"}
+            </h3>
+            <p style={{ color: "var(--text-secondary)", maxWidth: "560px", margin: "0 auto 24px auto", lineHeight: 1.6, fontSize: "14px" }}>
+              {data?.providerStatuses?.some((p) => (p.retailerId === 'amazon' || p.retailerId === 'flipkart') && p.status === 'CREDENTIALS_REQUIRED')
+                ? "Live product feeds from Amazon India and Flipkart are currently being authorized. BuyWise AI strictly does not display fake products, fabricated prices, or synthetic matches when retailer feeds are offline."
+                : "We couldn't retrieve live store listings for this product under the selected filters. BuyWise AI strictly does not fabricate prices or results when live feeds are unavailable."}
             </p>
-            <button onClick={fetchComparison} className="btn-primary">Retry Search</button>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+              <Link href="/store" style={{ textDecoration: "none" }}>
+                <button className="btn-primary" style={{ padding: "12px 24px", fontSize: "14px" }}>
+                  🛍️ Browse BuyWise Partner Products
+                </button>
+              </Link>
+              <a
+                href="https://wa.me/918955438945?text=Hello%20BuyWise%20Team%2C%20I%20am%20looking%20for%20a%20product%20comparison%20and%20need%20assistance."
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: "none" }}
+              >
+                <button style={{ padding: "12px 24px", borderRadius: "16px", background: "rgba(37, 211, 102, 0.15)", border: "1px solid rgba(37, 211, 102, 0.5)", color: "#25d366", fontWeight: 800, fontSize: "14px", cursor: "pointer" }}>
+                  💬 Enquire on WhatsApp
+                </button>
+              </a>
+              <button
+                onClick={() => {
+                  const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+                  if (input) input.focus();
+                }}
+                style={{ padding: "12px 24px", borderRadius: "16px", background: "rgba(255, 255, 255, 0.08)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#ffffff", fontWeight: 700, fontSize: "14px", cursor: "pointer" }}
+              >
+                🔍 Search by Product Name
+              </button>
+            </div>
           </div>
         )}
 
@@ -674,7 +727,7 @@ function SearchContent() {
 }
 
 // 📱 TILES MODE CARD COMPONENT
-function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: StoreOffer; searchQuery: string; user: any; triggerToast: (msg: string) => void }) {
+function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: StoreOffer; searchQuery: string; user: { uid?: string } | null; triggerToast: (msg: string) => void }) {
   const matchPercentage = Math.round((offer.matchConfidence || 0.85) * 100);
   const [alertSaved, setAlertSaved] = useState(false);
 
@@ -911,7 +964,7 @@ function OfferTileCard({ offer, searchQuery, user, triggerToast }: { offer: Stor
 }
 
 // 📋 LIST MODE CARD COMPONENT
-function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: StoreOffer; searchQuery: string; user: any; triggerToast: (msg: string) => void }) {
+function OfferListCard({ offer, searchQuery, user, triggerToast }: { offer: StoreOffer; searchQuery: string; user: { uid?: string } | null; triggerToast: (msg: string) => void }) {
   const matchPercentage = Math.round((offer.matchConfidence || 0.8) * 100);
   const [alertSaved, setAlertSaved] = useState(false);
   const payablePrice = offer.effectivePayablePrice || offer.price;

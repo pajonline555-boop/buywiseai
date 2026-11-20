@@ -95,6 +95,13 @@ export interface StoreOffer {
   effectivePayablePrice?: number;
   priceBasis?: 'listed' | 'effective_payable';
   tier?: 'PREMIUM' | 'LUXURY';
+  additionalImages?: string[];
+  availableSizes?: string[];
+  availableColors?: string[];
+  specifications?: Array<{ label: string; value: string }>;
+  deliveryInfo?: string;
+  returnInfo?: string;
+  matchClass?: 'EXACT_VERIFIED' | 'HIGH_CONFIDENCE_VISUAL' | 'SIMILAR_ALTERNATIVE' | 'REJECTED';
   dataFreshness?: string;
   provenance?: {
     source: SourceType;

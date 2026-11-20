@@ -9,6 +9,9 @@ export interface BestsellerProduct {
   name: string;
   category: string;
   image: string;
+  images?: string[];
+  availableSizes?: string[];
+  availableColors?: string[];
   youtubeUrl?: string;
   externalProductId?: string;
   productUrl?: string;

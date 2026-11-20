@@ -1,13 +1,17 @@
 package com.pajonline.buywiseai.ui.screens.web
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,9 +62,37 @@ fun WebViewerScreen(
     var isLoading by remember { mutableStateOf(true) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var currentUrl by remember { mutableStateOf(initialUrl) }
+    var fileUploadCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+
+    val fileChooserLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val intent = result.data
+            val clipData = intent?.clipData
+            val dataUri = intent?.data
+            val uris = when {
+                clipData != null -> {
+                    val list = mutableListOf<Uri>()
+                    for (i in 0 until clipData.itemCount) {
+                        list.add(clipData.getItemAt(i).uri)
+                    }
+                    list.toTypedArray()
+                }
+                dataUri != null -> arrayOf(dataUri)
+                else -> emptyArray()
+            }
+            fileUploadCallback?.onReceiveValue(uris)
+        } else {
+            fileUploadCallback?.onReceiveValue(null)
+        }
+        fileUploadCallback = null
+    }
 
     // Always intercept back press and return directly to BuyWise AI app
     BackHandler {
+        fileUploadCallback?.onReceiveValue(null)
+        fileUploadCallback = null
         onBack()
     }
 
@@ -146,8 +178,8 @@ fun WebViewerScreen(
                                 databaseEnabled = true
                                 useWideViewPort = true
                                 loadWithOverviewMode = true
-                                allowFileAccess = false
-                                allowContentAccess = false
+                                allowFileAccess = true
+                                allowContentAccess = true
                                 mediaPlaybackRequiresUserGesture = false
                                 cacheMode = WebSettings.LOAD_NO_CACHE
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
@@ -158,6 +190,31 @@ fun WebViewerScreen(
                                 override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
                                     android.util.Log.d("BuyWiseWebConsole", "${consoleMessage?.message()} -- From line ${consoleMessage?.lineNumber()} of ${consoleMessage?.sourceId()}")
                                     return super.onConsoleMessage(consoleMessage)
+                                }
+
+                                override fun onShowFileChooser(
+                                    webView: WebView?,
+                                    filePathCallback: ValueCallback<Array<Uri>>?,
+                                    fileChooserParams: FileChooserParams?
+                                ): Boolean {
+                                    fileUploadCallback?.onReceiveValue(null)
+                                    fileUploadCallback = filePathCallback
+                                    try {
+                                        val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                                            addCategory(Intent.CATEGORY_OPENABLE)
+                                            type = "image/*"
+                                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                                        }
+                                        if (fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                                            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                                        }
+                                        fileChooserLauncher.launch(intent)
+                                        return true
+                                    } catch (e: Exception) {
+                                        fileUploadCallback?.onReceiveValue(null)
+                                        fileUploadCallback = null
+                                        return false
+                                    }
                                 }
                             }
                             webViewClient = object : WebViewClient() {

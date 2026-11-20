@@ -88,6 +88,9 @@ function InventoryPageContent() {
     brand: 'BuyWise Partner',
     description: '',
     primaryImage: '',
+    additionalImages: [] as string[],
+    sizes: ['S', 'M', 'L', 'XL'] as string[],
+    colors: [] as string[],
     youtubeUrl: '',
     mrp: 1999,
     sellingPrice: 1299,
@@ -102,6 +105,9 @@ function InventoryPageContent() {
     partnerName: 'BuyWise Verified Partner Network'
   });
 
+  const [extraImageUrl, setExtraImageUrl] = useState('');
+  const [customSizeInput, setCustomSizeInput] = useState('');
+  const [customColorInput, setCustomColorInput] = useState('');
   const [scraping, setScraping] = useState(false);
   const [productUrl, setProductUrl] = useState('');
 
@@ -112,10 +118,91 @@ function InventoryPageContent() {
     }
     try {
       const res = await compressImageForStorage(file, { maxDimension: 1080, initialQuality: 0.84 });
-      setFormData(prev => ({ ...prev, primaryImage: res.dataUrl }));
-      setOptimizationInfo(res);
+      if (!formData.primaryImage) {
+        setFormData(prev => ({ ...prev, primaryImage: res.dataUrl }));
+        setOptimizationInfo(res);
+      } else {
+        setFormData(prev => ({ ...prev, additionalImages: [...prev.additionalImages, res.dataUrl] }));
+      }
     } catch (err) {
       console.warn('Image compression fallback:', err);
+    }
+  };
+
+  const processMultipleFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i];
+      if (file.type && file.type.startsWith('image/')) {
+        try {
+          const res = await compressImageForStorage(file, { maxDimension: 1080, initialQuality: 0.84 });
+          if (i === 0 && !formData.primaryImage) {
+            setFormData(prev => ({ ...prev, primaryImage: res.dataUrl }));
+            setOptimizationInfo(res);
+          } else {
+            setFormData(prev => ({ ...prev, additionalImages: [...prev.additionalImages, res.dataUrl] }));
+          }
+        } catch (err) {
+          console.warn('Multiple image compression notice:', err);
+        }
+      }
+    }
+  };
+
+  const handleAddExtraImageUrl = () => {
+    if (!extraImageUrl.trim()) return;
+    const url = extraImageUrl.trim();
+    if (!formData.primaryImage) {
+      setFormData(prev => ({ ...prev, primaryImage: url }));
+    } else {
+      setFormData(prev => ({ ...prev, additionalImages: [...prev.additionalImages, url] }));
+    }
+    setExtraImageUrl('');
+  };
+
+  const handleSetPrimary = (index: number) => {
+    const newPrimary = formData.additionalImages[index];
+    const oldPrimary = formData.primaryImage;
+    const updated = [...formData.additionalImages];
+    updated.splice(index, 1);
+    if (oldPrimary) updated.unshift(oldPrimary);
+    setFormData(prev => ({ ...prev, primaryImage: newPrimary, additionalImages: updated }));
+  };
+
+  const handleRemoveAdditionalImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalImages: prev.additionalImages.filter((_, i) => i !== index)
+    }));
+  };
+
+  const toggleSize = (size: string) => {
+    setFormData(prev => ({
+      ...prev,
+      sizes: prev.sizes.includes(size) ? prev.sizes.filter(s => s !== size) : [...prev.sizes, size]
+    }));
+  };
+
+  const addCustomSize = () => {
+    const s = customSizeInput.trim().toUpperCase();
+    if (s && !formData.sizes.includes(s)) {
+      setFormData(prev => ({ ...prev, sizes: [...prev.sizes, s] }));
+      setCustomSizeInput('');
+    }
+  };
+
+  const toggleColor = (color: string) => {
+    setFormData(prev => ({
+      ...prev,
+      colors: prev.colors.includes(color) ? prev.colors.filter(c => c !== color) : [...prev.colors, color]
+    }));
+  };
+
+  const addCustomColor = () => {
+    const c = customColorInput.trim();
+    if (c && !formData.colors.includes(c)) {
+      setFormData(prev => ({ ...prev, colors: [...prev.colors, c] }));
+      setCustomColorInput('');
     }
   };
 
@@ -600,6 +687,9 @@ function InventoryPageContent() {
       brand: 'BuyWise Partner',
       description: '',
       primaryImage: '',
+      additionalImages: [],
+      sizes: ['S', 'M', 'L', 'XL'],
+      colors: [],
       youtubeUrl: '',
       mrp: 1999,
       sellingPrice: 1299,
@@ -613,6 +703,9 @@ function InventoryPageContent() {
       partnerId: 'partner_buywise_network',
       partnerName: 'BuyWise Verified Partner Network'
     });
+    setExtraImageUrl('');
+    setCustomSizeInput('');
+    setCustomColorInput('');
     setValidationErrors([]);
     setShowModal(true);
   };
@@ -620,13 +713,18 @@ function InventoryPageContent() {
   const handleEditProduct = (prod: PartnerProduct) => {
     setEditingProduct(prod);
     setProductUrl(prod.productUrl || '');
+    const primImg = prod.primaryImage || (prod.images && prod.images[0]) || '';
+    const otherImgs = prod.images ? prod.images.filter(img => img !== primImg) : [];
     setFormData({
       title: cleanProductTitle(prod.title || ''),
       sku: prod.sku || prod.id,
       category: prod.category || 'Fashion & Clothing',
       brand: prod.brand || 'BuyWise Partner',
       description: prod.description || '',
-      primaryImage: prod.primaryImage || (prod.images && prod.images[0]) || '',
+      primaryImage: primImg,
+      additionalImages: otherImgs,
+      sizes: prod.sizes && prod.sizes.length > 0 ? prod.sizes : ['S', 'M', 'L', 'XL'],
+      colors: prod.colors || [],
       youtubeUrl: prod.youtubeUrl || '',
       mrp: prod.mrp || prod.sellingPrice || 1999,
       sellingPrice: prod.sellingPrice || 1299,
@@ -640,6 +738,9 @@ function InventoryPageContent() {
       partnerId: prod.partnerId || 'partner_buywise_network',
       partnerName: prod.partnerName || 'BuyWise Verified Partner Network'
     });
+    setExtraImageUrl('');
+    setCustomSizeInput('');
+    setCustomColorInput('');
     setValidationErrors([]);
     setShowModal(true);
   };
@@ -656,6 +757,8 @@ function InventoryPageContent() {
       ? formData.description
       : `Verified BuyWise AI product: ${cleanTitle}. Authentic quality and fast delivery guaranteed.`;
 
+    const allImages = [formData.primaryImage, ...formData.additionalImages].filter(Boolean);
+
     if (editingProduct) {
       await updatePartnerProduct(editingProduct.id, {
         title: cleanTitle,
@@ -664,7 +767,9 @@ function InventoryPageContent() {
         brand: formData.brand,
         description,
         primaryImage: formData.primaryImage,
-        images: [formData.primaryImage],
+        images: allImages.length > 0 ? allImages : [formData.primaryImage],
+        sizes: formData.sizes && formData.sizes.length > 0 ? formData.sizes : undefined,
+        colors: formData.colors && formData.colors.length > 0 ? formData.colors : undefined,
         youtubeUrl: formData.youtubeUrl || undefined,
         mrp: Number(formData.mrp),
         sellingPrice: Number(formData.sellingPrice),
@@ -683,11 +788,13 @@ function InventoryPageContent() {
       title: cleanTitle,
       description,
       productUrl: productUrl || undefined,
-      images: [formData.primaryImage],
+      primaryImage: formData.primaryImage,
+      images: allImages.length > 0 ? allImages : [formData.primaryImage],
       youtubeUrl: formData.youtubeUrl || undefined,
       garmentCategory: 'dresses' as const,
       tryOnEnabled: true,
-      sizes: ['Petite S', 'Regular M', 'Dusky L', 'Curvy XXL'],
+      sizes: formData.sizes && formData.sizes.length > 0 ? formData.sizes : ['Free Size'],
+      colors: formData.colors && formData.colors.length > 0 ? formData.colors : undefined,
       warranty: 'Partner Quality Guaranteed',
       gstPercent: 5,
       commissionType: 'PERCENTAGE' as const,
@@ -1568,7 +1675,7 @@ function InventoryPageContent() {
                     onDrop={(e) => {
                       e.preventDefault();
                       setIsDragging(false);
-                      if (e.dataTransfer.files?.[0]) processImageFile(e.dataTransfer.files[0]);
+                      if (e.dataTransfer.files?.length) processMultipleFiles(e.dataTransfer.files);
                     }}
                     style={{
                       border: isDragging ? '2px dashed #00ff88' : '1px dashed rgba(255, 255, 255, 0.25)',
@@ -1583,10 +1690,11 @@ function InventoryPageContent() {
                     <input
                       ref={fileInputRef}
                       type="file"
+                      multiple
                       accept="image/*"
                       style={{ display: 'none' }}
                       onChange={(e) => {
-                        if (e.target.files?.[0]) processImageFile(e.target.files[0]);
+                        if (e.target.files?.length) processMultipleFiles(e.target.files);
                       }}
                     />
 
@@ -1628,22 +1736,22 @@ function InventoryPageContent() {
                           gap: '6px'
                         }}
                       >
-                        📁 Browse / Drop Image File
+                        📁 Browse / Drop Multiple Images
                       </button>
                     </div>
 
                     <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                      Drag and drop image here, or copy an image (or file) and press <strong style={{ color: '#ffffff' }}>Ctrl+V</strong>
+                      Drag and drop multiple images here, or copy an image (or file) and press <strong style={{ color: '#ffffff' }}>Ctrl+V</strong>
                     </div>
                   </div>
 
-                  {/* Manual Input (URL or Path or Data) - type="text" to avoid HTML5 url restriction */}
+                  {/* Manual Input (URL or Path or Data) */}
                   <input
                     type="text"
-                    required
+                    required={!formData.primaryImage}
                     value={formData.primaryImage}
                     onChange={(e) => handleImageInputChange(e.target.value)}
-                    placeholder="Paste image URL, web link, or press Ctrl+V to paste image"
+                    placeholder="Primary image URL, web link, or press Ctrl+V to paste image"
                     style={{
                       width: '100%',
                       padding: '10px 14px',
@@ -1726,6 +1834,287 @@ function InventoryPageContent() {
                       >
                         🗑️ Remove
                       </button>
+                    </div>
+                  )}
+
+                  {/* Multi-Image Gallery Strip */}
+                  <div style={{ marginTop: '14px', padding: '14px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#00d4ff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>📸</span> Multi-Angle Gallery Images ({(formData.primaryImage ? 1 : 0) + formData.additionalImages.length})
+                      </label>
+                      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                        Front, Back, Fabric &amp; Detail Shots
+                      </span>
+                    </div>
+
+                    {/* Extra Image URL input */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                      <input
+                        type="text"
+                        value={extraImageUrl}
+                        onChange={(e) => setExtraImageUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddExtraImageUrl(); } }}
+                        placeholder="Add extra image URL (e.g. back angle, fabric zoom)..."
+                        style={{ flex: 1, padding: '7px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '12px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddExtraImageUrl}
+                        disabled={!extraImageUrl.trim()}
+                        style={{ padding: '7px 14px', borderRadius: '10px', background: 'rgba(0, 212, 255, 0.2)', border: '1px solid #00d4ff', color: '#00d4ff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        + Add URL
+                      </button>
+                    </div>
+
+                    {/* Thumbnails preview strip */}
+                    {(formData.primaryImage || formData.additionalImages.length > 0) && (
+                      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px' }}>
+                        {formData.primaryImage && (
+                          <div style={{ position: 'relative', width: '70px', height: '90px', borderRadius: '10px', overflow: 'hidden', border: '2px solid #00ff88', flexShrink: 0, background: '#0a0a0a' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={formData.primaryImage} alt="Primary" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <span style={{ position: 'absolute', bottom: '2px', left: '2px', right: '2px', background: 'rgba(0,255,136,0.9)', color: '#000', fontSize: '9px', fontWeight: 900, textAlign: 'center', borderRadius: '4px', padding: '1px 0' }}>
+                              Primary
+                            </span>
+                          </div>
+                        )}
+                        {formData.additionalImages.map((img, idx) => (
+                          <div key={idx} style={{ position: 'relative', width: '70px', height: '90px', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0, background: '#0a0a0a' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={img} alt={`Angle ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div
+                              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', opacity: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '4px', transition: 'opacity 0.2s ease' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleSetPrimary(idx)}
+                                style={{ padding: '2px 6px', fontSize: '9px', fontWeight: 800, background: '#00d4ff', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                              >
+                                Primary
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAdditionalImage(idx)}
+                                style={{ padding: '2px 6px', fontSize: '9px', fontWeight: 800, background: '#ff0055', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 📏 SIZES & FITS CONFIGURATION */}
+                <div style={{ marginBottom: '14px', padding: '14px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#00d4ff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📏</span> Available Sizes &amp; Fits
+                    </label>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                      {formData.sizes.length} sizes active
+                    </span>
+                  </div>
+
+                  {/* Standard Apparel Sizes */}
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Apparel Sizes:</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', 'Free Size'].map((sz) => {
+                      const active = formData.sizes.includes(sz);
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => toggleSize(sz)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: active ? 800 : 500,
+                            background: active ? 'linear-gradient(135deg, #00d4ff, #0077ff)' : 'rgba(255, 255, 255, 0.05)',
+                            border: active ? '1px solid #00d4ff' : '1px solid rgba(255, 255, 255, 0.12)',
+                            color: active ? '#000000' : '#cbd5e1',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {active ? `✓ ${sz}` : sz}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footwear Sizes */}
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Footwear Sizes (UK/IND):</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {['UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11'].map((sz) => {
+                      const active = formData.sizes.includes(sz);
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => toggleSize(sz)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: active ? 800 : 500,
+                            background: active ? 'linear-gradient(135deg, #00d4ff, #0077ff)' : 'rgba(255, 255, 255, 0.05)',
+                            border: active ? '1px solid #00d4ff' : '1px solid rgba(255, 255, 255, 0.12)',
+                            color: active ? '#000000' : '#cbd5e1',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {active ? `✓ ${sz}` : sz}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Size Input */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      value={customSizeInput}
+                      onChange={(e) => setCustomSizeInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomSize(); } }}
+                      placeholder="Custom size (e.g. 32, 34, 4XL, 100cm)..."
+                      style={{ flex: 1, padding: '7px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '12px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomSize}
+                      disabled={!customSizeInput.trim()}
+                      style={{ padding: '7px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      + Add Size
+                    </button>
+                  </div>
+
+                  {/* Active Selected Size Tags */}
+                  {formData.sizes.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {formData.sizes.map((sz) => (
+                        <span
+                          key={sz}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: 'rgba(0, 212, 255, 0.15)',
+                            border: '1px solid rgba(0, 212, 255, 0.4)',
+                            color: '#00d4ff',
+                            fontSize: '11px',
+                            fontWeight: 800
+                          }}
+                        >
+                          {sz}
+                          <button
+                            type="button"
+                            onClick={() => toggleSize(sz)}
+                            style={{ background: 'transparent', border: 'none', color: '#00d4ff', cursor: 'pointer', padding: 0, fontSize: '11px', fontWeight: 900 }}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 🎨 COLOR VARIANTS CONFIGURATION */}
+                <div style={{ marginBottom: '14px', padding: '14px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#ff007f', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>🎨</span> Available Colors &amp; Shades
+                    </label>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                      {formData.colors.length} colors selected
+                    </span>
+                  </div>
+
+                  {/* Quick Color Presets */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {['Black', 'White', 'Red', 'Blue', 'Teal', 'Green', 'Pink', 'Yellow', 'Gold', 'Navy', 'Maroon'].map((c) => {
+                      const active = formData.colors.includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => toggleColor(c)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: active ? 800 : 500,
+                            background: active ? 'linear-gradient(135deg, #ff007f, #aa0055)' : 'rgba(255, 255, 255, 0.05)',
+                            border: active ? '1px solid #ff007f' : '1px solid rgba(255, 255, 255, 0.12)',
+                            color: active ? '#ffffff' : '#cbd5e1',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {active ? `✓ ${c}` : c}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Color Input */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      value={customColorInput}
+                      onChange={(e) => setCustomColorInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomColor(); } }}
+                      placeholder="Custom color (e.g. Royal Wine, Pastel Olive)"
+                      style={{ flex: 1, padding: '7px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '12px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomColor}
+                      disabled={!customColorInput.trim()}
+                      style={{ padding: '7px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      + Add Color
+                    </button>
+                  </div>
+
+                  {/* Active Selected Color Tags */}
+                  {formData.colors.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {formData.colors.map((c) => (
+                        <span
+                          key={c}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: 'rgba(255, 0, 127, 0.15)',
+                            border: '1px solid rgba(255, 0, 127, 0.4)',
+                            color: '#ff007f',
+                            fontSize: '11px',
+                            fontWeight: 800
+                          }}
+                        >
+                          {c}
+                          <button
+                            type="button"
+                            onClick={() => toggleColor(c)}
+                            style={{ background: 'transparent', border: 'none', color: '#ff007f', cursor: 'pointer', padding: 0, fontSize: '11px', fontWeight: 900 }}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>

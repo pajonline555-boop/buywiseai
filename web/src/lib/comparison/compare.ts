@@ -6,7 +6,7 @@ import { normalizeOffer } from './normalize';
 import { validateSearchResultOffer } from '../search/SearchResultValidator';
 import { CanonicalProduct } from '../query/types';
 import { selectRetailerQuery } from './planner';
-import { classifyProductMatch, isSameProductAndVariant, groupSameProductsAcrossRetailers, extractFabricFromText, extractPackCountFromText } from './matcher';
+import { classifyProductMatch, groupSameProductsAcrossRetailers, extractFabricFromText } from './matcher';
 
 import { normalizeTextQueryToCanonical } from '../query/normalize';
 import { calculateSmartValueScore } from '../score/engine';
@@ -14,7 +14,6 @@ import { calculateTrustScore } from '../trust/engine';
 import { recordPriceHistory, getPriceHistory } from '../history/store';
 import { analyzePriceTrend } from '../history/engine';
 import { auditAndIsolateDuplicateImages } from './imageAuditor';
-import { getCategoryMarketFallbackOffers } from './categoryMarketFallback';
 
 export async function executeComparison(
   query: string,
@@ -146,32 +145,17 @@ export async function executeCanonicalComparison(
     console.warn(`[ImageAuditor] Isolated ${imgReport.duplicateImageCount} duplicate images across distinct products.`);
   }
 
-  let allOffers = [...sanitizedOffers];
-  if (allOffers.length < 3) {
-    const fallbackOffers = getCategoryMarketFallbackOffers(canonical.rawInput || canonical.title, canonical);
-    const existingStoreNames = allOffers.map((o) => o.store.toLowerCase());
-    for (const fb of fallbackOffers) {
-      const alreadyPresent = existingStoreNames.some((s) => s.includes(fb.store.toLowerCase()) || fb.store.toLowerCase().includes(s));
-      if (!alreadyPresent) {
-        allOffers.push(fb);
-      }
+  // Filter out any offers that were rejected or have critically conflicting categories
+  const allOffers = sanitizedOffers.filter((o) => {
+    // If offer was classified as low confidence (<0.20), reject from primary comparison
+    if ((o.matchConfidence || 0) < 0.20) {
+      console.info(`[CompareEngine] Rejecting unrelated offer: "${o.title}" (Confidence: ${o.matchConfidence})`);
+      return false;
     }
-    successfulStores = allOffers.length;
-    providerStatuses.forEach((ps) => {
-      const retailerOffers = allOffers.filter((o) => o.retailerId === ps.retailerId);
-      if (retailerOffers.length > 0) {
-        const hasVerifiedLive = retailerOffers.some((o) => o.verificationStatus === 'verified_live' && !o.isSearchLinkOnly);
-        const hasSearchLinkOnly = retailerOffers.some((o) => o.isSearchLinkOnly);
-        if (hasVerifiedLive) {
-          ps.status = ps.retailerId === 'buywise_partners' ? 'PARTNER_LIVE' : 'LIVE';
-          ps.message = undefined;
-        } else if (hasSearchLinkOnly) {
-          ps.status = 'SEARCH_LINK_ONLY';
-          ps.message = 'Direct retailer search link. Prices and stock verified directly on retailer site.';
-        }
-      }
-    });
-  }
+    return true;
+  });
+
+  successfulStores = new Set(allOffers.map((o) => o.retailerId)).size;
 
   // Calculate Smart Value Score & Independent Shopping Trust Score
   allOffers.forEach((offer) => {
@@ -186,27 +170,29 @@ export async function executeCanonicalComparison(
   });
 
   // Determine Best Value & Best Match
-  // Rule: An offer can ONLY be isBestValue if matchConfidence >= 0.70!
-  // Weak or unrelated items (<0.70 match) must NEVER be crowned Best Value.
+  // STRICT RULE: An offer can ONLY be isBestValue or isBestMatch if matchConfidence >= 0.78!
+  // Low-confidence or unrelated items (<0.78 match) must NEVER be crowned Best Value or Best Match.
   let maxScore = -1;
   let maxMatch = -1;
   allOffers.forEach((o) => {
-    if ((o.matchConfidence || 0) >= 0.70 && (o.smartValueScore || 0) > maxScore) {
+    if ((o.matchConfidence || 0) >= 0.78 && (o.smartValueScore || 0) > maxScore) {
       maxScore = o.smartValueScore || 0;
     }
-    if ((o.matchConfidence || 0) > maxMatch) {
+    if ((o.matchConfidence || 0) >= 0.78 && (o.matchConfidence || 0) > maxMatch) {
       maxMatch = o.matchConfidence || 0;
     }
   });
 
   allOffers.forEach((o) => {
-    if (maxScore > 0 && o.smartValueScore === maxScore && (o.matchConfidence || 0) >= 0.70) {
+    if (maxScore > 0 && o.smartValueScore === maxScore && (o.matchConfidence || 0) >= 0.78) {
       o.isBestValue = true;
     } else {
       o.isBestValue = false;
     }
-    if (maxMatch >= 0.65 && o.matchConfidence === maxMatch) {
+    if (maxMatch >= 0.78 && o.matchConfidence === maxMatch) {
       o.isBestMatch = true;
+    } else {
+      o.isBestMatch = false;
     }
   });
 

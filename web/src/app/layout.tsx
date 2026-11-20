@@ -5,6 +5,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import AppHeader from "@/components/AppHeader";
 import AppFooter from "@/components/AppFooter";
 import WebSplashScreen from "@/components/WebSplashScreen";
+import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
 import { AuthProvider } from "@/lib/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
@@ -106,6 +107,7 @@ export default function RootLayout({
               <AppHeader />
               {children}
               <Chatbot />
+              <FloatingWhatsAppButton />
               <MobileBottomNav />
               <AppFooter />
             </AuthProvider>

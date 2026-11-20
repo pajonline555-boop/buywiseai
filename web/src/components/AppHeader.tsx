@@ -6,12 +6,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/i18nContext';
 import { useTheme } from '@/lib/theme/themeProvider';
 import { useAuth, checkIsAdminUser } from '@/lib/AuthContext';
+import { useCart } from '@/lib/cart/cartStore';
 import VoiceSearchModal from '@/components/VoiceSearchModal';
 
 export default function AppHeader() {
   const { t } = useTranslation();
   const { accentColor } = useTheme();
   const { user, userProfile, isAdmin, logout } = useAuth();
+  const { totalItemCount } = useCart();
   const pathname = usePathname();
   const router = useRouter();
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
@@ -212,6 +214,43 @@ export default function AppHeader() {
               </button>
             </div>
           )}
+
+          <Link href="/cart" style={{ textDecoration: 'none' }}>
+            <button
+              title="Shopping Cart & Comparison Shortlist"
+              style={{
+                position: 'relative',
+                padding: '6px 12px',
+                fontSize: '13px',
+                fontWeight: 800,
+                background: totalItemCount > 0 ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                color: totalItemCount > 0 ? '#00ff88' : '#ffffff',
+                border: totalItemCount > 0 ? '1px solid rgba(0, 255, 136, 0.4)' : '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <span>🛒</span>
+              {totalItemCount > 0 && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 900,
+                    background: '#00ff88',
+                    color: '#000',
+                    padding: '1px 6px',
+                    borderRadius: '8px',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {totalItemCount}
+                </span>
+              )}
+            </button>
+          </Link>
 
           <button
             onClick={() => setIsVoiceModalOpen(true)}

@@ -40,6 +40,12 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
   const [price, setPrice] = useState<number>(2999);
   const [mrp, setMrp] = useState<number>(4999);
   const [imageUrl, setImageUrl] = useState('');
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [extraImageUrl, setExtraImageUrl] = useState('');
+  const [selectedSizes, setSelectedSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
+  const [customSizeInput, setCustomSizeInput] = useState('');
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [customColorInput, setCustomColorInput] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [category, setCategory] = useState<typeof CATEGORY_OPTIONS[number]>('Fashion');
   const [brand, setBrand] = useState('Featured Brand');
@@ -75,10 +81,87 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
     }
     try {
       const res = await compressImageForStorage(file, { maxDimension: 1080, initialQuality: 0.84 });
-      setImageUrl(res.dataUrl);
-      setOptimizationInfo(res);
+      if (!imageUrl) {
+        setImageUrl(res.dataUrl);
+        setOptimizationInfo(res);
+      } else {
+        setAdditionalImages(prev => [...prev, res.dataUrl]);
+      }
     } catch (err) {
       console.warn('Image compression fallback:', err);
+    }
+  };
+
+  const processMultipleFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i];
+      if (file.type && file.type.startsWith('image/')) {
+        try {
+          const res = await compressImageForStorage(file, { maxDimension: 1080, initialQuality: 0.84 });
+          if (i === 0 && !imageUrl) {
+            setImageUrl(res.dataUrl);
+            setOptimizationInfo(res);
+          } else {
+            setAdditionalImages(prev => [...prev, res.dataUrl]);
+          }
+        } catch (err) {
+          console.warn('Multiple image compression notice:', err);
+        }
+      }
+    }
+  };
+
+  const handleAddExtraImageUrl = () => {
+    if (!extraImageUrl.trim()) return;
+    const url = extraImageUrl.trim();
+    if (!imageUrl) {
+      setImageUrl(url);
+    } else {
+      setAdditionalImages(prev => [...prev, url]);
+    }
+    setExtraImageUrl('');
+  };
+
+  const handleSetPrimary = (index: number) => {
+    const newPrimary = additionalImages[index];
+    const oldPrimary = imageUrl;
+    const updated = [...additionalImages];
+    updated.splice(index, 1);
+    if (oldPrimary) updated.unshift(oldPrimary);
+    setImageUrl(newPrimary);
+    setAdditionalImages(updated);
+  };
+
+  const handleRemoveAdditionalImage = (index: number) => {
+    setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleSize = (size: string) => {
+    setSelectedSizes(prev => 
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    );
+  };
+
+  const addCustomSize = () => {
+    const s = customSizeInput.trim().toUpperCase();
+    if (s && !selectedSizes.includes(s)) {
+      setSelectedSizes(prev => [...prev, s]);
+      setCustomSizeInput('');
+    }
+  };
+
+  const toggleColor = (color: string) => {
+    setSelectedColors(prev => 
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+    );
+  };
+
+  const addCustomColor = () => {
+    const c = customColorInput.trim();
+    if (c && !selectedColors.includes(c)) {
+      setSelectedColors(prev => [...prev, c]);
+      setCustomColorInput('');
     }
   };
 
@@ -428,12 +511,13 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
         mrp: finalMrp,
         sellingPrice: finalSellingPrice,
         stock: stock || 50,
-        images: [finalImage],
+        images: [finalImage, ...additionalImages].filter(Boolean),
         primaryImage: finalImage,
         fulfillment: 'PARTNER_FULFILLED',
         source: 'PARTNER',
         tryOnEnabled: true,
-        sizes: ['Petite S', 'Regular M', 'Dusky L', 'Curvy XXL'],
+        sizes: selectedSizes.length > 0 ? selectedSizes : undefined,
+        colors: selectedColors.length > 0 ? selectedColors : undefined,
         garmentCategory: garmentCat,
         returnPolicy: '7 Days Return & Refund Guaranteed',
         warranty: '1 Year Brand Guarantee',
@@ -715,19 +799,21 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
               </span>
             </div>
 
-            {/* Drag & Drop / Paste Dropzone */}
+            {/* Drag & Drop / Paste Dropzone with Multiple Image Support */}
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
                 setIsDragging(false);
-                if (e.dataTransfer.files?.[0]) processImageFile(e.dataTransfer.files[0]);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  processMultipleFiles(e.dataTransfer.files);
+                }
               }}
               style={{
                 border: isDragging ? '2px dashed #00ff88' : '1px dashed rgba(255, 255, 255, 0.25)',
                 borderRadius: '16px',
-                padding: '12px',
+                padding: '14px',
                 background: isDragging ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 255, 255, 0.03)',
                 marginBottom: '10px',
                 transition: 'all 0.2s ease',
@@ -738,9 +824,12 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 style={{ display: 'none' }}
                 onChange={(e) => {
-                  if (e.target.files?.[0]) processImageFile(e.target.files[0]);
+                  if (e.target.files && e.target.files.length > 0) {
+                    processMultipleFiles(e.target.files);
+                  }
                 }}
               />
 
@@ -749,7 +838,7 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                   type="button"
                   onClick={handlePasteFromClipboardClick}
                   style={{
-                    padding: '6px 12px',
+                    padding: '8px 14px',
                     borderRadius: '10px',
                     background: 'linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 212, 255, 0.2))',
                     border: '1px solid #00ff88',
@@ -762,14 +851,14 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                     gap: '6px'
                   }}
                 >
-                  📋 Paste Image from Clipboard (Ctrl+V)
+                  📋 Paste Image (Ctrl+V)
                 </button>
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   style={{
-                    padding: '6px 12px',
+                    padding: '8px 14px',
                     borderRadius: '10px',
                     background: 'rgba(255, 255, 255, 0.08)',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
@@ -782,12 +871,12 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
                     gap: '6px'
                   }}
                 >
-                  📁 Browse / Drop File
+                  📁 Browse / Upload Multiple Images
                 </button>
               </div>
 
               <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                Drag and drop image here, or copy an image (or file) and press <strong style={{ color: '#ffffff' }}>Ctrl+V</strong>
+                Select multiple photos at once, drop image files here, or press <strong style={{ color: '#ffffff' }}>Ctrl+V</strong>
               </div>
             </div>
 
@@ -795,79 +884,270 @@ export default function AddProductByLinkModal({ isOpen, onClose, onSuccess }: Ad
               type="text"
               value={imageUrl}
               onChange={(e) => handleImageInputChange(e.target.value)}
-              placeholder="Paste image URL, web link, or press Ctrl+V to paste image"
+              placeholder="Paste primary image URL, web link, or press Ctrl+V"
               style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', fontSize: '13px', outline: 'none', marginBottom: '8px' }}
             />
 
-            {imageUrl && (
-              <div style={{
-                position: 'relative',
-                width: '100%',
-                borderRadius: '14px',
-                padding: '10px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(0, 255, 136, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  position: 'relative',
-                  width: '64px',
-                  height: '64px',
+            {/* Extra Image URL Adder */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <input
+                type="text"
+                value={extraImageUrl}
+                onChange={(e) => setExtraImageUrl(e.target.value)}
+                placeholder="+ Add additional gallery image URL"
+                style={{ flex: 1, padding: '8px 12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontSize: '12px', outline: 'none' }}
+              />
+              <button
+                type="button"
+                onClick={handleAddExtraImageUrl}
+                disabled={!extraImageUrl.trim()}
+                style={{
+                  padding: '8px 14px',
                   borderRadius: '10px',
-                  overflow: 'hidden',
-                  background: '#080612',
-                  flexShrink: 0,
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt="Preview"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/kamarbandh.png';
-                    }}
-                  />
+                  background: extraImageUrl.trim() ? '#00d4ff' : 'rgba(255,255,255,0.08)',
+                  color: extraImageUrl.trim() ? '#000' : 'rgba(255,255,255,0.3)',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  border: 'none',
+                  cursor: extraImageUrl.trim() ? 'pointer' : 'not-allowed'
+                }}
+              >
+                + Add Image
+              </button>
+            </div>
+
+            {/* Multi-Image Gallery Thumbnail Strip */}
+            {(imageUrl || additionalImages.length > 0) && (
+              <div style={{ marginTop: '10px', padding: '12px', borderRadius: '14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(0, 212, 255, 0.3)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#00d4ff', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>🖼️ Product Image Gallery ({(imageUrl ? 1 : 0) + additionalImages.length} photos)</span>
+                  <span style={{ fontSize: '11px', color: '#00ff88' }}>Tap &quot;Make Primary&quot; to change cover photo</span>
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#00ff88', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>🟢</span>
-                    {imageUrl.startsWith('data:image/') ? 'Image Optimized & Connected' : 'Image URL Connected'}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {imageUrl.startsWith('data:image/') ? 'Compressed High-Efficiency WebP/JPEG' : imageUrl}
-                  </div>
-                  {optimizationInfo && (
-                    <div style={{ fontSize: '11px', color: '#00ff88', marginTop: '3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>⚡</span>
-                      <span>
-                        Optimized: {formatFileSize(optimizationInfo.originalSize)} ➔ {formatFileSize(optimizationInfo.compressedSize)} ({optimizationInfo.savedPercentage}% saved • HD Quality)
-                      </span>
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px' }}>
+                  {/* Primary Thumbnail */}
+                  {imageUrl && (
+                    <div style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', border: '2px solid #00ff88', flexShrink: 0, background: '#0a0818' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imageUrl} alt="Primary" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(0, 255, 136, 0.9)', color: '#000', fontSize: '9px', fontWeight: 900, textAlign: 'center', padding: '1px 0' }}>
+                        ★ PRIMARY
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl('')}
+                        style={{ position: 'absolute', bottom: 2, right: 2, width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255, 0, 80, 0.85)', color: 'white', border: 'none', fontSize: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setImageUrl('')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    background: 'rgba(255, 0, 127, 0.2)',
-                    border: '1px solid rgba(255, 0, 127, 0.5)',
-                    color: '#ff007f',
-                    fontWeight: 700,
-                    fontSize: '11px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🗑️ Remove
-                </button>
+                  {/* Additional Images */}
+                  {additionalImages.map((img, idx) => (
+                    <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.2)', flexShrink: 0, background: '#0a0818' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img} alt={`Gallery ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button
+                        type="button"
+                        onClick={() => handleSetPrimary(idx)}
+                        style={{ position: 'absolute', bottom: 2, left: 2, padding: '2px 4px', borderRadius: '4px', background: 'rgba(0, 212, 255, 0.9)', color: '#000', border: 'none', fontSize: '8px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Make Primary
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAdditionalImage(idx)}
+                        style={{ position: 'absolute', top: 2, right: 2, width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(255, 0, 80, 0.85)', color: 'white', border: 'none', fontSize: '9px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+          </div>
+
+          {/* 📏 SIZING & PRODUCT VARIANTS CONFIGURATION */}
+          <div style={{ marginBottom: '20px', padding: '16px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 800, color: '#00d4ff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>📏</span> Product Sizes &amp; Variants
+              </label>
+              <span style={{ fontSize: '11px', color: selectedSizes.length > 0 ? '#00ff88' : '#ffd700', fontWeight: 700 }}>
+                {selectedSizes.length > 0 ? `✓ ${selectedSizes.length} sizes active` : 'ℹ️ No sizes (one-size / accessory)'}
+              </span>
+            </div>
+
+            {/* Quick Apparel Size Chips */}
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>Apparel Sizes (Click to toggle):</div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', 'Free Size'].map((sz) => {
+                  const active = selectedSizes.includes(sz);
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => toggleSize(sz)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: active ? 900 : 600,
+                        background: active ? 'linear-gradient(135deg, #00d4ff, #0055ff)' : 'rgba(255, 255, 255, 0.06)',
+                        border: active ? '1px solid #00d4ff' : '1px solid rgba(255, 255, 255, 0.15)',
+                        color: active ? '#ffffff' : '#cbd5e1',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {active ? `✓ ${sz}` : sz}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footwear Sizing Chips */}
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>Footwear Sizes (UK):</div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11'].map((sz) => {
+                  const active = selectedSizes.includes(sz);
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => toggleSize(sz)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: active ? 900 : 600,
+                        background: active ? 'linear-gradient(135deg, #00ff88, #00aa55)' : 'rgba(255, 255, 255, 0.06)',
+                        border: active ? '1px solid #00ff88' : '1px solid rgba(255, 255, 255, 0.15)',
+                        color: active ? '#000000' : '#cbd5e1',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {active ? `✓ ${sz}` : sz}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Size Adder */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                type="text"
+                value={customSizeInput}
+                onChange={(e) => setCustomSizeInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomSize(); } }}
+                placeholder="Custom size (e.g. 32B, 38, 42, 6-9M)"
+                style={{ flex: 1, padding: '7px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '12px' }}
+              />
+              <button
+                type="button"
+                onClick={addCustomSize}
+                disabled={!customSizeInput.trim()}
+                style={{ padding: '7px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                + Add Size
+              </button>
+            </div>
+
+            {/* Active Selected Size Tags */}
+            {selectedSizes.length > 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                {selectedSizes.map((sz) => (
+                  <span
+                    key={sz}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: 'rgba(0, 212, 255, 0.15)',
+                      border: '1px solid rgba(0, 212, 255, 0.4)',
+                      color: '#00d4ff',
+                      fontSize: '11px',
+                      fontWeight: 800
+                    }}
+                  >
+                    {sz}
+                    <button
+                      type="button"
+                      onClick={() => toggleSize(sz)}
+                      style={{ background: 'transparent', border: 'none', color: '#00d4ff', cursor: 'pointer', padding: 0, fontSize: '11px', fontWeight: 900 }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 🎨 COLOR VARIANTS CONFIGURATION */}
+          <div style={{ marginBottom: '20px', padding: '16px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 800, color: '#ff007f', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🎨</span> Available Colors &amp; Shades
+              </label>
+              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                {selectedColors.length} colors selected
+              </span>
+            </div>
+
+            {/* Quick Color Presets */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              {['Black', 'White', 'Red', 'Blue', 'Teal', 'Green', 'Pink', 'Yellow', 'Gold', 'Navy', 'Maroon'].map((c) => {
+                const active = selectedColors.includes(c);
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => toggleColor(c)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: active ? 800 : 500,
+                      background: active ? 'linear-gradient(135deg, #ff007f, #aa0055)' : 'rgba(255, 255, 255, 0.05)',
+                      border: active ? '1px solid #ff007f' : '1px solid rgba(255, 255, 255, 0.12)',
+                      color: active ? '#ffffff' : '#cbd5e1',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {active ? `✓ ${c}` : c}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Color Input */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={customColorInput}
+                onChange={(e) => setCustomColorInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomColor(); } }}
+                placeholder="Custom color (e.g. Royal Wine, Pastel Olive)"
+                style={{ flex: 1, padding: '7px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '12px' }}
+              />
+              <button
+                type="button"
+                onClick={addCustomColor}
+                disabled={!customColorInput.trim()}
+                style={{ padding: '7px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                + Add Color
+              </button>
+            </div>
           </div>
 
           {/* Submit Button */}

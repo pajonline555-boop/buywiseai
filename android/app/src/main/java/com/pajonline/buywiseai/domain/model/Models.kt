@@ -37,7 +37,10 @@ data class StoreOffer(
     val ageGroup: String? = null,
     val packQty: Int? = 1,
     val sourceLabel: String? = null,
-    val isSearchLinkOnly: Boolean? = false
+    val isSearchLinkOnly: Boolean? = false,
+    val additionalImages: List<String> = emptyList(),
+    val availableSizes: List<String> = emptyList(),
+    val availableColors: List<String> = emptyList()
 )
 
 data class SameProductGroup(

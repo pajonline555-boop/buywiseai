@@ -1,8 +1,11 @@
 package com.pajonline.buywiseai.ui.screens.details
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
@@ -33,25 +38,24 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.pajonline.buywiseai.domain.model.StoreOffer
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
 import com.pajonline.buywiseai.ui.theme.BuyWiseGold
 import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
-
-import android.content.Context
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 
 private fun isWearableProduct(title: String): Boolean {
     val lower = title.lowercase().trim()
@@ -353,6 +357,150 @@ fun ProductDetailsScreen(
                                 fontSize = 15.sp,
                                 color = Color.Gray
                             )
+                        }
+                    }
+
+                    // Multi-Image Gallery
+                    val allImages = remember(offer.imageUrl, offer.additionalImages) {
+                        val list = mutableListOf<String>()
+                        if (!offer.imageUrl.isNullOrBlank()) list.add(offer.imageUrl)
+                        list.addAll(offer.additionalImages.filter { it.isNotBlank() })
+                        list.distinct()
+                    }
+                    var selectedImageIndex by remember(offer.id) { mutableStateOf(0) }
+                    var selectedSize by remember(offer.id) { mutableStateOf(offer.availableSizes.firstOrNull() ?: "") }
+                    var selectedColor by remember(offer.id) { mutableStateOf(offer.availableColors.firstOrNull() ?: "") }
+
+                    if (allImages.isNotEmpty()) {
+                        val currentImage = allImages.getOrNull(selectedImageIndex) ?: allImages.first()
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .background(Color(0xFF0F0B1E), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = currentImage,
+                                contentDescription = offer.title,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(6.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+
+                        if (allImages.size > 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                allImages.forEachIndexed { idx, imgUrl ->
+                                    val isSelected = idx == selectedImageIndex
+                                    Box(
+                                        modifier = Modifier
+                                            .width(52.dp)
+                                            .height(64.dp)
+                                            .background(Color(0xFF0F0B1E), RoundedCornerShape(8.dp))
+                                            .clickable { selectedImageIndex = idx }
+                                            .padding(2.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = imgUrl,
+                                            contentDescription = "Thumbnail $idx",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        if (isSelected) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(BuyWiseCyan.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Available Sizes & Fits Selection
+                    if (offer.availableSizes.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Select Size:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.LightGray
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            offer.availableSizes.forEach { sz ->
+                                val isSelected = sz == selectedSize
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            if (isSelected) BuyWiseCyan else Color(0xFF25213B),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable { selectedSize = sz }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = sz,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) Color.Black else Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Available Colors & Shades Selection
+                    if (offer.availableColors.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Available Colors:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.LightGray
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            offer.availableColors.forEach { col ->
+                                val isSelected = col == selectedColor
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            if (isSelected) BuyWiseNeonPink else Color(0xFF25213B),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable { selectedColor = col }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = col,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) Color.White else Color.LightGray
+                                    )
+                                }
+                            }
                         }
                     }
 

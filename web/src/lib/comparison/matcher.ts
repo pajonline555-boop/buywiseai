@@ -274,7 +274,7 @@ export function groupSameProductsAcrossRetailers(offers: StoreOffer[]): import('
   }> = [];
 
   for (const offer of offers) {
-    let matchedGroup = groups.find(g => g.offers.some(existing => isSameProductAndVariant(existing, offer)));
+    const matchedGroup = groups.find(g => g.offers.some(existing => isSameProductAndVariant(existing, offer)));
     if (matchedGroup) {
       matchedGroup.offers.push(offer);
     } else {
@@ -336,20 +336,38 @@ export function classifyProductMatch(
 
   const tier = classifyProductTier(offer, canonical);
 
+  const matchingAttributes: string[] = [];
+  const differingAttributes: string[] = [];
+
   // --- BRAND CONFLICT CHECK ---
-  // If user searched for a specific brand (e.g. Lancer) and the offer is a distinct brand (e.g. Asian or Puma),
-  // they are completely different products!
-  if (canonicalBrand && offerBrand && canonicalBrand !== offerBrand) {
-    return {
-      matchType: 'similar',
-      matchConfidence: 0.15,
-      identityConfidence: 0.05,
-      attributeMatchScore: 0.10,
-      visualSimilarityScore: 0.40,
-      tier,
-      isSameProductAndVariant: false,
-      differenceReason: `Brand mismatch: Expected ${canonical.brand}, found ${offer.brand || offerBrand}`,
-    };
+  let brandMatch = false;
+  if (canonicalBrand && offerBrand) {
+    if (canonicalBrand === offerBrand) {
+      brandMatch = true;
+      matchingAttributes.push(`Brand: ${offer.brand || offerBrand}`);
+    } else {
+      differingAttributes.push(`Brand: Expected ${canonical.brand}, found ${offer.brand || offerBrand}`);
+      return {
+        matchType: 'similar',
+        matchConfidence: 0.15,
+        identityConfidence: 0.05,
+        attributeMatchScore: 0.10,
+        visualSimilarityScore: 0.35,
+        tier,
+        isSameProductAndVariant: false,
+        differenceReason: `Brand mismatch: Expected ${canonical.brand}, found ${offer.brand || offerBrand}`,
+        matchExplanation: {
+          categoryMatch: true,
+          materialMatch: false,
+          colorMatch: false,
+          styleMatch: false,
+          brandMatch: false,
+          matchingAttributes,
+          differingAttributes,
+          summary: `Different brand: ${canonical.brand} vs ${offer.brand || offerBrand}`,
+        },
+      };
+    }
   }
 
   // --- GENDER CONFLICT CHECK ---
@@ -360,89 +378,221 @@ export function classifyProductMatch(
   const isOfferMen = /\b(men|mens|men's|boy|boys)\b/i.test(offerTitle);
 
   if ((isCanonicalMen && isOfferWomen) || (isCanonicalWomen && isOfferMen)) {
+    differingAttributes.push(`Target audience: ${isCanonicalMen ? 'Men' : 'Women'} vs ${isOfferWomen ? 'Women' : 'Men'}`);
     return {
       matchType: 'similar',
-      matchConfidence: 0.25,
-      identityConfidence: 0.15,
-      attributeMatchScore: 0.20,
-      visualSimilarityScore: 0.40,
+      matchConfidence: 0.20,
+      identityConfidence: 0.10,
+      attributeMatchScore: 0.15,
+      visualSimilarityScore: 0.30,
       tier,
       isSameProductAndVariant: false,
       differenceReason: `Gender mismatch: Target is for ${isCanonicalMen ? 'Men' : 'Women'}, but offer is for ${isOfferWomen ? 'Women' : 'Men'}`,
+      matchExplanation: {
+        categoryMatch: false,
+        materialMatch: false,
+        colorMatch: false,
+        styleMatch: false,
+        brandMatch,
+        matchingAttributes,
+        differingAttributes,
+        summary: `Gender mismatch between target and offer.`,
+      },
     };
   }
 
+  // --- GARMENT TYPE / PRODUCT TYPE CHECK ---
+  const canonicalGarment = extractGarmentType(canonicalText) || canonical.subcategory?.toLowerCase();
+  const offerGarment = extractGarmentType(offerTitle);
+  let categoryMatch = true;
+
+  if (canonicalGarment && offerGarment) {
+    if (canonicalGarment === offerGarment) {
+      matchingAttributes.push(`Garment type: ${canonicalGarment.replace(/_/g, ' ')}`);
+    } else {
+      categoryMatch = false;
+      differingAttributes.push(`Garment type: Expected ${canonicalGarment.replace(/_/g, ' ')}, found ${offerGarment.replace(/_/g, ' ')}`);
+    }
+  }
+
+  // --- FABRIC / MATERIAL CHECK ---
+  const canonicalFabric = canonical.fabric || extractFabricFromText(canonicalText) || (canonical.materials && canonical.materials[0]);
+  const offerFabric = offer.fabric || offer.variant?.fabric || extractFabricFromText(offerTitle);
+  let materialMatch = false;
+
+  if (canonicalFabric && offerFabric) {
+    if (canonicalFabric.toLowerCase() === offerFabric.toLowerCase()) {
+      materialMatch = true;
+      matchingAttributes.push(`Fabric: ${offerFabric}`);
+    } else {
+      differingAttributes.push(`Fabric: Target is ${canonicalFabric}, offer is ${offerFabric}`);
+    }
+  } else if (!canonicalFabric && !offerFabric) {
+    materialMatch = true;
+  }
+
+  // --- COLOR CHECK ---
+  const canonicalColors = canonical.colors && canonical.colors.length > 0 ? canonical.colors.map(c => c.toLowerCase()) : extractColorsFromText(canonicalText);
+  const offerColors = offer.variant?.color ? [offer.variant.color.toLowerCase()] : extractColorsFromText(offerTitle);
+  let colorMatch = false;
+
+  if (canonicalColors.length > 0 && offerColors.length > 0) {
+    const hasCommonColor = canonicalColors.some(c => offerColors.some(oc => oc.includes(c) || c.includes(oc)));
+    if (hasCommonColor) {
+      colorMatch = true;
+      matchingAttributes.push(`Color: ${offerColors.join(', ')}`);
+    } else {
+      differingAttributes.push(`Color: Expected ${canonicalColors.join('/')}, found ${offerColors.join('/')}`);
+    }
+  } else {
+    colorMatch = true;
+  }
+
+  // --- EMBROIDERY / DESIGN STYLE CHECK ---
+  const canonicalEmbroidery = extractEmbroideryStyle(canonicalText);
+  const offerEmbroidery = extractEmbroideryStyle(offerTitle);
+  let styleMatch = false;
+
+  if (canonicalEmbroidery.length > 0 && offerEmbroidery.length > 0) {
+    const commonStyles = canonicalEmbroidery.filter(s => offerEmbroidery.includes(s));
+    if (commonStyles.length > 0) {
+      styleMatch = true;
+      matchingAttributes.push(`Design work: ${commonStyles.join(', ')}`);
+    } else {
+      differingAttributes.push(`Design: Expected ${canonicalEmbroidery.join('/')}, found ${offerEmbroidery.join('/')}`);
+    }
+  } else {
+    styleMatch = true;
+  }
+
   // --- MODEL SPECIFICITY CHECK ---
-  // E.g., Lancer Wonder-3 vs Lancer Wonder-10
   if (canonicalModel && offerModel && canonicalModel !== offerModel) {
+    differingAttributes.push(`Model: Expected ${canonicalModel}, found ${offerModel}`);
     return {
       matchType: 'similar',
       matchConfidence: 0.35,
       identityConfidence: 0.20,
-      attributeMatchScore: 0.50,
-      visualSimilarityScore: 0.50,
+      attributeMatchScore: 0.40,
+      visualSimilarityScore: 0.45,
       tier,
       isSameProductAndVariant: false,
       differenceReason: `Model mismatch: Expected ${canonicalModel}, found ${offerModel}`,
+      matchExplanation: {
+        categoryMatch,
+        materialMatch,
+        colorMatch,
+        styleMatch,
+        brandMatch,
+        matchingAttributes,
+        differingAttributes,
+        summary: `Model mismatch: ${canonicalModel} vs ${offerModel}`,
+      },
     };
   }
 
-  // --- VARIANT ATTRIBUTE CHECK (Size / Color) ---
+  // --- VARIANT ATTRIBUTE CHECK (Size) ---
   const offerSize = offer.variant?.size || extractSizeFromText(offer.title);
   const canonicalSize = extractSizeFromText(canonical.rawInput);
-
   let isVariantMismatch = false;
   let variantReason = '';
+
   if (canonicalSize && offerSize && canonicalSize.toUpperCase() !== offerSize.toUpperCase()) {
     isVariantMismatch = true;
     variantReason = `Size difference: Expected ${canonicalSize}, offer is ${offerSize}`;
+    differingAttributes.push(variantReason);
   }
 
   // --- IDENTITY CONFIDENCE CALCULATION ---
-  let identityConfidence = 0.50;
-
+  let identityConfidence = 0.40;
   if (canonicalModel && offerModel && canonicalModel === offerModel) {
     identityConfidence = 0.95;
+    matchingAttributes.push(`Exact Model: ${offerModel}`);
   } else if (canonicalBrand && offerBrand && canonicalBrand === offerBrand) {
-    identityConfidence = 0.80;
+    identityConfidence = 0.85;
   } else if (canonical.productName) {
     const nameWords = canonical.productName.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     const matches = nameWords.filter(w => offerTitle.includes(w));
     if (nameWords.length > 0) {
-      identityConfidence = Math.min(0.85, (matches.length / nameWords.length) * 0.85);
+      const matchRatio = matches.length / nameWords.length;
+      if (!canonicalBrand || (offerBrand && canonicalBrand === offerBrand)) {
+        identityConfidence = Math.min(0.88, 0.40 + (matchRatio * 0.50));
+      } else {
+        identityConfidence = Math.min(0.70, matchRatio * 0.70);
+      }
     }
   }
 
-  // --- ATTRIBUTE MATCH SCORE ---
-  let attributeScore = 0;
-  if (canonicalBrand && (offerBrand === canonicalBrand || offerTitle.includes(canonicalBrand))) {
-    attributeScore += 0.40;
+  // When category, fabric, color, and design all match without brand conflict, identity concordance is strong
+  if (categoryMatch && materialMatch && colorMatch && styleMatch && !canonicalBrand) {
+    identityConfidence = Math.max(identityConfidence, 0.76);
   }
 
-  const isFootwear = canonical.category === 'footwear' || offerTitle.includes('shoes') || offerTitle.includes('sneakers');
-  if (isFootwear) {
-    attributeScore += 0.30;
-  }
+  // --- ATTRIBUTE MATCH SCORE CALCULATION ---
+  let attributeScore = 0.10;
+  if (categoryMatch) attributeScore += 0.30;
+  else attributeScore -= 0.30;
 
-  const attributeMatchScore = Math.min(1.0, parseFloat(attributeScore.toFixed(2)));
-  const visualSimilarityScore = 0.60;
+  if (materialMatch) attributeScore += 0.20;
+  else if (canonicalFabric && offerFabric) attributeScore -= 0.25;
+
+  if (colorMatch) attributeScore += 0.20;
+  else if (canonicalColors.length > 0 && offerColors.length > 0) attributeScore -= 0.25;
+
+  if (styleMatch) attributeScore += 0.15;
+  if (brandMatch) attributeScore += 0.20;
+
+  const isFootwear = (canonical.category === 'footwear' || canonicalGarment === 'footwear') && offerTitle.includes('shoe');
+  if (isFootwear) attributeScore += 0.10;
+
+  const attributeMatchScore = Math.min(1.0, Math.max(0.05, parseFloat(attributeScore.toFixed(2))));
+
+  // Visual similarity score
+  let visualSimilarity = 0.50;
+  if (categoryMatch && colorMatch && materialMatch) visualSimilarity = 0.88;
+  else if (categoryMatch && (colorMatch || materialMatch)) visualSimilarity = 0.70;
+  else if (!categoryMatch) visualSimilarity = 0.25;
+
+  const visualSimilarityScore = parseFloat(visualSimilarity.toFixed(2));
 
   // --- OVERALL MATCH CONFIDENCE ---
-  const overallRaw = (identityConfidence * 0.55) + (attributeMatchScore * 0.35) + (visualSimilarityScore * 0.10);
+  // Branded tech/footwear uses 50% identity weighting; unbranded fashion weights verified visual attributes higher
+  const isBrandedTechOrShoe = Boolean(canonicalBrand || canonicalModel);
+  const overallRaw = isBrandedTechOrShoe
+    ? (identityConfidence * 0.50) + (attributeMatchScore * 0.35) + (visualSimilarityScore * 0.15)
+    : (identityConfidence * 0.35) + (attributeMatchScore * 0.45) + (visualSimilarityScore * 0.20);
+
   const overallMatchConfidence = Math.min(0.98, Math.max(0.10, parseFloat(overallRaw.toFixed(2))));
 
+  // --- MATCH TYPE HIERARCHY ---
+  // A. Verified exact match: identityConfidence >= 0.85 && attributeMatchScore >= 0.65 && overall >= 0.78
+  // B. High-confidence visual match: attributeMatchScore >= 0.65 && overall >= 0.78
+  // C. Close alternative: category matches, overall >= 0.45
+  // D. Unrelated / rejected: overall < 0.45 or category mismatch
   let matchType: 'exact' | 'variant' | 'similar' = 'similar';
-  if (isVariantMismatch) {
-    matchType = 'variant';
-  } else if (identityConfidence >= 0.85 && attributeMatchScore >= 0.65 && overallMatchConfidence >= 0.75) {
+  let differenceReason: string | undefined = undefined;
+
+  if (identityConfidence >= 0.85 && attributeMatchScore >= 0.65 && overallMatchConfidence >= 0.78 && !isVariantMismatch) {
     matchType = 'exact';
-  } else if (overallMatchConfidence >= 0.45 && attributeMatchScore >= 0.35) {
-    matchType = 'variant';
+  } else if (attributeMatchScore >= 0.65 && overallMatchConfidence >= 0.78) {
+    matchType = 'variant'; // High-confidence visual match
+    if (isVariantMismatch) differenceReason = variantReason;
+  } else if (categoryMatch && overallMatchConfidence >= 0.40) {
+    matchType = 'similar'; // Close alternative
+    differenceReason = differingAttributes[0] || 'Minor style variation';
   } else {
     matchType = 'similar';
+    differenceReason = differingAttributes[0] || 'Unrelated product or low similarity';
   }
 
   const isSame = matchType === 'exact' && !isVariantMismatch;
+
+  const summary = isSame
+    ? 'Verified exact match with matching brand, fabric, and attributes.'
+    : matchType === 'variant'
+    ? 'High-confidence visual match with matching category, fabric, and color.'
+    : differingAttributes.length > 0
+    ? `Alternative with differences: ${differingAttributes.join(', ')}`
+    : 'Similar category alternative.';
 
   return {
     matchType,
@@ -452,6 +602,16 @@ export function classifyProductMatch(
     visualSimilarityScore,
     tier,
     isSameProductAndVariant: isSame,
-    differenceReason: isVariantMismatch ? variantReason : undefined,
+    differenceReason,
+    matchExplanation: {
+      categoryMatch,
+      materialMatch,
+      colorMatch,
+      styleMatch,
+      brandMatch,
+      matchingAttributes,
+      differingAttributes,
+      summary,
+    },
   };
 }

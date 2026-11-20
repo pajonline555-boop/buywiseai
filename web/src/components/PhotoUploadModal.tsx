@@ -168,15 +168,14 @@ export default function PhotoUploadModal({ isOpen, onClose }: PhotoUploadModalPr
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          let errMsg = data.error || 'Failed to process image payload.';
+          let rawErr = data.error || data.message || 'Failed to process image payload.';
+          let errMsg = typeof rawErr === 'object' ? (rawErr.message || JSON.stringify(rawErr)) : String(rawErr);
           try {
-            if (typeof errMsg === 'string') {
-              if (errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE')) {
-                errMsg = 'Vision AI model is experiencing a temporary load spike. Please click Analyze & Search Deals again to retry.';
-              } else if (errMsg.startsWith('{') && errMsg.includes('"message"')) {
-                const parsed = JSON.parse(errMsg);
-                errMsg = parsed?.error?.message || parsed?.message || errMsg;
-              }
+            if (errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE')) {
+              errMsg = 'Vision AI is experiencing temporary high demand. Please click Analyze & Search Deals again to retry.';
+            } else if (errMsg.includes('{') && errMsg.includes('"message"')) {
+              const parsed = JSON.parse(errMsg);
+              errMsg = parsed?.error?.message || parsed?.message || errMsg;
             }
           } catch {}
 

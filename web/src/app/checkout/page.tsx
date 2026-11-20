@@ -181,31 +181,50 @@ function CheckoutContent() {
                 </div>
               </div>
 
-              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '12px' }}>💳 Select Payment Gateway</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '12px' }}>💳 Order Confirmation &amp; Payment Options</h3>
+              
+              {/* WhatsApp Commerce Primary Option */}
+              <a
+                href={`https://wa.me/918955438945?text=${encodeURIComponent(
+                  `Hello BuyWise Team,\nI want to place an order for:\nProduct: ${product.title}\nSKU: ${product.sku}\nPrice: ₹${product.sellingPrice}\nBuyer: ${fullName || 'Customer'}\nPhone: ${phone || 'N/A'}\nDelivery Address: ${street || ''}, ${city || ''} - ${pincode || ''}\nPlease confirm order booking and payment instructions.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none', display: 'block', marginBottom: '16px' }}
+              >
                 <button
                   type="button"
-                  onClick={() => setPaymentProvider('RAZORPAY')}
-                  style={{ padding: '14px', borderRadius: '14px', border: paymentProvider === 'RAZORPAY' ? '2px solid #00ff88' : '1px solid var(--glass-border)', background: paymentProvider === 'RAZORPAY' ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #25d366, #128c7e)',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: '15px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 8px 25px rgba(37, 211, 102, 0.4)',
+                  }}
                 >
-                  Razorpay (UPI / Cards)
+                  <span style={{ fontSize: '20px' }}>💬</span>
+                  <span>Confirm Order via WhatsApp (+91 8955438945) ➔</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentProvider('CASHFREE')}
-                  style={{ padding: '14px', borderRadius: '14px', border: paymentProvider === 'CASHFREE' ? '2px solid #00d4ff' : '1px solid var(--glass-border)', background: paymentProvider === 'CASHFREE' ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.03)', color: 'white', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  Cashfree Payments
-                </button>
+              </a>
+
+              <div style={{ fontSize: '12px', color: '#94a3b8', background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                ℹ️ <strong>Immediate Fulfillment:</strong> WhatsApp orders connect directly with our partner fulfillment team. Cash on Delivery and direct UPI confirmation available.
               </div>
 
-              <button
-                type="submit"
-                disabled={isCreatingOrder}
-                style={{ width: '100%', padding: '16px', borderRadius: '14px', background: 'linear-gradient(90deg, #00ff88, #00d4ff)', border: 'none', color: '#080612', fontWeight: 900, fontSize: '16px', cursor: isCreatingOrder ? 'wait' : 'pointer' }}
-              >
-                {isCreatingOrder ? 'Authorizing & Reserving Stock...' : 'Proceed to Authoritative Payment 🔒'}
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', marginBottom: '24px' }}>
+                <div style={{ padding: '12px 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', color: '#94a3b8', fontSize: '12px' }}>
+                  🔒 <strong>Razorpay Online Gateway:</strong> Disabled by default (RAZORPAY_ENABLED=false) pending final merchant KYC and webhook registration.
+                </div>
+              </div>
             </form>
 
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '24px', padding: '24px' }}>
