@@ -93,7 +93,7 @@ fun ChallengeRulesDialog(
                 ) {
                     RuleBullet(label = "Age Requirement", description = "Open to all registered users aged 18 years and older.")
                     RuleBullet(label = "Account Requirement", description = "Both challenge participation and voting require a logged-in account on the BuyWise AI app.")
-                    RuleBullet(label = "Submission Guidelines", description = "Upload a selfie or product photo in the Challenge section of the app. You may also use the mobile Virtual Try-On feature to create your entry.")
+                    RuleBullet(label = "Submission Guidelines", description = "Upload a styled outfit photo or creative look in the Challenge section of the app to enter.")
                     RuleBullet(label = "Entry Limit", description = "Strictly one (1) image submission is allowed per user.")
                     RuleBullet(label = "Voting Limit", description = "Voting is restricted to one (1) vote per mobile device/account.")
                     RuleBullet(label = "Promotion", description = "Participants are encouraged to share their entry links across social media platforms to appeal for votes.")

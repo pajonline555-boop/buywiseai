@@ -39,7 +39,12 @@ fun BuyWiseNavGraph(
                     compareViewModel.performSearch(query)
                     navController.navigate(Screen.Search.route)
                 },
-                onNavigateToVto = { navController.navigate(Screen.Vto.route) },
+                onNavigateToVto = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToCompetition = { navController.navigate(Screen.Competition.route) },
                 onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
@@ -86,7 +91,12 @@ fun BuyWiseNavGraph(
                         }
                     }
                 },
-                onNavigateToVto = { navController.navigate(Screen.Vto.route) },
+                onNavigateToVto = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToWeb = { title, url ->
                     try {
                         val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
@@ -102,7 +112,12 @@ fun BuyWiseNavGraph(
             ProductDetailsScreen(
                 offer = compareViewModel.selectedOffer,
                 onBack = { navController.popBackStack() },
-                onNavigateToVto = { navController.navigate(Screen.Vto.route) },
+                onNavigateToVto = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToCheckout = { navController.navigate("checkout") }
             )
         }
@@ -114,16 +129,13 @@ fun BuyWiseNavGraph(
             )
         }
         composable(Screen.Vto.route) {
-            VtoScreen(
-                onBack = {
-                    if (!navController.popBackStack()) {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    }
+            // VTO is stopped: Redirect back to Home
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                    launchSingleTop = true
                 }
-            )
+            }
         }
         composable(Screen.Prime.route) {
             com.pajonline.buywiseai.ui.screens.prime.PrimeMembershipScreen(

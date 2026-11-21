@@ -8,14 +8,12 @@ import Image from "next/image";
 import { getProxiedImageUrl } from "@/lib/imageUtils";
 import SafeProductImage from "@/components/SafeProductImage";
 import { resolveProductImage } from "@/lib/categoryResolver";
-import SelfieDressTryOnModal from "@/components/SelfieDressTryOnModal";
 import { calculateEffectivePrice } from "@/lib/coupons/couponService";
 import { useTranslation } from "@/lib/i18n/i18nContext";
 
 export default function CategoriesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<BestsellerProduct | null>(null);
-  const [isSelfieModalOpen, setIsSelfieModalOpen] = useState(false);
   const [partnerProducts, setPartnerProducts] = useState<PartnerProduct[]>([]);
   const { t } = useTranslation();
 
@@ -177,51 +175,6 @@ export default function CategoriesPage() {
               <span>{t(cat.name)}</span>
             </button>
           ))}
-        </div>
-
-        {/* AI Selfie Virtual Dress Try-On Trigger Banner */}
-        <div
-          className="glass"
-          style={{
-            padding: "28px 36px",
-            borderRadius: "24px",
-            marginBottom: "44px",
-            background: "linear-gradient(135deg, rgba(255, 0, 128, 0.15), rgba(121, 40, 202, 0.2))",
-            border: "1px solid rgba(255, 0, 128, 0.4)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "20px"
-          }}
-        >
-          <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 14px", background: "rgba(255, 0, 128, 0.2)", borderRadius: "12px", marginBottom: "8px" }}>
-              <span style={{ color: "#ff0080", fontWeight: 800, fontSize: "12px" }}>NEW FEATURE ✨</span>
-              <span style={{ color: "white", fontSize: "12px" }}>AI Selfie Fashion & Outfit Studio</span>
-            </div>
-            <h2 style={{ fontSize: "28px", fontWeight: 900, color: "white", marginBottom: "6px" }}>
-              📸 {t("virtual_trial_desc")}
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "15px", maxWidth: "650px" }}>
-              Upload your photo to instantly preview dresses, sarees, suits & outfits across Amazon India, Myntra, Flipkart, Meesho & Tata CLiQ!
-            </p>
-          </div>
-
-          <button
-            onClick={() => setIsSelfieModalOpen(true)}
-            className="btn-primary"
-            style={{
-              padding: "14px 32px",
-              fontSize: "15px",
-              fontWeight: 800,
-              borderRadius: "30px",
-              background: "var(--gradient-accent)",
-              boxShadow: "0 10px 30px rgba(255, 0, 128, 0.4)"
-            }}
-          >
-            📸 {t("open_ai_trial_room")}
-          </button>
         </div>
 
         {/* Category Banner Title */}
@@ -497,11 +450,6 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        {/* Selfie Dress Try-On Modal */}
-        <SelfieDressTryOnModal
-          isOpen={isSelfieModalOpen}
-          onClose={() => setIsSelfieModalOpen(false)}
-        />
       </div>
     </main>
   );

@@ -359,28 +359,10 @@ export default function CompetitionPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
-            <Link href={`/try-on?garmentUrl=${encodeURIComponent(competition.featuredProductImage)}&title=${encodeURIComponent(competition.featuredProductTitle)}&price=${competition.featuredProductPrice}`} style={{ textDecoration: 'none' }}>
-              <button
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #ffd700, #ff8c00)',
-                  color: '#000000',
-                  fontWeight: 900,
-                  fontSize: '14px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(255, 215, 0, 0.4)',
-                }}
-              >
-                ✨ Try On in VTO Room ➔
-              </button>
-            </Link>
-
             <button
               onClick={() => setShowSubmitModal(true)}
               style={{
-                padding: '12px 22px',
+                padding: '12px 28px',
                 borderRadius: '20px',
                 background: 'linear-gradient(135deg, #a855f7, #ff007f)',
                 color: '#ffffff',
@@ -388,10 +370,10 @@ export default function CompetitionPage() {
                 fontSize: '14px',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(255, 0, 127, 0.35)',
+                boxShadow: '0 8px 24px rgba(255, 0, 128, 0.4)',
               }}
             >
-              📸 Submit Your Look
+              🏆 Enter Challenge Look ➔
             </button>
 
             <button
@@ -511,16 +493,11 @@ export default function CompetitionPage() {
                 Be the first shopper to try on the featured product and submit your look to win ₹5,000!
               </p>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                <Link href="/try-on">
-                  <button style={{ padding: '12px 24px', borderRadius: '20px', background: '#00ff88', color: '#000', fontWeight: 900, border: 'none', cursor: 'pointer' }}>
-                    Open AI Try-On Room ➔
-                  </button>
-                </Link>
                 <button
                   onClick={() => setShowSubmitModal(true)}
-                  style={{ padding: '12px 24px', borderRadius: '20px', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 800, border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
+                  style={{ padding: '12px 32px', borderRadius: '20px', background: 'linear-gradient(135deg, #a855f7, #ff007f)', color: '#fff', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(255, 0, 128, 0.4)' }}
                 >
-                  📸 Submit Photo Directly
+                  🏆 Submit Look to Challenge ➔
                 </button>
               </div>
             </div>

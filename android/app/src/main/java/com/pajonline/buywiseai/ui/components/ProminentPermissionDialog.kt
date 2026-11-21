@@ -29,7 +29,7 @@ fun ProminentPermissionDialog(
 ) {
     val title = if (permissionType == "CAMERA") "📷 Camera Disclosure (Play Store Policy)" else "🔔 Notification Disclosure"
     val purpose = if (permissionType == "CAMERA") {
-        "BuyWise AI requires camera access to allow you to take photos for AI Visual Product Search and AI Virtual Try-On."
+        "BuyWise AI requires camera access to allow you to take photos for AI Visual Product Search."
     } else {
         "BuyWise AI requires notification permission to alert you when tracked product prices drop below your specified threshold."
     }

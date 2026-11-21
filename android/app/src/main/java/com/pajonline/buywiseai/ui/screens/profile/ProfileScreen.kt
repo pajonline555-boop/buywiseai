@@ -220,10 +220,10 @@ fun ProfileScreen(
 
     fun shareAppToOthers() {
         try {
-            val shareMessage = "🛍️ Check out BuyWise AI — India's Smart Shopping & AI Virtual Try-On Assistant!\n\n" +
+            val shareMessage = "🛍️ Check out BuyWise AI — India's Smart Shopping & Price Intelligence Assistant!\n\n" +
                 "⚡ Compare live prices across 14 stores (Amazon, Flipkart, Myntra, Meesho)\n" +
-                "👗 Try on ethnic outfits & dresses with AI Virtual Try-On\n" +
-                "🔔 Get real-time price drop alerts\n\n" +
+                "🔔 Get real-time price drop alerts & coupons\n" +
+                "🛒 Direct partner store deals with zero markup\n\n" +
                 "Download BuyWise AI on Google Play:\n$playStoreUrl"
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
@@ -762,20 +762,18 @@ fun ProfileScreen(
                 onClick = { onNavigateToPrime() }
             )
             ProfileMenuItem(
-                title = "Launch AI Virtual Try-On Studio",
-                actionText = "Open ➔",
-                icon = Icons.Default.Star,
-                accentColor = Color(0xFFFF007F),
-                onClick = { openWebPage("AI Virtual Try-On Studio", "/try-on") }
+                title = "Price Drop Alerts & Tracker",
+                actionText = "Manage ➔",
+                icon = Icons.Default.Notifications,
+                accentColor = BuyWiseCyan,
+                onClick = { openWebPage("Price Alerts", "/alerts") }
             )
             ProfileMenuItem(
-                title = "Private Try-On Gallery ($vtoCount items)",
-                actionText = "Manage ➔",
-                icon = Icons.Default.Face,
-                accentColor = BuyWiseCyan,
-                onClick = {
-                    showInfoDialogText = "Your Virtual Try-On selfie photos are stored privately under local device encryption in compliance with DPDP 2025."
-                }
+                title = "BuyWise Partner Store Hub",
+                actionText = "Open ➔",
+                icon = Icons.Default.ShoppingCart,
+                accentColor = BuyWiseEmerald,
+                onClick = { openWebPage("BuyWise Partner Store", "/partners") }
             )
 
             Spacer(modifier = Modifier.height(24.dp))

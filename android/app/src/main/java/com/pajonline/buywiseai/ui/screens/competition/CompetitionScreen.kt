@@ -400,52 +400,30 @@ fun CompetitionScreen(
 
                                 Spacer(modifier = Modifier.height(14.dp))
 
-                                // PRIMARY CALL-TO-ACTION BUTTON (TRY OUTFIT IN VTO)
+                                // PRIMARY ACTION: ENTER CHALLENGE
                                 Button(
-                                    onClick = {
-                                        com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
-                                            title = activeComp.featuredProductTitle,
-                                            imageUrl = activeComp.featuredProductImage,
-                                            price = activeComp.featuredProductPrice,
-                                            compId = activeComp.id,
-                                            retailer = activeComp.retailer
-                                        )
-                                        onNavigateToVto()
-                                    },
-                                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
+                                    onClick = { showSubmitDialog = true },
+                                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text("👗 Try Outfit in AI Virtual Try-On", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.5.sp)
+                                    Icon(Icons.Default.Star, contentDescription = null, tint = Color.White)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("🏆 Enter Weekly Look Challenge", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                // SECONDARY ACTIONS: ENTER CHALLENGE & RULES
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                // SECONDARY ACTION: VIEW RULES
+                                Button(
+                                    onClick = { showRulesDialog = true },
+                                    modifier = Modifier.fillMaxWidth().height(38.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B162E)),
+                                    border = BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f)),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp)
                                 ) {
-                                    Button(
-                                        onClick = { showSubmitDialog = true },
-                                        modifier = Modifier.weight(1.3f).height(40.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
-                                        shape = RoundedCornerShape(10.dp),
-                                        contentPadding = PaddingValues(horizontal = 6.dp)
-                                    ) {
-                                        Text("🏆 Enter Look (Photo / AI)", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1)
-                                    }
-
-                                    Button(
-                                        onClick = { showRulesDialog = true },
-                                        modifier = Modifier.weight(1f).height(40.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B162E)),
-                                        border = BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f)),
-                                        shape = RoundedCornerShape(10.dp),
-                                        contentPadding = PaddingValues(horizontal = 6.dp)
-                                    ) {
-                                        Text("📜 Rules & Info", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
-                                    }
+                                    Text("📜 View Rules to Participate", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                                 }
                             }
                         }
@@ -744,7 +722,7 @@ private fun EmptyChallengeGalleryCard(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("1️⃣", fontSize = 14.sp)
-                    Text("Try Outfit", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BuyWiseGold)
+                    Text("Style Outfit", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BuyWiseGold)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("2️⃣", fontSize = 14.sp)
@@ -758,28 +736,13 @@ private fun EmptyChallengeGalleryCard(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Button(
+                onClick = onEnterNow,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Button(
-                    onClick = onEnterNow,
-                    modifier = Modifier.weight(1f).height(42.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("✨ Enter Now", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-
-                Button(
-                    onClick = onTryOutfit,
-                    modifier = Modifier.weight(1f).height(42.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1738)),
-                    border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.6f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("👗 Try Outfit", color = BuyWiseCyan, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
+                Text("✨ Enter Weekly Challenge Now", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.5.sp)
             }
         }
     }

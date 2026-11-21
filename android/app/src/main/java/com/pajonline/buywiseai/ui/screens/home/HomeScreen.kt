@@ -897,16 +897,6 @@ fun HomeScreen(
                 // SECTION 2: Exclusive Gen G Store Showcase
                 GenGStoreShowcase(
                     onViewAllClick = { onNavigateToSearch("Gen-G Store") },
-                    onTryOnClick = { prod ->
-                        val parsedPrice = prod.sellingPrice.filter { it.isDigit() }.toIntOrNull() ?: 499
-                        com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
-                            title = prod.title,
-                            imageUrl = prod.imageUrl,
-                            price = parsedPrice,
-                            retailer = if (prod.retailer.isNotBlank()) prod.retailer else "Gen-G Store"
-                        )
-                        onNavigateToVto()
-                    },
                     onBuyNowClick = { prod ->
                         val targetUrl = if (prod.productUrl.isNotBlank() && prod.productUrl.startsWith("http")) {
                             prod.productUrl
