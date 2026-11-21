@@ -24,7 +24,7 @@ sealed class Screen(val route: String, val titleKey: String, val icon: ImageVect
             return if (isAdmin) {
                 listOf(Home, Search, Competition, Admin, Profile)
             } else {
-                listOf(Home, Search, Competition, Vto, Profile)
+                listOf(Home, Search, Competition, Alerts, Profile)
             }
         }
     }

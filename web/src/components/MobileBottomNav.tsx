@@ -27,9 +27,9 @@ export default function MobileBottomNav() {
 
   const navItems = [
     { label: t("nav_home"), href: "/", icon: "🏠" },
-    { label: t("nav_try_on"), href: "/try-on", icon: "✨", highlight: true },
+    { label: "Compare", href: "/categories", icon: "⚡", highlight: true },
     { label: t("price_alerts"), href: "/alerts", icon: "🔔" },
-    { label: t("buywise_partners_portal"), href: "/partners", icon: "⚡" },
+    { label: t("nav_geng_store"), href: "/partners", icon: "🛍️" },
     ...(isUserAdmin ? [{ label: "Admin", href: "/admin", icon: "👑" }] : []),
     { label: t("nav_profile"), href: "/profile", icon: "👤" },
   ];

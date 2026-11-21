@@ -482,16 +482,16 @@ fun HomeScreen(
                                         }
                                     }
                                     IconButton(
-                                        onClick = { onNavigateToVto() }
+                                        onClick = { onNavigateToSearch("Fashion Deals") }
                                     ) {
                                         Box(
                                             modifier = Modifier
                                                 .size(32.dp)
-                                                .background(BuyWiseNeonPink.copy(alpha = 0.25f), CircleShape)
-                                                .border(1.dp, BuyWiseNeonPink, CircleShape),
+                                                .background(BuyWiseGold.copy(alpha = 0.25f), CircleShape)
+                                                .border(1.dp, BuyWiseGold, CircleShape),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text("📷", fontSize = 15.sp)
+                                            Text("🔍", fontSize = 15.sp)
                                         }
                                     }
                                 }
@@ -726,27 +726,13 @@ fun HomeScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        Row(
+                        Button(
+                            onClick = { if (searchQuery.isNotBlank()) onNavigateToSearch(searchQuery) else onNavigateToSearch("iPhone 17") },
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Button(
-                                onClick = { if (searchQuery.isNotBlank()) onNavigateToSearch(searchQuery) else onNavigateToSearch("iPhone 17") },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(text = tr("compare_btn"), color = Color.Black, fontWeight = FontWeight.Black)
-                            }
-
-                            Button(
-                                onClick = onNavigateToVto,
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(text = tr("ai_trial_room"), color = Color.White, fontWeight = FontWeight.Black)
-                            }
+                            Text(text = tr("compare_btn"), color = Color.Black, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -837,33 +823,11 @@ fun HomeScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // BUTTON LINE: TRY PRODUCT NOW, ENTER NOW, RULE TO PARTICIPATE
+                            // BUTTON LINE: ENTER NOW, RULE TO PARTICIPATE
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Button(
-                                    onClick = {
-                                        if (activeComp != null) {
-                                            com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
-                                                title = activeComp.featuredProductTitle,
-                                                imageUrl = activeComp.featuredProductImage,
-                                                price = activeComp.featuredProductPrice,
-                                                compId = activeComp.id,
-                                                retailer = activeComp.retailer,
-                                                category = "dresses"
-                                            )
-                                        }
-                                        onNavigateToVto()
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold),
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                ) {
-                                    Text("👗 Try Product Now", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 10.sp)
-                                }
-
                                 Button(
                                     onClick = onNavigateToCompetition,
                                     modifier = Modifier.weight(1f),
@@ -871,17 +835,17 @@ fun HomeScreen(
                                     shape = RoundedCornerShape(10.dp),
                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                 ) {
-                                    Text("🏆 Enter Now", color = Color.White, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                    Text("🏆 Enter Now", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
                                 }
 
                                 Button(
                                     onClick = { showRulesDialog = true },
-                                    modifier = Modifier.weight(1.1f),
+                                    modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D2545)),
                                     shape = RoundedCornerShape(10.dp),
                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                 ) {
-                                    Text("📜 Rule to Participate", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                    Text("📜 Rule to Participate", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                 }
                             }
                         }
@@ -969,7 +933,7 @@ fun HomeScreen(
                     onShareClick = { prod ->
                         val shareUrl = "https://buywiseai.pajonline.co.in/product/${prod.slug.ifEmpty { prod.id }}"
                         val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                            putExtra(Intent.EXTRA_TEXT, "Check out ${prod.title} on BuyWise AI! Compare prices & try on: $shareUrl")
+                            putExtra(Intent.EXTRA_TEXT, "Check out ${prod.title} on BuyWise AI! Compare prices & find lowest deal: $shareUrl")
                             type = "text/plain"
                         }
                         context.startActivity(Intent.createChooser(sendIntent, "Share Product via"))
@@ -978,12 +942,12 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // SECTION 3: See Compare Try On Save Buy
+                // SECTION 3: See Compare Save Buy
                 ShoppingJourneyBar(onStepClick = { stepId ->
                     when (stepId) {
                         "see" -> onNavigateToSearch("Saree")
                         "compare" -> onNavigateToSearch("iPhone")
-                        "tryon" -> onNavigateToVto()
+                        "tryon" -> onNavigateToSearch("Fashion")
                         "save" -> onNavigateToSearch("Coupons")
                         "buy" -> onNavigateToSearch("Bestsellers")
                     }
@@ -993,7 +957,7 @@ fun HomeScreen(
 
                 CoreExperienceCards(
                     onCompareClick = { onNavigateToSearch("iPhone 17") },
-                    onTryOnClick = onNavigateToVto,
+                    onTryOnClick = { onNavigateToSearch("Deals") },
                     onCouponsClick = { onNavigateToSearch("Coupons") }
                 )
 

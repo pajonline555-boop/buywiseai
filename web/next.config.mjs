@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
+const isStaticExport = process.env.NEXT_STATIC_EXPORT?.trim() === "true" || process.env.OUTPUT_EXPORT === "true";
 
 const nextConfig = {
   output: isStaticExport ? "export" : "standalone",

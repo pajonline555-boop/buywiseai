@@ -74,7 +74,7 @@ export default function ProductIntelligenceHeader({
   const smartValueScore = product.smartValueScore || Math.min(99, Math.floor(product.rating * 19 + 5));
   const shoppingTrustScore = product.shoppingTrustScore || Math.min(98, Math.floor(product.rating * 18 + 8));
   const isPartner = product.productSource === 'PARTNER' || product.source === 'PARTNER';
-  const isTryOn = product.isTryOnEligible !== false && isWearableProduct(product.name, product.category);
+  const isTryOn = false; // VTO feature paused
   const savingsAmount = product.originalPrice > product.lowestPrice ? product.originalPrice - product.lowestPrice : 0;
   const savingsPercent = product.originalPrice > product.lowestPrice ? Math.round((savingsAmount / product.originalPrice) * 100) : 0;
 
@@ -134,7 +134,7 @@ export default function ProductIntelligenceHeader({
       try {
         await navigator.share({
           title: product.name,
-          text: `Check out ${product.name} on BuyWise AI! Compare prices & try on:`,
+          text: `Check out ${product.name} on BuyWise AI! Compare prices & find lowest deal:`,
           url: shareUrl,
         });
         return;
@@ -492,7 +492,7 @@ export default function ProductIntelligenceHeader({
             </button>
 
             <a
-              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${product.name} on BuyWise AI! Compare prices & try on: ${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${product.slug || product.id}`)}`}
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${product.name} on BuyWise AI! Compare prices & find lowest deal: ${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${product.slug || product.id}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{ textDecoration: 'none' }}

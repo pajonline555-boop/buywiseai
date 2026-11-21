@@ -66,7 +66,7 @@ fun OnboardingScreen(
         listOf(
             PosterItemData(R.drawable.poster_1, "BuyWise AI - Smart Shopping Companion", "🛍️ WELCOME TO BUYWISE", BuyWiseCyan),
             PosterItemData(R.drawable.poster_2, "Compare 14 Retailer Prices Live", "⚡ REAL-TIME PRICE COMPARISON", BuyWiseEmerald),
-            PosterItemData(R.drawable.poster_3, "AI Virtual Trial Room - Try Before You Buy", "✨ AI VIRTUAL TRY-ON", Color(0xFFFF007F)),
+            PosterItemData(R.drawable.poster_3, "Verified Partner Store Direct Savings", "✨ FACTORY DIRECT SAVINGS", Color(0xFFFF007F)),
             PosterItemData(R.drawable.poster_4, "Multi-Lingual Voice & Photo Search", "🎙️ VOICE & CAMERA SEARCH", BuyWiseGold),
             PosterItemData(R.drawable.poster_5, "Price Alerts & Price History Graphs", "🔔 PRICE DROP NOTIFICATIONS", BuyWiseCyan),
             PosterItemData(R.drawable.poster_6, "Verified Merchants & Fraud Protection", "🛡️ SHOP WITH CONFIDENCE", BuyWiseEmerald)

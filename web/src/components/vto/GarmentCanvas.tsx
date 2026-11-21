@@ -792,51 +792,7 @@ export function GarmentCanvas({
           </div>
         )}
 
-        {/* TIER 3: 1 FREE LIVE GPU TRY-ON (POWERED BY MODAL L4 GPU) */}
-        <div style={{ background: "rgba(15, 16, 33, 0.8)", padding: "16px", borderRadius: "16px", border: "1.5px solid rgba(255, 0, 127, 0.45)", marginTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-            <span style={{ fontSize: "13px", fontWeight: 900, color: "white", display: "flex", alignItems: "center", gap: "6px" }}>
-              📸 Try On With Your Photo <span style={{ color: "#ffd700", fontSize: "11px" }}>• 1024px WebP Client Compressed</span>
-            </span>
-            <span style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "10px", background: freeQuotaRemaining > 0 ? "rgba(0, 255, 136, 0.15)" : "rgba(255,255,255,0.1)", color: freeQuotaRemaining > 0 ? "#00ff88" : "rgba(255,255,255,0.6)", fontWeight: 800 }}>
-              {freeQuotaRemaining > 0 ? `${freeQuotaRemaining} Free GPU Try-On Left` : "Quota Used (Free Body Switcher Active)"}
-            </span>
-          </div>
 
-          <label
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: "14px",
-              background: vtoLoading ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #ff007f, #8b5cf6)",
-              color: "white",
-              fontWeight: 900,
-              fontSize: "13px",
-              cursor: vtoLoading ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              textAlign: "center",
-              boxShadow: "0 4px 15px rgba(255, 0, 127, 0.35)",
-            }}
-          >
-            {vtoLoading ? "⚙️ Generating on Modal GPU..." : "📸 Upload Photo (1 Free AI Live Try-On)"}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleLiveCustomTryOn}
-              disabled={vtoLoading}
-              style={{ display: "none" }}
-            />
-          </label>
-
-          {vtoStatus && (
-            <p style={{ fontSize: "11.5px", textAlign: "center", color: "#ffd700", margin: 0, fontWeight: 700 }}>
-              {vtoStatus}
-            </p>
-          )}
-        </div>
 
         {/* Step 1 & Step 2 Buttons */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "14px", marginBottom: "16px" }}>

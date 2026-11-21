@@ -1376,74 +1376,29 @@ fun VtoScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // THE PRIMARY ACTION BUTTON: CONVERT & TRY ON WITH SELECTED DRESS
-                    Button(
-                        onClick = {
-                            val rawUri = userRawPhotoUri
-                            if (rawUri == null) {
-                                Toast.makeText(context, "👉 Please take a photo or select an image from gallery first!", Toast.LENGTH_SHORT).show()
-                            } else {
-                                isConvertingTryOn = true
-                                conversionStatusText = "⚡ Pre-processing photo to 1024px WebP..."
-                                coroutineScope.launch {
-                                    try {
-                                        com.pajonline.buywiseai.util.ImagePreProcessor.uriToCompressedWebPBase64(context, rawUri, 1024, 80)
-                                        conversionStatusText = "⚡ Fitting dress onto your authentic body via Diffusion Engine (~15s)..."
-                                        val outputFile = File(privateVtoDir, "vto_${System.currentTimeMillis()}.webp")
-
-                                        val success = VtoImageSynthesizer.generateFittedLook(
-                                            context = context,
-                                            userPhotoUriOrUrl = rawUri.toString(),
-                                            garment = selectedGarment,
-                                            mode = VtoFittingMode.FIT_ON_USER,
-                                            outputFile = outputFile
-                                        )
-
-                                        if (success && outputFile.exists() && outputFile.length() > 5000) {
-                                            resultLookUri = outputFile.absolutePath
-                                            VtoSessionState.lastGeneratedLookUri = outputFile.absolutePath
-                                            localFiles = privateVtoDir.listFiles()?.sortedByDescending { it.lastModified() } ?: emptyList()
-                                            conversionStatusText = "✨ Converted successfully! Dress fitted on your body."
-                                            Toast.makeText(context, "✨ Success! Dress fitted beautifully.", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            if (outputFile.exists()) {
-                                                outputFile.delete()
-                                            }
-                                            conversionStatusText = "Try-on could not produce a high-fidelity fit. Please try with a clearer front-facing photo or different outfit."
-                                            Toast.makeText(context, "Try-on quality check failed. Please select a clearer photo or different garment.", Toast.LENGTH_LONG).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        conversionStatusText = "Error: ${e.message}"
-                                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    } finally {
-                                        isConvertingTryOn = false
-                                    }
-                                }
-                            }
-                        },
-                        enabled = !isConvertingTryOn,
-                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
+                    // Live VTO Fitting Temporarily Stopped
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFF1E1528),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        border = BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.5f))
                     ) {
-                        if (isConvertingTryOn) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             Text(
-                                "Synthesizing Try-On...",
-                                color = Color.White,
-                                fontWeight = FontWeight.Black
-                            )
-                        } else {
-                            val buttonTitle = if (userRawPhotoUri == null) 
-                                "📸 Upload Photo to Fit With Dress" 
-                            else 
-                                "✨ Fit Dress On My Photo (100% Real You)"
-                            Text(
-                                text = buttonTitle,
-                                color = Color.White,
+                                text = "⚙️ Virtual Try-On Fitting Paused",
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
-                                fontSize = 13.5.sp
+                                color = BuyWiseGold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Virtual outfit fitting is currently paused for upgrades. Use our AI Size & Style Match above for personalized sizing recommendations!",
+                                fontSize = 11.sp,
+                                color = Color.LightGray,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
                     }

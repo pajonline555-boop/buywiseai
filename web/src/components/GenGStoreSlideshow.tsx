@@ -112,7 +112,7 @@ export default function GenGStoreSlideshow() {
       try {
         await navigator.share({
           title: prod.title,
-          text: `Check out ${prod.title} on BuyWise AI! Compare prices & try on with AI:`,
+          text: `Check out ${prod.title} on BuyWise AI! Compare prices & find lowest deal:`,
           url: shareUrl,
         });
         return;
@@ -325,40 +325,6 @@ export default function GenGStoreSlideshow() {
                 </h3>
               </Link>
 
-              {/* Auto Multi-Size Try-On Selector (Petite S, Regular M, Curvy L, Plus XXL) */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.35)', padding: '10px 14px', borderRadius: '14px', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 900, color: '#ffd700' }}>
-                  👗 Auto Multi-Size Try-On:
-                </span>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {[
-                    { label: 'S', title: 'Petite S' },
-                    { label: 'M', title: 'Regular M' },
-                    { label: 'L', title: 'Dusky L' },
-                    { label: 'XXL', title: 'Curvy XXL' }
-                  ].map(sz => (
-                    <button
-                      key={sz.label}
-                      onClick={() => handleTryOn(currentProduct, sz.label)}
-                      title={`Auto-Try ${sz.title} (${sz.label})`}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(255, 215, 0, 0.6)',
-                        background: 'linear-gradient(135deg, rgba(40, 25, 60, 0.9), rgba(20, 15, 35, 0.9))',
-                        color: '#ffffff',
-                        fontSize: '11px',
-                        fontWeight: 900,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      {sz.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Official YouTube Shorts Channel Link ONLY */}
               <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <a
@@ -408,28 +374,7 @@ export default function GenGStoreSlideshow() {
               </div>
 
               {/* Action Buttons Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.9fr', gap: '10px' }}>
-                <button
-                  onClick={() => handleTryOn(currentProduct)}
-                  title="Try on with BuyWise AI"
-                  style={{
-                    padding: '13px 10px',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(255, 0, 128, 0.5)',
-                    background: 'linear-gradient(135deg, rgba(255, 0, 128, 0.25), rgba(121, 40, 202, 0.25))',
-                    color: 'white',
-                    fontWeight: 800,
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  {t('ai_try_on_btn')}
-                </button>
-
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '10px' }}>
                 <button
                   onClick={() => handleBuyNow(currentProduct)}
                   className="btn-primary"
@@ -479,7 +424,7 @@ export default function GenGStoreSlideshow() {
                 <span style={{ fontWeight: 700 }}>Share to Social Media:</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <a
-                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${currentProduct.title} on BuyWise AI! Compare prices & try on: ${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${currentProduct.slug || currentProduct.id}`)}`}
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${currentProduct.title} on BuyWise AI! Compare prices & find lowest deal: ${typeof window !== 'undefined' ? window.location.origin : 'https://buywiseai.pajonline.co.in'}/product/${currentProduct.slug || currentProduct.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

@@ -177,14 +177,14 @@ export default function BrandPillars() {
             </Link>
           </div>
 
-          {/* Pillar 2: TRY IT */}
+          {/* Pillar 2: PRICE DROP TRACKER */}
           <div
             className="glass-card"
             style={{
               padding: "28px",
               borderRadius: "24px",
               background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 0, 128, 0.25)",
+              border: "1px solid rgba(255, 215, 0, 0.25)",
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between"
@@ -192,38 +192,38 @@ export default function BrandPillars() {
           >
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                <div style={{ width: "50px", height: "50px", borderRadius: "16px", background: "rgba(255, 0, 128, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", border: "1px solid rgba(255, 0, 128, 0.4)" }}>
-                  👗✨
+                <div style={{ width: "50px", height: "50px", borderRadius: "16px", background: "rgba(255, 215, 0, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", border: "1px solid rgba(255, 215, 0, 0.4)" }}>
+                  🔔📉
                 </div>
-                <span style={{ fontSize: "11px", fontWeight: 900, padding: "4px 10px", borderRadius: "10px", background: "rgba(255, 0, 128, 0.2)", color: "#ff007f", letterSpacing: "0.05em" }}>
-                  {t('try_it_on')}
+                <span style={{ fontSize: "11px", fontWeight: 900, padding: "4px 10px", borderRadius: "10px", background: "rgba(255, 215, 0, 0.2)", color: "#ffd700", letterSpacing: "0.05em" }}>
+                  {t('price_alerts')}
                 </span>
               </div>
 
               <h3 style={{ fontSize: "22px", fontWeight: 900, color: "white", marginBottom: "8px" }}>
-                {t('ai_virtual_trial_room')}
+                Price Drop Alerts
               </h3>
 
               <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "20px" }}>
-                {t('virtual_trial_desc')}
+                Track product price history, set target budget alerts, and get notified instantly when prices drop across Amazon, Flipkart, and partner stores.
               </p>
             </div>
 
-            <Link href="/try-on" style={{ textDecoration: "none" }}>
+            <Link href="/alerts" style={{ textDecoration: "none" }}>
               <button
                 style={{
                   width: "100%",
                   padding: "12px",
                   borderRadius: "14px",
-                  border: "1px solid rgba(255, 0, 128, 0.4)",
-                  background: "linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(121, 40, 202, 0.2))",
-                  color: "#ff0080",
+                  border: "1px solid rgba(255, 215, 0, 0.4)",
+                  background: "linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2))",
+                  color: "#ffd700",
                   fontWeight: 800,
                   fontSize: "13px",
                   cursor: "pointer"
                 }}
               >
-                {t('open_ai_trial_room')}
+                Set Price Alerts Now ➔
               </button>
             </Link>
           </div>

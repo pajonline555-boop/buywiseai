@@ -251,7 +251,7 @@ fun GenGStoreShowcase(
     val handleShare: () -> Unit = {
         val shareUrl = "https://buywiseai.pajonline.co.in/product/${currentProd.slug.ifEmpty { currentProd.id }}"
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            putExtra(Intent.EXTRA_TEXT, "Check out ${currentProd.title} on BuyWise AI! Compare prices & try on: $shareUrl")
+            putExtra(Intent.EXTRA_TEXT, "Check out ${currentProd.title} on BuyWise AI! Compare prices & find lowest deal: $shareUrl")
             type = "text/plain"
         }
         context.startActivity(Intent.createChooser(sendIntent, "Share Product via"))
@@ -564,79 +564,12 @@ fun GenGStoreShowcase(
                         }
                     }
 
-                    // Multi-Size Auto Try-On Options (Petite S, Regular M, Dusky L, Curvy XXL)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFF0F0B1E), RoundedCornerShape(10.dp))
-                            .border(1.dp, BuyWiseGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "👗 Auto Try-On Sizes:",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = BuyWiseGold
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("S", "M", "L", "XXL").forEach { sizeLabel ->
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            brush = Brush.horizontalGradient(
-                                                colors = listOf(Color(0xFF261D42), Color(0xFF191330))
-                                            ),
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .border(1.dp, BuyWiseGold.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.targetSize = sizeLabel
-                                            onTryOnClick(currentProd)
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = sizeLabel,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Action Buttons: AI Try On + Buy Now + Share
+                    // Action Buttons: Buy Now + Share
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(BuyWiseNeonPink.copy(alpha = 0.3f), BuyWisePurple.copy(alpha = 0.3f))
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .border(1.dp, BuyWiseNeonPink.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                                .clickable { onTryOnClick(currentProd) }
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✨ AI Try On",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
 
                         Box(
                             modifier = Modifier

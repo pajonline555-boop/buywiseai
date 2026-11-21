@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.pajonline.buywiseai.data.i18n.tr
 import com.pajonline.buywiseai.ui.theme.BuyWiseCyan
 import com.pajonline.buywiseai.ui.theme.BuyWiseEmerald
+import com.pajonline.buywiseai.ui.theme.BuyWiseGold
 import com.pajonline.buywiseai.ui.theme.BuyWiseNeonPink
 import com.pajonline.buywiseai.ui.theme.BuyWisePurple
 
@@ -117,12 +118,12 @@ fun CoreExperienceCards(
             }
         }
 
-        // Card 2: AI Virtual Trial Room
+        // Card 2: Price Drop Alerts & Smart Tracking
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
             shape = RoundedCornerShape(20.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseNeonPink.copy(alpha = 0.35f))
+            border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseGold.copy(alpha = 0.35f))
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(
@@ -133,23 +134,23 @@ fun CoreExperienceCards(
                     Box(
                         modifier = Modifier
                             .size(46.dp)
-                            .background(BuyWiseNeonPink.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-                            .border(1.dp, BuyWiseNeonPink.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
+                            .background(BuyWiseGold.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                            .border(1.dp, BuyWiseGold.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "👗✨", fontSize = 20.sp)
+                        Text(text = "🔔📉", fontSize = 20.sp)
                     }
 
                     Box(
                         modifier = Modifier
-                            .background(BuyWiseNeonPink.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                            .background(BuyWiseGold.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = tr("try_it_on"),
+                            text = tr("price_alerts"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
-                            color = BuyWiseNeonPink,
+                            color = BuyWiseGold,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -158,7 +159,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = tr("ai_virtual_trial_room"),
+                    text = "Price Drop Alerts",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White
@@ -167,7 +168,7 @@ fun CoreExperienceCards(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = tr("virtual_trial_desc"),
+                    text = "Track prices across 14+ Indian online retailers. Get notified instantly when your favorite items hit the lowest target price.",
                     fontSize = 13.sp,
                     color = Color.LightGray,
                     lineHeight = 18.sp
@@ -180,20 +181,20 @@ fun CoreExperienceCards(
                         .fillMaxWidth()
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(BuyWiseNeonPink.copy(alpha = 0.25f), BuyWisePurple.copy(alpha = 0.25f))
+                                colors = listOf(BuyWiseGold.copy(alpha = 0.25f), BuyWiseEmerald.copy(alpha = 0.25f))
                             ),
                             shape = RoundedCornerShape(12.dp)
                         )
-                        .border(1.dp, BuyWiseNeonPink.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .border(1.dp, BuyWiseGold.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                         .clickable { onTryOnClick() }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = tr("open_ai_trial_room"),
+                        text = "Track Lowest Prices ➔",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BuyWiseNeonPink
+                        color = BuyWiseGold
                     )
                 }
             }

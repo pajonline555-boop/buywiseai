@@ -80,7 +80,7 @@ fun BannerCarousel(
                 dropTag = "🔥 0% Commission Deal",
                 badgeText = "DIRECT FACTORY",
                 storeLogo = "👗",
-                actionText = "Try In 3D Room ➔",
+                actionText = "View Deal ➔",
                 gradientColors = listOf(Color(0xFF380C26), Color(0xFF140B22)),
                 accentColor = BuyWiseNeonPink
             ),
@@ -96,13 +96,13 @@ fun BannerCarousel(
                 accentColor = BuyWiseEmerald
             ),
             PosterBannerItem(
-                title = "AI VIRTUAL TRIAL ROOM",
-                headline = "Instant Outfit Try-On Engine",
+                title = "PRICE DROP ALERTS",
+                headline = "Never Miss Lowest Price Drops",
                 priceText = "100% Free",
-                dropTag = "✨ SSIM Quality Gate Verified",
-                badgeText = "IDM-VTON AI",
-                storeLogo = "📸",
-                actionText = "Upload Photo ➔",
+                dropTag = "🔔 Instant Telegram & Push Alerts",
+                badgeText = "SMART TRACKER",
+                storeLogo = "🔔",
+                actionText = "Track Prices ➔",
                 gradientColors = listOf(Color(0xFF382F0F), Color(0xFF1C0D2B)),
                 accentColor = BuyWiseGold
             )

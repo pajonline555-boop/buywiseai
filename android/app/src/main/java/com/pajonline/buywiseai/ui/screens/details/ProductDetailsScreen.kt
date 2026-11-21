@@ -280,7 +280,7 @@ fun ProductDetailsScreen(
                     }
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Check out ${offer.title} on BuyWise AI! Compare prices & try on: $shareUrl")
+                        putExtra(Intent.EXTRA_TEXT, "Check out ${offer.title} on BuyWise AI! Compare prices & find lowest deal: $shareUrl")
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Product via"))
                 }) {
@@ -583,30 +583,6 @@ fun ProductDetailsScreen(
                 Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.Black)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "VIEW NOW ON ${offer.store.uppercase()}", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-
-            // Only show Try-On option for wearable items (clothing, sarees, dresses, jewellery, shoes)
-            if (isWearable) {
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = {
-                        if (offer != null) {
-                            com.pajonline.buywiseai.ui.screens.vto.VtoSessionState.setTarget(
-                                title = offer.title,
-                                imageUrl = offer.imageUrl,
-                                price = offer.price,
-                                retailer = offer.store
-                            )
-                        }
-                        onNavigateToVto()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Default.Face, contentDescription = null, tint = BuyWiseNeonPink)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "TRY ON THIS OUTFIT", color = BuyWiseNeonPink, fontWeight = FontWeight.Bold)
-                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))

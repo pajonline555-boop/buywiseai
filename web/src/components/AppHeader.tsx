@@ -273,13 +273,13 @@ export default function AppHeader() {
           </button>
 
           <div className="desktop-only">
-            <Link href="/try-on" style={{ textDecoration: 'none' }}>
+            <Link href="/partners" style={{ textDecoration: 'none' }}>
               <button 
                 style={{ 
                   padding: '8px 16px', 
                   fontSize: '13px', 
                   fontWeight: 800, 
-                  background: `linear-gradient(135deg, ${accentColor}, #ff007f)`, 
+                  background: `linear-gradient(135deg, ${accentColor}, #00ff88)`, 
                   color: '#ffffff', 
                   border: 'none',
                   borderRadius: '14px',
@@ -287,11 +287,11 @@ export default function AppHeader() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: `0 4px 20px ${accentColor}55`,
+                  boxShadow: '0 4px 20px rgba(0, 255, 136, 0.35)',
                   transition: 'all 0.2s ease'
                 }}
               >
-                ✨ {t('nav_try_on_room')}
+                🛍️ {t('nav_geng_store')}
               </button>
             </Link>
           </div>

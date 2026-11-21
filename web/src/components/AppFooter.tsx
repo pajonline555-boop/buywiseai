@@ -88,7 +88,7 @@ export default function AppFooter() {
             {t('footer_shopping_hub')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#cbd5e1' }}>
-            <Link href="/try-on" style={{ color: '#ffffff', textDecoration: 'none' }}>✨ {t('nav_try_on')}</Link>
+            <Link href="/categories" style={{ color: '#ffffff', textDecoration: 'none' }}>⚡ {t('multi_store_engine') || 'Price Comparison'}</Link>
             <Link href="/alerts" style={{ color: '#ffffff', textDecoration: 'none' }}>🔔 {t('price_alerts')}</Link>
             <Link href="/coupons" style={{ color: '#ffffff', textDecoration: 'none' }}>🎟️ {t('coupons_offers')}</Link>
             <Link href="/partners" style={{ color: '#00ff88', textDecoration: 'none', fontWeight: 700 }}>⚡ {t('nav_geng_store')}</Link>
