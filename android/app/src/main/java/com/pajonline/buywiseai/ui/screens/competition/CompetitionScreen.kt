@@ -1,12 +1,26 @@
 package com.pajonline.buywiseai.ui.screens.competition
 
 import android.app.DownloadManager
+import android.content.ClipData
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Base64
 import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1093,10 +1107,11 @@ private fun EditEntryDialog(
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val pickPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
             selectedImageUri = uri.toString()
+            Toast.makeText(context, "🖼️ Photo selected!", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1259,9 +1274,7 @@ private fun EditEntryDialog(
                 ) {
                     Button(
                         onClick = {
-                            pickPhotoLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
+                            pickPhotoLauncher.launch("image/*")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF231C38)),
                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
@@ -1317,31 +1330,76 @@ private fun EditEntryDialog(
     }
 }
 
-private fun downloadProductImage(context: Context, imageUrl: String?, title: String?) {
+private fun saveImageToGallery(context: Context, imageUrl: String?, title: String?) {
     if (imageUrl.isNullOrBlank()) {
         Toast.makeText(context, "Outfit image is not available", Toast.LENGTH_SHORT).show()
         return
     }
-    try {
-        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
-        if (dm != null) {
-            val request = DownloadManager.Request(Uri.parse(imageUrl)).apply {
-                setTitle(title ?: "BuyWise Outfit Look")
-                setDescription("Challenge product image downloaded for AI styling")
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setDestinationInExternalPublicDir(
-                    Environment.DIRECTORY_DOWNLOADS,
-                    "buywise_challenge_look_${System.currentTimeMillis()}.png"
-                )
-                setMimeType("image/png")
+    Toast.makeText(context, "⏳ Saving outfit image to your Gallery...", Toast.LENGTH_SHORT).show()
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            var bitmap: Bitmap? = null
+            if (imageUrl.startsWith("data:image/")) {
+                val base64Data = imageUrl.substringAfter("base64,")
+                val decodedBytes = Base64.decode(base64Data, Base64.DEFAULT)
+                bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+            } else {
+                val url = URL(imageUrl)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.doInput = true
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+                connection.connect()
+                val inputStream = connection.inputStream
+                bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream.close()
             }
-            dm.enqueue(request)
-            Toast.makeText(context, "📥 Downloading outfit image to Downloads folder!", Toast.LENGTH_LONG).show()
-        } else {
-            Toast.makeText(context, "Download manager not available", Toast.LENGTH_SHORT).show()
+
+            if (bitmap != null) {
+                val filename = "buywise_outfit_${System.currentTimeMillis()}.png"
+                val resolver = context.contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/BuyWise")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                }
+                val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (imageUri != null) {
+                    resolver.openOutputStream(imageUri)?.use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        contentValues.clear()
+                        contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                        resolver.update(imageUri, contentValues, null, null)
+                    }
+                    MediaScannerConnection.scanFile(
+                        context,
+                        arrayOf(imageUri.toString()),
+                        arrayOf("image/png")
+                    ) { _, _ -> }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "✅ Outfit image saved to your Gallery & Photos!", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Could not save to gallery", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Could not decode outfit image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Saved image fallback: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
-    } catch (e: Exception) {
-        Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -1365,7 +1423,6 @@ private fun SubmitEntryDialog(
         )
     }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
-    var showCameraChoiceDialog by remember { mutableStateOf(false) }
     var is18Plus by remember { mutableStateOf(false) }
     var consentVoting by remember { mutableStateOf(false) }
     var consentWinner by remember { mutableStateOf(false) }
@@ -1373,10 +1430,11 @@ private fun SubmitEntryDialog(
     var showRulesInDialog by remember { mutableStateOf(false) }
 
     val pickPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
             selectedImageUri = uri.toString()
+            Toast.makeText(context, "🖼️ Photo selected!", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1385,6 +1443,7 @@ private fun SubmitEntryDialog(
     ) { success: Boolean ->
         if (success && tempCameraUri != null) {
             selectedImageUri = tempCameraUri.toString()
+            Toast.makeText(context, "📸 Photo captured!", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1393,29 +1452,40 @@ private fun SubmitEntryDialog(
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK && tempCameraUri != null) {
             selectedImageUri = tempCameraUri.toString()
+            Toast.makeText(context, "📸 Photo captured!", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun launchCamera(isFrontFacing: Boolean) {
-        val photoFile = File(context.cacheDir, "challenge_camera_${System.currentTimeMillis()}.jpg")
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
-        tempCameraUri = uri
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-            putExtra(MediaStore.EXTRA_OUTPUT, uri)
-            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            if (isFrontFacing) {
-                putExtra("android.intent.extras.CAMERA_FACING", 1)
-                putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
-                putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
-                putExtra("com.google.assistant.extra.USE_FRONT_CAMERA", true)
-                putExtra("camerafacing", "front")
-                putExtra("previous_mode", "front")
-            }
-        }
         try {
+            val photoFile = File(context.cacheDir, "challenge_camera_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+            tempCameraUri = uri
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                putExtra(MediaStore.EXTRA_OUTPUT, uri)
+                clipData = ClipData.newRawUri("", uri)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                if (isFrontFacing) {
+                    putExtra("android.intent.extras.CAMERA_FACING", 1)
+                    putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
+                    putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
+                    putExtra("com.google.assistant.extra.USE_FRONT_CAMERA", true)
+                    putExtra("camerafacing", "front")
+                    putExtra("previous_mode", "front")
+                }
+            }
+            val resInfoList = context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            for (resolveInfo in resInfoList) {
+                val packageName = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(packageName, uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
             cameraIntentLauncher.launch(intent)
-        } catch (_: Exception) {
-            takePhotoLauncher.launch(uri)
+        } catch (e: Exception) {
+            try {
+                tempCameraUri?.let { takePhotoLauncher.launch(it) }
+            } catch (e2: Exception) {
+                Toast.makeText(context, "Could not open camera: ${e2.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -1577,7 +1647,7 @@ private fun SubmitEntryDialog(
                                 )
                                 Button(
                                     onClick = {
-                                        downloadProductImage(
+                                        saveImageToGallery(
                                             context = context,
                                             imageUrl = activeComp?.featuredProductImage,
                                             title = activeComp?.featuredProductTitle ?: "BuyWise Outfit"
@@ -1612,7 +1682,7 @@ private fun SubmitEntryDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // IMAGE PREVIEW & UPLOAD BUTTONS
+                // IMAGE PREVIEW & DIRECT PHOTO BUTTONS
                 Text("Your Look Photo:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BuyWiseCyan)
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -1623,7 +1693,7 @@ private fun SubmitEntryDialog(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(86.dp)
+                            .size(92.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF0C091A))
                             .border(1.dp, BuyWiseCyan, RoundedCornerShape(12.dp)),
@@ -1637,73 +1707,41 @@ private fun SubmitEntryDialog(
                         )
                     }
 
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Button(
                             onClick = {
-                                showCameraChoiceDialog = true
+                                launchCamera(isFrontFacing = true)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF261F42)),
+                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 6.dp)
+                            modifier = Modifier.fillMaxWidth().height(34.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text("📸 Take Photo / Selfie", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("🤳 Take Selfie", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
                             onClick = {
-                                pickPhotoLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
+                                launchCamera(isFrontFacing = false)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF261F42)),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 6.dp)
+                            modifier = Modifier.fillMaxWidth().height(34.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("📸 Rear Camera", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                pickPhotoLauncher.launch("image/*")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF261F42)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth().height(34.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text("🖼️ Pick from Gallery", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // CAMERA CHOICE DIALOG (SELFIE VS NORMAL REAR)
-                if (showCameraChoiceDialog) {
-                    androidx.compose.ui.window.Dialog(onDismissRequest = { showCameraChoiceDialog = false }) {
-                        Surface(
-                            shape = RoundedCornerShape(18.dp),
-                            color = Color(0xFF17102B),
-                            border = BorderStroke(1.2.dp, BuyWiseGold),
-                            modifier = Modifier.fillMaxWidth().padding(16.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("📸 Choose Camera Option", fontSize = 15.sp, fontWeight = FontWeight.Black, color = BuyWiseGold)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Take a front selfie or normal photo", fontSize = 11.sp, color = Color.LightGray)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(
-                                    onClick = {
-                                        showCameraChoiceDialog = false
-                                        launchCamera(isFrontFacing = true)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.fillMaxWidth().height(42.dp)
-                                ) {
-                                    Text("🤳 Take Selfie (Front Camera)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Button(
-                                    onClick = {
-                                        showCameraChoiceDialog = false
-                                        launchCamera(isFrontFacing = false)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF281F45)),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.fillMaxWidth().height(42.dp)
-                                ) {
-                                    Text("📷 Normal Photo (Rear Camera)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
-                                }
-                            }
                         }
                     }
                 }

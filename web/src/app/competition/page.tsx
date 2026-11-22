@@ -142,6 +142,28 @@ export default function CompetitionPage() {
     }
   };
 
+  const handleDownloadOutfit = async (url: string) => {
+    try {
+      setToastMsg('⏳ Downloading outfit image...');
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'buywise_challenge_outfit.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      setToastMsg('✅ Outfit image saved to your device!');
+      setTimeout(() => setToastMsg(null), 4000);
+    } catch {
+      window.open(url, '_blank');
+      setToastMsg('✅ Opened outfit image in new tab to save');
+      setTimeout(() => setToastMsg(null), 4000);
+    }
+  };
+
   const handleDirectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!competition) return;
@@ -724,15 +746,13 @@ export default function CompetitionPage() {
               <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(255, 0, 127, 0.08)', border: '1px solid rgba(255, 0, 127, 0.35)', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>📥 Step 1: Download Outfit Image</span>
-                  <a
-                    href={competition.featuredProductImage || '/kamarbandh.png'}
-                    download="buywise_challenge_outfit.png"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontSize: '11.5px', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #ff007f, #8b5cf6)', padding: '7px 14px', borderRadius: '10px', textDecoration: 'none', border: 'none' }}
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadOutfit(competition.featuredProductImage || '/kamarbandh.png')}
+                    style={{ fontSize: '11.5px', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #ff007f, #8b5cf6)', padding: '7px 14px', borderRadius: '10px', textDecoration: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     ⬇️ Download Image
-                  </a>
+                  </button>
                 </div>
                 <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.35)', fontSize: '11.5px', color: '#ffd700', lineHeight: 1.4, fontWeight: 700 }}>
                   💡 <strong>Guidance:</strong> Download image and replace with your face using ChatGPT, Gemini, or any AI tool, then upload here by picking from gallery.
