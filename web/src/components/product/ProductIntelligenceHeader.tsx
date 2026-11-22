@@ -540,26 +540,6 @@ export default function ProductIntelligenceHeader({
                 <span>📲</span> OPEN IN APP
               </button>
             </a>
-
-            {isTryOn && (
-              <Link href="/try-on" style={{ textDecoration: 'none' }}>
-                <button
-                  onClick={onTryOnClick}
-                  style={{
-                    padding: '16px 24px',
-                    borderRadius: '18px',
-                    background: 'rgba(0, 212, 255, 0.15)',
-                    border: '1px solid #00d4ff',
-                    color: '#00d4ff',
-                    fontWeight: 900,
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✨ TRY ON IN 3D
-                </button>
-              </Link>
-            )}
           </div>
         </div>
       </div>

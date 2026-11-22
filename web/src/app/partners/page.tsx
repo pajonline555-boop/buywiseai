@@ -62,18 +62,6 @@ export default function PartnersStorefront() {
     return p.category.toLowerCase() === activeTab.toLowerCase();
   });
 
-  const handleTryOn = (product: PartnerProduct) => {
-    if (product.partnerId) {
-      trackPartnerEvent({
-        partnerId: product.partnerId,
-        productId: product.id,
-        eventType: 'product_detail_view',
-        sourceSurface: 'gen_g_store'
-      }).catch(() => {});
-    }
-    router.push(`/try-on?garmentUrl=${encodeURIComponent(product.primaryImage)}&title=${encodeURIComponent(product.title)}`);
-  };
-
   const handleBuyNow = (product: PartnerProduct) => {
     if (product.partnerId) {
       trackPartnerEvent({
@@ -83,14 +71,9 @@ export default function PartnersStorefront() {
         sourceSurface: 'gen_g_store'
       }).catch(() => {});
     }
-    const targetUrl = product.productUrl && product.productUrl.startsWith('http')
-      ? product.productUrl
-      : (product.brand || product.partnerName || '').toLowerCase().includes('flipkart')
-      ? `https://www.flipkart.com/search?q=${encodeURIComponent(product.title)}`
-      : `https://www.amazon.in/s?k=${encodeURIComponent(product.title)}`;
-    if (typeof window !== 'undefined') {
-      window.open(targetUrl, '_blank', 'noopener,noreferrer');
-    }
+    // Always open in-app BuyWise direct checkout modal - NEVER divert to Amazon or external store
+    setSelectedProductForCheckout(product);
+    setIsCheckoutOpen(true);
   };
 
   const handleShareProduct = async (product: PartnerProduct) => {
@@ -140,7 +123,7 @@ export default function PartnersStorefront() {
           </h1>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '18px', maxWidth: '750px', margin: '0 auto 30px auto' }}>
-            {t('Shop authentic handpicked products directly from verified partner brands. Enjoy AI Virtual Try-On, guaranteed stock, direct partner packing, fast delivery & dedicated customer support.')}
+            {t('Shop authentic handpicked products directly from verified partner brands. Enjoy guaranteed stock, direct partner packing, fast delivery & dedicated customer support.')}
           </p>
 
           {/* Key Value Props Pill Badges */}
@@ -149,7 +132,7 @@ export default function PartnersStorefront() {
               <span style={{ fontSize: '16px' }}>🟢</span> {t('Verified Direct Partner Brands')}
             </div>
             <div style={{ padding: '10px 18px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700 }}>
-              <span style={{ fontSize: '16px' }}>👗</span> {t('1-Click AI Virtual Try-On')}
+              <span style={{ fontSize: '16px' }}>🛍️</span> In-App Direct Checkout
             </div>
             <div style={{ padding: '10px 18px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700 }}>
               <span style={{ fontSize: '16px' }}>🚚</span> {t('Seller-Fulfilled Expedited Delivery')}
@@ -332,45 +315,26 @@ export default function PartnersStorefront() {
                       </div>
 
                       {/* Action Buttons */}
-                      <div style={{ display: 'grid', gridTemplateColumns: prod.tryOnEnabled ? '1fr 1.2fr 44px' : '1fr 44px', gap: '10px', alignItems: 'center' }}>
-                        {prod.tryOnEnabled && (
-                          <button
-                            onClick={() => handleTryOn(prod)}
-                            title="Try on with AI"
-                            style={{
-                              padding: '12px 8px',
-                              borderRadius: '14px',
-                              border: '1px solid rgba(255, 0, 128, 0.4)',
-                              background: 'linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(121, 40, 202, 0.2))',
-                              color: 'white',
-                              fontWeight: 800,
-                              fontSize: '13px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px'
-                            }}
-                          >
-                            ✨ {t('nav_try_on')}
-                          </button>
-                        )}
-
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 44px', gap: '10px', alignItems: 'center' }}>
                         <button
                           onClick={() => handleBuyNow(prod)}
                           className="btn-primary"
-                          title="View Now on Verified Partner Store"
+                          title="Order in BuyWise"
                           style={{
-                            padding: '12px 10px',
+                            padding: '12px 14px',
                             borderRadius: '14px',
                             fontSize: '13px',
                             fontWeight: 900,
                             background: 'var(--gradient-accent)',
                             color: '#ffffff',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px'
                           }}
                         >
-                          🛍️ {t('buy_now_btn')}
+                          🛍️ Order in BuyWise
                         </button>
 
                         <button

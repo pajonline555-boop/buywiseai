@@ -20,6 +20,8 @@ import {
   submitToCompetition,
 } from '@/lib/competition/store';
 import RulesAndRegulationsModal from '@/components/competition/RulesAndRegulationsModal';
+import CheckoutModal from '@/components/CheckoutModal';
+import { PartnerProduct } from '@/lib/partners/types';
 
 export default function CompetitionPage() {
   const { t } = useTranslation();
@@ -33,6 +35,7 @@ export default function CompetitionPage() {
   const [activeTab, setActiveTab] = useState<'CURRENT' | 'FASHION_WALL'>('CURRENT');
   const [votingBusy, setVotingBusy] = useState<string | null>(null);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Submit Look Modal State
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -223,6 +226,33 @@ export default function CompetitionPage() {
   // Sort submissions by highest vote count
   const sortedSubmissions = [...submissions].sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0));
 
+  const featuredPartnerProduct: PartnerProduct | null = competition ? {
+    id: `comp_${competition.id}`,
+    partnerId: 'partner_buywise_official',
+    partnerName: 'Verified BuyWise Partner Network',
+    brand: 'BuyWise Partner',
+    title: competition.featuredProductTitle,
+    description: competition.description || 'Official BuyWise Challenge Designer Outfit',
+    category: 'Fashion',
+    mrp: (competition.featuredProductPrice || 4999) + 2000,
+    sellingPrice: competition.featuredProductPrice || 4999,
+    stock: 100,
+    primaryImage: competition.featuredProductImage || '/kamarbandh.png',
+    images: [competition.featuredProductImage || '/kamarbandh.png'],
+    sku: `BW-COMP-${competition.id}`,
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'DIRECT',
+    tryOnEnabled: false,
+    returnPolicy: '7 Days Easy Return',
+    warranty: '100% Genuine Quality Guarantee',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 10,
+    gstPercent: 12,
+    status: 'LIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  } : null;
+
   return (
     <main
       style={{
@@ -258,8 +288,8 @@ export default function CompetitionPage() {
       {/* Header & Title */}
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 18px', background: 'rgba(255, 215, 0, 0.12)', border: '1px solid rgba(255, 215, 0, 0.4)', borderRadius: '20px', marginBottom: '14px' }}>
-          <span style={{ color: '#ffd700', fontWeight: 900, fontSize: '13px' }}>🏆 {t('WEEKLY BUYWISE TRY-ON COMPETITION')}</span>
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>Live Weekly Challenge</span>
+          <span style={{ color: '#ffd700', fontWeight: 900, fontSize: '13px' }}>🏆 BUYWISE LOOK CHALLENGE</span>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>Live Challenge</span>
         </div>
 
         <h1 style={{ fontSize: '38px', fontWeight: 900, margin: '0 0 12px 0', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
@@ -397,6 +427,27 @@ export default function CompetitionPage() {
               }}
             >
               🏆 Enter Look Challenge ➔
+            </button>
+
+            <button
+              onClick={() => setIsCheckoutOpen(true)}
+              style={{
+                padding: '12px 20px',
+                borderRadius: '20px',
+                background: 'rgba(0, 255, 136, 0.15)',
+                color: '#00ff88',
+                fontWeight: 900,
+                fontSize: '13.5px',
+                border: '1px solid rgba(0, 255, 136, 0.45)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(0, 255, 136, 0.2)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>🛍️</span> Buy Outfit in BuyWise (₹{competition.featuredProductPrice.toLocaleString()})
             </button>
 
             <button
@@ -649,7 +700,7 @@ export default function CompetitionPage() {
                 <div style={{ position: 'relative', width: '100%', height: '280px', borderRadius: '20px', overflow: 'hidden' }}>
                   <Image src={winner.vtoResultImage} alt={winner.userName} fill unoptimized style={{ objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', top: '16px', left: '16px', padding: '6px 14px', borderRadius: '12px', background: '#ffd700', color: '#000', fontWeight: 900, fontSize: '12px' }}>
-                    🏆 WEEKLY WINNER
+                    🏆 CHALLENGE WINNER
                   </div>
                 </div>
 
@@ -735,12 +786,13 @@ export default function CompetitionPage() {
                     ₹{competition.featuredProductPrice || 4999} • Official BuyWise Partner Store • Free Delivery
                   </div>
                 </div>
-                <Link
-                  href="/partners"
-                  style={{ fontSize: '11.5px', fontWeight: 900, color: '#000', background: '#00ff88', padding: '7px 16px', borderRadius: '10px', textDecoration: 'none' }}
+                <button
+                  type="button"
+                  onClick={() => setIsCheckoutOpen(true)}
+                  style={{ fontSize: '11.5px', fontWeight: 900, color: '#000', background: '#00ff88', padding: '8px 18px', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}
                 >
-                  Order in App ➔
-                </Link>
+                  🛍️ Order in App ➔
+                </button>
               </div>
             ) : (
               <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(255, 0, 127, 0.08)', border: '1px solid rgba(255, 0, 127, 0.35)', marginBottom: '16px' }}>
@@ -904,6 +956,13 @@ export default function CompetitionPage() {
           </div>
         </div>
       )}
+      {/* Direct In-App / On-Site Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        product={featuredPartnerProduct}
+      />
+
       {/* Rules and Regulations / Terms & Conditions Modal */}
       <RulesAndRegulationsModal
         isOpen={showRulesModal}

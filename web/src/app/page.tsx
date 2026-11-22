@@ -444,9 +444,9 @@ export default function Home() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <Link href="/partners" style={{ flex: 1, textDecoration: 'none' }}>
-                    <button style={{ width: '100%', padding: '12px', borderRadius: '16px', background: 'linear-gradient(135deg, #ffd700, #ff8c00)', color: '#000', fontWeight: 900, fontSize: '13px', border: 'none', cursor: 'pointer' }}>
-                      🛍️ View Deal Outfit
+                  <Link href="/competition" style={{ flex: 1, textDecoration: 'none' }}>
+                    <button style={{ width: '100%', padding: '12px', borderRadius: '16px', background: 'linear-gradient(135deg, #a855f7, #ff007f)', color: '#ffffff', fontWeight: 900, fontSize: '13px', border: 'none', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255, 0, 128, 0.35)' }}>
+                      🏆 Enter Look Challenge
                     </button>
                   </Link>
                   <Link href="/competition" style={{ flex: 1, textDecoration: 'none' }}>
