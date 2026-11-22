@@ -778,11 +778,18 @@ export function GarmentCanvas({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "10px" }}>
           <div>
             <div style={{ fontSize: "16px", fontWeight: 900, color: "#ff007f", display: "flex", alignItems: "center", gap: "6px" }}>
-              🏆 Join the Weekly Look Challenge
+              🏆 Join the Look Challenge
             </div>
             <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", margin: "4px 0 0 0" }}>
-              Win ₹5,000 Voucher! Download this outfit, create your styled look with your favorite editor or photo, and upload here to compete.
+              Win ₹5,000 Voucher! Download this outfit, replace face with your photo using ChatGPT or Gemini, and upload here to compete.
             </p>
+          </div>
+        </div>
+
+        {/* Guidance Note */}
+        <div style={{ background: "rgba(255, 215, 0, 0.08)", border: "1px solid rgba(255, 215, 0, 0.35)", borderRadius: "12px", padding: "10px 14px", marginTop: "10px" }}>
+          <div style={{ fontSize: "11.5px", color: "#ffd700", fontWeight: 700, lineHeight: 1.4 }}>
+            💡 <strong>Guidance:</strong> Download the outfit image below and replace with your face using ChatGPT, Gemini, or any AI tool, then upload by picking from gallery to compete!
           </div>
         </div>
 
@@ -865,7 +872,7 @@ export function GarmentCanvas({
             gap: "8px",
           }}
         >
-          🏆 Submit This Look to Weekly Challenge!
+          🏆 Submit This Look to Look Challenge!
         </button>
       </div>
 

@@ -1479,7 +1479,7 @@ fun VtoScreen(
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "🏆 Join the Weekly Look Challenge",
+                        text = "🏆 Join the Look Challenge",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                         color = BuyWiseNeonPink
@@ -1856,19 +1856,12 @@ fun VtoScreen(
                                 .weight(1f)
                                 .clickable {
                                     submissionType = "REAL_DRESSED"
-                                    val realUrl = "https://www.amazon.in/s?k=${Uri.encode(activeComp.featuredProductTitle)}&tag=pajonline-21&ascsubtag=bw_vto_realdress"
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(realUrl)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (_: Exception) {}
                                 }
                         ) {
                             Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("📸 Real Dressed", fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (isReal) BuyWiseEmerald else Color.White)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("Wear look • Amazon ↗", fontSize = 9.sp, color = if (isReal) BuyWiseEmerald.copy(alpha = 0.85f) else Color.Gray)
+                                Text("Wear look • Buy in BuyWise", fontSize = 9.sp, color = if (isReal) BuyWiseEmerald.copy(alpha = 0.85f) else Color.Gray)
                             }
                         }
 
@@ -1881,19 +1874,12 @@ fun VtoScreen(
                                 .weight(1f)
                                 .clickable {
                                     submissionType = "AI_GENERATED"
-                                    val aiUrl = "https://www.amazon.in/s?k=${Uri.encode(activeComp.featuredProductTitle)}&tag=pajonline-21&ascsubtag=bw_vto_ailook"
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(aiUrl)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (_: Exception) {}
                                 }
                         ) {
                             Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("✨ AI Look", fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (isAi) BuyWiseNeonPink else Color.White)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("AI styled • Amazon ↗", fontSize = 9.sp, color = if (isAi) BuyWiseNeonPink.copy(alpha = 0.85f) else Color.Gray)
+                                Text("AI styled • Download & Style", fontSize = 9.sp, color = if (isAi) BuyWiseNeonPink.copy(alpha = 0.85f) else Color.Gray)
                             }
                         }
                     }

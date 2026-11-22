@@ -352,7 +352,7 @@ export default function Home() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 14px', borderRadius: '16px', background: 'rgba(255, 215, 0, 0.2)', border: '1px solid rgba(255, 215, 0, 0.5)' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#ffd700' }}>🏆 THIS WEEK&apos;S BUYWISE CHALLENGE</span>
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#ffd700' }}>🏆 BUYWISE CHALLENGE</span>
                   </div>
                   <span style={{ fontSize: '11px', color: '#00ff88', fontWeight: 800, background: 'rgba(0, 255, 136, 0.15)', padding: '4px 10px', borderRadius: '12px', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
                     🆓 Free Entry • 🔞 18+ Only

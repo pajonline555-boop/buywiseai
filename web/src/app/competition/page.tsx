@@ -40,6 +40,7 @@ export default function CompetitionPage() {
   const [submitImage, setSubmitImage] = useState('');
   const [submitConsent, setSubmitConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submissionType, setSubmissionType] = useState<'REAL_DRESSED' | 'AI_CONCEPT'>('REAL_DRESSED');
 
   useEffect(() => {
     // Generate or fetch a stable guest voter ID
@@ -105,7 +106,7 @@ export default function CompetitionPage() {
     }
 
     if (voted || hasUserVotedInCompetition(competition.id, currentVoterId)) {
-      setToastMsg('⚠️ You have already voted in this week\'s challenge! One vote per user.');
+      setToastMsg('⚠️ You have already voted in this challenge! One vote per user.');
       setTimeout(() => setToastMsg(null), 4000);
       return;
     }
@@ -179,7 +180,7 @@ export default function CompetitionPage() {
       };
       setSubmissions(prev => [newEntry, ...prev]);
       setShowSubmitModal(false);
-      setToastMsg('✨ Look successfully submitted to the Weekly Competition!');
+      setToastMsg('✨ Look successfully submitted to the Look Challenge!');
       setSubmitImage('');
       setSubmitConsent(false);
       setTimeout(() => setToastMsg(null), 4000);
@@ -373,7 +374,7 @@ export default function CompetitionPage() {
                 boxShadow: '0 8px 24px rgba(255, 0, 128, 0.4)',
               }}
             >
-              🏆 Enter Challenge Look ➔
+              🏆 Enter Look Challenge ➔
             </button>
 
             <button
@@ -488,7 +489,7 @@ export default function CompetitionPage() {
           {submissions.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)' }}>
               <span style={{ fontSize: '48px', display: 'block', marginBottom: '12px' }}>👗</span>
-              <h3 style={{ fontSize: '20px', fontWeight: 800 }}>No submissions yet for this week&apos;s challenge.</h3>
+              <h3 style={{ fontSize: '20px', fontWeight: 800 }}>No submissions yet for this challenge.</h3>
               <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '420px', margin: '8px auto 20px auto' }}>
                 Be the first shopper to try on the featured product and submit your look to win ₹5,000!
               </p>
@@ -497,7 +498,7 @@ export default function CompetitionPage() {
                   onClick={() => setShowSubmitModal(true)}
                   style={{ padding: '12px 32px', borderRadius: '20px', background: 'linear-gradient(135deg, #a855f7, #ff007f)', color: '#fff', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(255, 0, 128, 0.4)' }}
                 >
-                  🏆 Submit Look to Challenge ➔
+                  🏆 Enter Look Challenge ➔
                 </button>
               </div>
             </div>
@@ -649,16 +650,97 @@ export default function CompetitionPage() {
       {/* Direct Look Submission Modal */}
       {showSubmitModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="glass" style={{ width: '100%', maxWidth: '520px', background: 'rgba(18, 14, 36, 0.98)', border: '1px solid rgba(255, 215, 0, 0.4)', borderRadius: '24px', padding: '32px', boxShadow: '0 25px 60px rgba(0,0,0,0.8)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="glass" style={{ width: '100%', maxWidth: '540px', background: 'rgba(18, 14, 36, 0.98)', border: '1px solid rgba(255, 215, 0, 0.4)', borderRadius: '24px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.8)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div>
-                <span style={{ fontSize: '11px', color: '#ffd700', fontWeight: 900 }}>WEEKLY FASHION CHALLENGE</span>
-                <h2 style={{ fontSize: '20px', fontWeight: 900, margin: '2px 0 0 0', color: '#fff' }}>Submit Look to Competition</h2>
+                <span style={{ fontSize: '11px', color: '#ffd700', fontWeight: 900 }}>BUYWISE FASHION CHALLENGE</span>
+                <h2 style={{ fontSize: '20px', fontWeight: 900, margin: '2px 0 0 0', color: '#fff' }}>Submit Look to Challenge</h2>
               </div>
               <button onClick={() => setShowSubmitModal(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '22px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <form onSubmit={handleDirectSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* DUAL SUBMISSION TABS: REAL DRESSED VS AI CONCEPT LOOK */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setSubmissionType('REAL_DRESSED')}
+                style={{
+                  padding: '12px 8px',
+                  borderRadius: '14px',
+                  background: submissionType === 'REAL_DRESSED' ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  border: submissionType === 'REAL_DRESSED' ? '1.5px solid #00ff88' : '1px solid rgba(255, 255, 255, 0.15)',
+                  color: submissionType === 'REAL_DRESSED' ? '#00ff88' : '#ffffff',
+                  fontWeight: 900,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                📸 Real Dressed
+                <div style={{ fontSize: '10px', fontWeight: 700, color: submissionType === 'REAL_DRESSED' ? 'rgba(0, 255, 136, 0.8)' : 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                  Wear look • Buy in BuyWise
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSubmissionType('AI_CONCEPT')}
+                style={{
+                  padding: '12px 8px',
+                  borderRadius: '14px',
+                  background: submissionType === 'AI_CONCEPT' ? 'rgba(255, 0, 127, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  border: submissionType === 'AI_CONCEPT' ? '1.5px solid #ff007f' : '1px solid rgba(255, 255, 255, 0.15)',
+                  color: submissionType === 'AI_CONCEPT' ? '#ff007f' : '#ffffff',
+                  fontWeight: 900,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                ✨ AI Concept Look
+                <div style={{ fontSize: '10px', fontWeight: 700, color: submissionType === 'AI_CONCEPT' ? 'rgba(255, 0, 127, 0.8)' : 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                  AI photos • Download &amp; Style
+                </div>
+              </button>
+            </div>
+
+            {/* CONDITIONAL SUBMISSION CONTENT */}
+            {submissionType === 'REAL_DRESSED' ? (
+              <div style={{ padding: '12px 16px', borderRadius: '14px', background: 'rgba(0, 255, 136, 0.08)', border: '1px solid rgba(0, 255, 136, 0.35)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#00ff88' }}>🛍️ Buy This Outfit in BuyWise</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
+                    ₹{competition.featuredProductPrice || 4999} • Official BuyWise Partner Store • Free Delivery
+                  </div>
+                </div>
+                <Link
+                  href="/partners"
+                  style={{ fontSize: '11.5px', fontWeight: 900, color: '#000', background: '#00ff88', padding: '7px 16px', borderRadius: '10px', textDecoration: 'none' }}
+                >
+                  Order in App ➔
+                </Link>
+              </div>
+            ) : (
+              <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(255, 0, 127, 0.08)', border: '1px solid rgba(255, 0, 127, 0.35)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>📥 Step 1: Download Outfit Image</span>
+                  <a
+                    href={competition.featuredProductImage || '/kamarbandh.png'}
+                    download="buywise_challenge_outfit.png"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '11.5px', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #ff007f, #8b5cf6)', padding: '7px 14px', borderRadius: '10px', textDecoration: 'none', border: 'none' }}
+                  >
+                    ⬇️ Download Image
+                  </a>
+                </div>
+                <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.35)', fontSize: '11.5px', color: '#ffd700', lineHeight: 1.4, fontWeight: 700 }}>
+                  💡 <strong>Guidance:</strong> Download image and replace with your face using ChatGPT, Gemini, or any AI tool, then upload here by picking from gallery.
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleDirectSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 800, color: 'rgba(255,255,255,0.8)', display: 'block', marginBottom: '6px' }}>Your Name / Model Handle</label>
                 <input
@@ -671,40 +753,99 @@ export default function CompetitionPage() {
                 />
               </div>
 
+              {/* PHOTO UPLOAD & SELFIE OPTION */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, color: 'rgba(255,255,255,0.8)', display: 'block', marginBottom: '6px' }}>Try-On Look Image URL</label>
+                <label style={{ fontSize: '12px', fontWeight: 800, color: 'rgba(255,255,255,0.8)', display: 'block', marginBottom: '6px' }}>
+                  Your Look Photo (Selfie or Uploaded Image)
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <label
+                    style={{
+                      padding: '10px',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 0, 127, 0.15)',
+                      border: '1px solid #ff007f',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    🤳 Take Selfie
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = ev => {
+                            if (ev.target?.result) setSubmitImage(ev.target.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+
+                  <label
+                    style={{
+                      padding: '10px',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    🖼️ Pick from Gallery
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = ev => {
+                            if (ev.target?.result) setSubmitImage(ev.target.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+
                 <input
                   type="url"
-                  value={submitImage}
+                  value={submitImage.startsWith('data:') ? 'Image selected from camera/gallery' : submitImage}
                   onChange={e => setSubmitImage(e.target.value)}
-                  placeholder="https://... (or choose a preset below)"
-                  required
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '13px' }}
+                  placeholder="Or enter image URL here..."
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '12px' }}
                 />
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '6px' }}>
-                  Quick Presets:
-                  <button type="button" onClick={() => setSubmitImage('https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80')} style={{ marginLeft: '6px', background: 'none', border: 'none', color: '#00d4ff', textDecoration: 'underline', cursor: 'pointer', fontSize: '11px' }}>Kanjivaram Saree</button>
-                  <button type="button" onClick={() => setSubmitImage('https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80')} style={{ marginLeft: '6px', background: 'none', border: 'none', color: '#00d4ff', textDecoration: 'underline', cursor: 'pointer', fontSize: '11px' }}>Emerald Anarkali</button>
-                </div>
               </div>
 
               {submitImage && (
-                <div style={{ width: '100%', height: '180px', borderRadius: '14px', overflow: 'hidden', position: 'relative', border: '1px solid rgba(255,255,255,0.2)' }}>
-                  <img src={submitImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ width: '100%', height: '180px', borderRadius: '14px', overflow: 'hidden', position: 'relative', border: '1.5px solid #00d4ff', background: '#0a0a0a' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={submitImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
               )}
-
-              <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255, 215, 0, 0.08)', border: '1px solid rgba(255, 215, 0, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>🛍️ Need official garment photos or authentic dress?</span>
-                <a
-                  href={`https://www.amazon.in/s?k=${encodeURIComponent(competition.featuredProductTitle)}&tag=pajonline-21&ascsubtag=bw_web_comp`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '11px', fontWeight: 800, color: '#ffd700', textDecoration: 'none', background: 'rgba(255,215,0,0.15)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,215,0,0.4)' }}
-                >
-                  View on Amazon ↗
-                </a>
-              </div>
 
               <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '4px' }}>
                 <input

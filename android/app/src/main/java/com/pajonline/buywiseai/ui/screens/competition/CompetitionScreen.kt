@@ -1,7 +1,11 @@
 package com.pajonline.buywiseai.ui.screens.competition
 
+import android.app.DownloadManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -409,7 +413,7 @@ fun CompetitionScreen(
                                 ) {
                                     Icon(Icons.Default.Star, contentDescription = null, tint = Color.White)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("🏆 Enter Weekly Look Challenge", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                                    Text("🏆 Enter Look Challenge", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -571,6 +575,7 @@ fun CompetitionScreen(
         SubmitEntryDialog(
             activeComp = activeComp,
             onDismiss = { showSubmitDialog = false },
+            onNavigateToPurchase = { onNavigateToWeb("BuyWise Store Checkout", "/partners") },
             onSubmit = { name, imageUri, subType, ytUrl ->
                 if (activeComp != null) {
                     val linkedPhone = prefs.getString("saved_user_phone", "") ?: ""
@@ -1312,10 +1317,39 @@ private fun EditEntryDialog(
     }
 }
 
+private fun downloadProductImage(context: Context, imageUrl: String?, title: String?) {
+    if (imageUrl.isNullOrBlank()) {
+        Toast.makeText(context, "Outfit image is not available", Toast.LENGTH_SHORT).show()
+        return
+    }
+    try {
+        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+        if (dm != null) {
+            val request = DownloadManager.Request(Uri.parse(imageUrl)).apply {
+                setTitle(title ?: "BuyWise Outfit Look")
+                setDescription("Challenge product image downloaded for AI styling")
+                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    "buywise_challenge_look_${System.currentTimeMillis()}.png"
+                )
+                setMimeType("image/png")
+            }
+            dm.enqueue(request)
+            Toast.makeText(context, "📥 Downloading outfit image to Downloads folder!", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(context, "Download manager not available", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
 @Composable
 private fun SubmitEntryDialog(
     activeComp: com.pajonline.buywiseai.domain.model.Competition?,
     onDismiss: () -> Unit,
+    onNavigateToPurchase: () -> Unit = {},
     onSubmit: (name: String, imageUri: String, subType: String, youtubeUrl: String) -> Unit
 ) {
     val context = LocalContext.current
@@ -1331,6 +1365,7 @@ private fun SubmitEntryDialog(
         )
     }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var showCameraChoiceDialog by remember { mutableStateOf(false) }
     var is18Plus by remember { mutableStateOf(false) }
     var consentVoting by remember { mutableStateOf(false) }
     var consentWinner by remember { mutableStateOf(false) }
@@ -1350,6 +1385,37 @@ private fun SubmitEntryDialog(
     ) { success: Boolean ->
         if (success && tempCameraUri != null) {
             selectedImageUri = tempCameraUri.toString()
+        }
+    }
+
+    val cameraIntentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && tempCameraUri != null) {
+            selectedImageUri = tempCameraUri.toString()
+        }
+    }
+
+    fun launchCamera(isFrontFacing: Boolean) {
+        val photoFile = File(context.cacheDir, "challenge_camera_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+        tempCameraUri = uri
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, uri)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (isFrontFacing) {
+                putExtra("android.intent.extras.CAMERA_FACING", 1)
+                putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
+                putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
+                putExtra("com.google.assistant.extra.USE_FRONT_CAMERA", true)
+                putExtra("camerafacing", "front")
+                putExtra("previous_mode", "front")
+            }
+        }
+        try {
+            cameraIntentLauncher.launch(intent)
+        } catch (_: Exception) {
+            takePhotoLauncher.launch(uri)
         }
     }
 
@@ -1390,11 +1456,6 @@ private fun SubmitEntryDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // DUAL SELECTION TABS: REAL LOOK VS AI LOOK (Direct affiliate link on click)
-                val affiliateQuery = remember(activeComp?.featuredProductTitle) {
-                    activeComp?.featuredProductTitle ?: "Gujarati Traditional Navratri Waist Belt Kamarbandh"
-                }
-
                 Text("Select Submission Type:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BuyWiseGold)
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -1410,19 +1471,12 @@ private fun SubmitEntryDialog(
                             .weight(1f)
                             .clickable {
                                 submissionType = "REAL_DRESSED"
-                                val realUrl = "https://www.amazon.in/s?k=${Uri.encode(affiliateQuery)}&tag=pajonline-21&ascsubtag=bw_vto_realdress"
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(realUrl)).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {}
                             }
                     ) {
                         Column(modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("📸 Real Dressed", fontSize = 11.5.sp, fontWeight = FontWeight.Black, color = if (isReal) BuyWiseEmerald else Color.White)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("Wear look • Amazon ↗", fontSize = 9.sp, color = if (isReal) BuyWiseEmerald.copy(alpha = 0.85f) else Color.Gray)
+                            Text("Wear look • Buy in BuyWise", fontSize = 9.sp, color = if (isReal) BuyWiseEmerald.copy(alpha = 0.85f) else Color.Gray)
                         }
                     }
 
@@ -1435,19 +1489,123 @@ private fun SubmitEntryDialog(
                             .weight(1f)
                             .clickable {
                                 submissionType = "AI_GENERATED"
-                                val aiUrl = "https://www.amazon.in/s?k=${Uri.encode(affiliateQuery)}&tag=pajonline-21&ascsubtag=bw_vto_ailook"
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(aiUrl)).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {}
                             }
                     ) {
                         Column(modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("✨ AI Concept Look", fontSize = 11.5.sp, fontWeight = FontWeight.Black, color = if (isAi) BuyWiseNeonPink else Color.White)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("AI photos • Amazon ↗", fontSize = 9.sp, color = if (isAi) BuyWiseNeonPink.copy(alpha = 0.85f) else Color.Gray)
+                            Text("AI photos • Download & Style", fontSize = 9.sp, color = if (isAi) BuyWiseNeonPink.copy(alpha = 0.85f) else Color.Gray)
+                        }
+                    }
+                }
+
+                // CONDITIONAL SECTION: REAL DRESSED PURCHASE VS AI CONCEPT DOWNLOAD + GUIDANCE
+                val isRealSelected = submissionType == "REAL_DRESSED"
+                if (isRealSelected) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToPurchase() },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A2619)),
+                        border = BorderStroke(1.dp, BuyWiseEmerald.copy(alpha = 0.7f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = activeComp?.featuredProductImage,
+                                    contentDescription = "Outfit to purchase",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize().padding(2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "🛍️ Buy This Outfit in BuyWise",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BuyWiseEmerald
+                                )
+                                Text(
+                                    text = "₹${activeComp?.featuredProductPrice ?: 4999} • Official BuyWise Partner Store",
+                                    fontSize = 9.5.sp,
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                            }
+                            Button(
+                                onClick = { onNavigateToPurchase() },
+                                colors = ButtonDefaults.buttonColors(containerColor = BuyWiseEmerald),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text("Order Now", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            }
+                        }
+                    }
+                } else {
+                    // AI Concept Look selected: Direct product image download & guidance note
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF260D2D)),
+                        border = BorderStroke(1.dp, BuyWiseNeonPink.copy(alpha = 0.7f))
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "📥 Download Outfit Image",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Button(
+                                    onClick = {
+                                        downloadProductImage(
+                                            context = context,
+                                            imageUrl = activeComp?.featuredProductImage,
+                                            title = activeComp?.featuredProductTitle ?: "BuyWise Outfit"
+                                        )
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(28.dp)
+                                ) {
+                                    Text("Download Image", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF16061E), RoundedCornerShape(8.dp))
+                                    .border(1.dp, BuyWiseGold.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = "💡 Guidance: Download image and replace with your face using ChatGPT, Gemini, or any AI tool, then upload here via 'Pick from Gallery'.",
+                                    fontSize = 10.sp,
+                                    color = BuyWiseGold,
+                                    lineHeight = 13.5.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -1482,17 +1640,14 @@ private fun SubmitEntryDialog(
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = {
-                                val photoFile = File(context.cacheDir, "challenge_camera_${System.currentTimeMillis()}.jpg")
-                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
-                                tempCameraUri = uri
-                                takePhotoLauncher.launch(uri)
+                                showCameraChoiceDialog = true
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF261F42)),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(vertical = 6.dp)
                         ) {
-                            Text("📸 Take Photo", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("📸 Take Photo / Selfie", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -1507,6 +1662,48 @@ private fun SubmitEntryDialog(
                             contentPadding = PaddingValues(vertical = 6.dp)
                         ) {
                             Text("🖼️ Pick from Gallery", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // CAMERA CHOICE DIALOG (SELFIE VS NORMAL REAR)
+                if (showCameraChoiceDialog) {
+                    androidx.compose.ui.window.Dialog(onDismissRequest = { showCameraChoiceDialog = false }) {
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = Color(0xFF17102B),
+                            border = BorderStroke(1.2.dp, BuyWiseGold),
+                            modifier = Modifier.fillMaxWidth().padding(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("📸 Choose Camera Option", fontSize = 15.sp, fontWeight = FontWeight.Black, color = BuyWiseGold)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Take a front selfie or normal photo", fontSize = 11.sp, color = Color.LightGray)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = {
+                                        showCameraChoiceDialog = false
+                                        launchCamera(isFrontFacing = true)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth().height(42.dp)
+                                ) {
+                                    Text("🤳 Take Selfie (Front Camera)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = {
+                                        showCameraChoiceDialog = false
+                                        launchCamera(isFrontFacing = false)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF281F45)),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth().height(42.dp)
+                                ) {
+                                    Text("📷 Normal Photo (Rear Camera)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                                }
+                            }
                         }
                     }
                 }
