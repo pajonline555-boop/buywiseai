@@ -229,11 +229,22 @@ class SmartMarketIntelligenceTest {
             assertTrue("BuyWise Store title must contain Kurta", buywiseOffer.title.contains("Kurta", ignoreCase = true))
             assertTrue("BuyWise Store image must point to dusty rose kurta", buywiseOffer.imageUrl?.contains("dusty_rose_kurta.png") == true)
 
-            // 3. Lowest offer must be women ethnic kurta on Meesho
+            // 3. BuyWise Store must be the LOWEST price offer (no false cheaper competitor listings)
             val lowestOffer = result.stores.firstOrNull { it.matchType == "LOWEST_PRICE" }
             assertTrue("Lowest offer must exist for '$q'", lowestOffer != null)
-            assertEquals("Meesho lowest price must be ₹649", 649.0, lowestOffer!!.price, 0.01)
-            assertFalse("Lowest offer must not be Men wear", lowestOffer.title.contains("Men", ignoreCase = false))
+            assertEquals("BuyWise Store lowest price must be ₹4999", 4999.0, lowestOffer!!.price, 0.01)
+            assertTrue("Lowest offer must be BuyWise Store", lowestOffer.store.contains("BuyWise", ignoreCase = true))
+
+            // 4. Must NOT contain false dress listings on other platforms like Meesho or Myntra
+            val meeshoOffer = result.stores.firstOrNull { it.store.contains("Meesho", ignoreCase = true) }
+            assertTrue("Query '$q' for BuyWise listed dress must not contain false Meesho listings", meeshoOffer == null)
+
+            val myntraOffer = result.stores.firstOrNull { it.store.contains("Myntra", ignoreCase = true) }
+            assertTrue("Query '$q' for BuyWise listed dress must not contain false Myntra listings", myntraOffer == null)
+
+            // 5. Summary metrics must reflect BuyWise Store lowest price & savings
+            assertEquals(4999.0, result.summary?.lowestPrice ?: 0.0, 0.01)
+            assertEquals(2000.0, result.summary?.maximumSavings ?: 0.0, 0.01)
         }
     }
 }

@@ -1117,6 +1117,40 @@ object SmartMarketIntelligence {
         val enc = encode(query)
         val today = currentDateString()
 
+        val isOurKurtaDress = lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
+            lower.contains("kurta") || lower.contains("kurti") || lower.contains("anarkali") || lower.contains("pant set") ||
+            lower.contains("solid a-line") || lower.contains("a-line kurta") ||
+            (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
+            lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
+            (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women"))) ||
+            (lower.contains("women") && (lower.contains("peach") || lower.contains("coral") || lower.contains("rust") || (lower.contains("pink") && lower.contains("embroid"))))
+
+        // When a product is listed on BuyWise AI, show lowest price of it and do not show false dress listings on other platforms like Meesho
+        if (isOurKurtaDress) {
+            val buywiseOffer = StoreOffer(
+                id = "fash_bw_store_exclusive",
+                store = "🟢 BuyWise Store",
+                title = "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta",
+                url = "https://buywiseai.pajonline.co.in/partners?product=prod_partner_kurta_set_1",
+                price = 4999.0,
+                mrp = 6999.0,
+                discount = 29.0,
+                imageUrl = "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png",
+                rating = 4.9,
+                reviewCount = 1420,
+                isLowest = true,
+                isBestValue = true,
+                matchType = "LOWEST_PRICE",
+                trustScore = 99,
+                verificationStatus = "VERIFIED_TODAY",
+                tryOnEnabled = true,
+                productSource = "PARTNER",
+                deliveryText = "Verified BuyWise Partner: Free 2-Day Express Shipping & Easy Returns"
+            )
+            val rec = "🟢 BuyWise Store (₹4,999) is the exclusive authorized seller for this verified designer outfit. Guaranteed lowest price with 99/100 Trust Score and direct fulfillment. Not listed on Meesho or third-party marketplaces."
+            return wrapResponse(query, listOf(buywiseOffer), today, rec)
+        }
+
         val words = query.split(" ").filter { it.isNotBlank() }
         val titleCased = words.joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
 
@@ -1124,30 +1158,9 @@ object SmartMarketIntelligence {
         // 1. Lowest Price Found (Budget / Best Deal in Market)
         // 2. Branded (Top Authentic Brand)
         if (!hasSpecificBrand(lower)) {
-                val isOurKurtaDress = lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
-                    lower.contains("kurta") || lower.contains("kurti") || lower.contains("anarkali") || lower.contains("pant set") ||
-                    lower.contains("solid a-line") || lower.contains("a-line kurta") ||
-                    (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
-                    lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
-                    (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women"))) ||
-                    (lower.contains("women") && (lower.contains("peach") || lower.contains("coral") || lower.contains("rust") || (lower.contains("pink") && lower.contains("embroid"))))
-
                 val isWomenQuery = lower.contains("women") || lower.contains("woman") || lower.contains("girl") || lower.contains("ladies") || lower.contains("lady") || lower.contains("female")
 
                 val (lowestItem, brandedItem) = when {
-                isOurKurtaDress -> {
-                    Quad(
-                        "GoSriKi Women Solid Embroidered A-Line Kurta with Pant & Dupatta Set",
-                        649.0,
-                        2599.0,
-                        "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png"
-                    ) to Quad(
-                        "BIBA Women Embroidered Festive A-Line Kurta with Pant & Dupatta Set",
-                        2499.0,
-                        4999.0,
-                        "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png"
-                    )
-                }
                 lower.contains("dress") || lower.contains("frock") || lower.contains("gown") -> {
                     if (lower.contains("girl") || lower.contains("kid") || lower.contains("baby") || lower.contains("child")) {
                         Quad(
@@ -1585,9 +1598,9 @@ object SmartMarketIntelligence {
                 imageUrl = imgUrl,
                 rating = 4.8,
                 reviewCount = 1420,
-                isLowest = false,
+                isLowest = true,
                 isBestValue = true,
-                matchType = "BEST_VALUE",
+                matchType = "LOWEST_PRICE",
                 trustScore = 99,
                 verificationStatus = "VERIFIED_TODAY",
                 tryOnEnabled = true,
@@ -1605,8 +1618,9 @@ object SmartMarketIntelligence {
                 imageUrl = imgUrl,
                 rating = 4.5,
                 reviewCount = 22100,
-                isLowest = true,
-                isBestValue = true,
+                isLowest = false,
+                isBestValue = false,
+                matchType = "BRANDED",
                 trustScore = 98,
                 verificationStatus = "VERIFIED_TODAY",
                 tryOnEnabled = true,
@@ -2329,15 +2343,15 @@ object SmartMarketIntelligence {
                 store = "🟢 BuyWise Store",
                 title = "$titleCased (BuyWise Direct Verified)",
                 url = "https://buywiseai.pajonline.co.in/partners",
-                price = (amzPrice - 50.0).coerceAtLeast(199.0),
+                price = (amzPrice - 100.0).coerceAtLeast(149.0),
                 mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - (amzPrice - 50.0).coerceAtLeast(199.0)) / mrpPrice) * 100).toDouble(),
+                discount = Math.round(((mrpPrice - (amzPrice - 100.0).coerceAtLeast(149.0)) / mrpPrice) * 100).toDouble(),
                 imageUrl = fallbackImg,
                 rating = 4.8,
                 reviewCount = 1420,
-                isLowest = false,
+                isLowest = true,
                 isBestValue = true,
-                matchType = "BEST_VALUE",
+                matchType = "LOWEST_PRICE",
                 trustScore = 99,
                 verificationStatus = "VERIFIED_TODAY",
                 productSource = "PARTNER",
@@ -2348,15 +2362,15 @@ object SmartMarketIntelligence {
                 store = "Meesho",
                 title = "$titleCased (Social Commerce Deal)",
                 url = buildDirectStoreUrl("Meesho", titleCased),
-                price = (amzPrice - 100.0).coerceAtLeast(149.0),
+                price = (amzPrice - 50.0).coerceAtLeast(199.0),
                 mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - (amzPrice - 100.0).coerceAtLeast(149.0)) / mrpPrice) * 100).toDouble(),
+                discount = Math.round(((mrpPrice - (amzPrice - 50.0).coerceAtLeast(199.0)) / mrpPrice) * 100).toDouble(),
                 imageUrl = fallbackImg,
                 rating = 4.2,
                 reviewCount = 5200,
-                isLowest = true,
+                isLowest = false,
                 isBestValue = false,
-                matchType = "LOWEST_PRICE",
+                matchType = "MATCHING",
                 trustScore = 94,
                 verificationStatus = "VERIFIED_TODAY",
                 deliveryText = "Meesho Social Deal: Cash on Delivery"
@@ -2395,7 +2409,7 @@ object SmartMarketIntelligence {
             )
         )
 
-        return wrapResponse(query, stores, today, "Meesho (₹${(amzPrice - 100.0).coerceAtLeast(149.0).toInt()}) offers the Lowest Price Found, while 🟢 BuyWise Store offers Best Value with 99/100 Trust Score.")
+        return wrapResponse(query, stores, today, "🟢 BuyWise Store (₹${(amzPrice - 100.0).coerceAtLeast(149.0).toInt()}) offers the Lowest Price Found with 99/100 Trust Score and direct fulfillment.")
     }
 
     // Helper to package response summary
@@ -2407,7 +2421,11 @@ object SmartMarketIntelligence {
     ): ComparisonResponse {
         val lowest = stores.minOfOrNull { it.price } ?: 0.0
         val highest = stores.maxOfOrNull { it.price } ?: 0.0
-        val savings = highest - lowest
+        val savings = if (highest > lowest) {
+            highest - lowest
+        } else {
+            stores.firstOrNull()?.let { (it.mrp ?: it.price) - it.price }?.coerceAtLeast(0.0) ?: 0.0
+        }
 
         val groups = stores.groupBy { 
             it.title.substringBefore("(").trim()

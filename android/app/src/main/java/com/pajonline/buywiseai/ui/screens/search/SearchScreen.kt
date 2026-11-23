@@ -953,8 +953,8 @@ fun SearchScreen(
                                         }
                                     }
 
-                                    // Featured Dual-Tier Showcase: 1 Lowest Price Found + 1 Branded
-                                    if (isDualItemResult) {
+                                    // Featured Dual-Tier Showcase: 1 Lowest Price Found + 1 Branded (suppressed when BuyWise Store verified outfit is featured)
+                                    if (isDualItemResult && buywiseFeaturedOffer == null) {
                                         item(key = "dual_tier_showcase") {
                                             val bestLowOffer = lowestPriceOffers.minByOrNull { it.price } ?: lowestPriceOffers.first()
                                             val bestBrdOffer = brandedOffers.minByOrNull { it.price } ?: brandedOffers.first()
