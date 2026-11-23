@@ -24,9 +24,18 @@ export class BuyWisePartnerAdapter implements RetailerAdapter {
 
       const significantTokens = tokens.filter(t => !STOP_WORDS.has(t) && t.length > 2);
 
-      const isApparelQuery = /\b(salwar|kameez|suit|saree|kurti|kurta|lehenga|dress|gown|frock|top|jeans|shirt)\b/i.test(queryLower);
+      const isApparelQuery = /\b(salwar|kameez|suit|saree|kurti|kurta|lehenga|dress|gown|frock|top|jeans|shirt|pant|dupatta|anarkali|ethnic|clothing|apparel|embroidery|a-line)\b/i.test(queryLower);
+
+      // Check for direct store match for featured Kurta set or Kamarbandh
+      const isKurtaSearch = queryLower.includes('kurta') || queryLower.includes('kurti') || queryLower.includes('dusty') || 
+                            queryLower.includes('rose') || queryLower.includes('embroidery') || queryLower.includes('a-line') || 
+                            (queryLower.includes('pant') && queryLower.includes('set'));
 
       const matchingProds = partnerProds.filter(p => {
+        if (isKurtaSearch && p.id === 'prod_partner_kurta_set_1') {
+          return true;
+        }
+
         const titleLower = p.title.toLowerCase();
         const descLower = p.description.toLowerCase();
         const catLower = p.category.toLowerCase();

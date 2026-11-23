@@ -658,6 +658,9 @@ fun SearchScreen(
                             val summary = response.summary
                             val lowestPriceOffers = remember(response.stores) { response.stores.filter { it.matchType == "LOWEST_PRICE" } }
                             val brandedOffers = remember(response.stores) { response.stores.filter { it.matchType == "BRANDED" } }
+                            val buywiseFeaturedOffer = remember(response.stores) {
+                                response.stores.firstOrNull { it.store.contains("BuyWise", ignoreCase = true) || it.retailerId == "buywise_partners" || it.id.contains("bw_store") }
+                            }
                             val isDualItemResult = lowestPriceOffers.isNotEmpty() && brandedOffers.isNotEmpty()
 
                             val displayedOffers = when (selectedTierFilter) {
@@ -807,6 +810,132 @@ fun SearchScreen(
                                                     }
                                                 }
                                             }
+                                        }
+                                    }
+
+                                    if (buywiseFeaturedOffer != null) {
+                                        item(key = "buywise_partner_showcase") {
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        viewModel.selectOffer(buywiseFeaturedOffer)
+                                                        onOfferSelect(buywiseFeaturedOffer)
+                                                    },
+                                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1535)),
+                                                shape = RoundedCornerShape(14.dp),
+                                                border = BorderStroke(1.5.dp, BuyWiseGold.copy(alpha = 0.85f))
+                                            ) {
+                                                Column(modifier = Modifier.padding(12.dp)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .background(BuyWiseGold.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                                                                .border(1.dp, BuyWiseGold, RoundedCornerShape(6.dp))
+                                                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "🟢 BUYWISE STORE • VERIFIED OUTFIT",
+                                                                fontSize = 9.5.sp,
+                                                                fontWeight = FontWeight.Black,
+                                                                color = BuyWiseGold
+                                                            )
+                                                        }
+                                                        Text(
+                                                             text = "🛡️ 99/100 Trust Score",
+                                                             fontSize = 10.sp,
+                                                             fontWeight = FontWeight.Bold,
+                                                             color = BuyWiseEmerald
+                                                        )
+                                                    }
+
+                                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(76.dp)
+                                                                .clip(RoundedCornerShape(10.dp))
+                                                                .background(Color(0xFF120C22)),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            if (!buywiseFeaturedOffer.imageUrl.isNullOrBlank()) {
+                                                                AsyncImage(
+                                                                    model = buywiseFeaturedOffer.imageUrl,
+                                                                    contentDescription = buywiseFeaturedOffer.title,
+                                                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                                                                    contentScale = ContentScale.Crop
+                                                                )
+                                                            } else {
+                                                                Text("👗", fontSize = 28.sp)
+                                                            }
+                                                        }
+
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = buywiseFeaturedOffer.title,
+                                                                fontSize = 13.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color.White,
+                                                                maxLines = 2,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                lineHeight = 17.sp
+                                                            )
+
+                                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = "₹${NumberFormat.getIntegerInstance(Locale.forLanguageTag("en-IN")).format(buywiseFeaturedOffer.price.toInt())}",
+                                                                    fontSize = 16.sp,
+                                                                    fontWeight = FontWeight.Black,
+                                                                    color = BuyWiseGold
+                                                                )
+                                                                if (buywiseFeaturedOffer.mrp != null && buywiseFeaturedOffer.mrp > buywiseFeaturedOffer.price) {
+                                                                    Text(
+                                                                        text = "₹${NumberFormat.getIntegerInstance(Locale.forLanguageTag("en-IN")).format(buywiseFeaturedOffer.mrp.toInt())}",
+                                                                        fontSize = 11.sp,
+                                                                        color = Color.Gray,
+                                                                        textDecoration = TextDecoration.LineThrough
+                                                                    )
+                                                                }
+                                                            }
+
+                                                            Text(
+                                                                text = "✨ Free 2-Day Delivery • 7-Day Returns",
+                                                                fontSize = 10.sp,
+                                                                color = BuyWiseCyan,
+                                                                fontWeight = FontWeight.Medium
+                                                            )
+                                                        }
+
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .background(BuyWiseGold, RoundedCornerShape(8.dp))
+                                                                .padding(horizontal = 10.dp, vertical = 7.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "VIEW DEAL ➔",
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Black,
+                                                                color = Color.Black
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(10.dp))
                                         }
                                     }
 

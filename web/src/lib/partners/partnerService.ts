@@ -39,7 +39,7 @@ export function getDeletedProductIds(): string[] {
     const raw = localStorage.getItem(DELETED_IDS_KEY);
     const parsed: string[] = raw ? JSON.parse(raw) : [];
     // CRITICAL ADMIN INTEGRITY: Essential catalog items & user-onboarded products must never be purged
-    const protectedIds = new Set(['prod_partner_kamarbandh_1', 'prod_sku_660638', 'prod_partner_kanjivaram_1', 'prod_sku_meesho_466292667']);
+    const protectedIds = new Set(['prod_partner_kamarbandh_1', 'prod_sku_660638', 'prod_partner_kanjivaram_1', 'prod_sku_meesho_466292667', 'prod_partner_kurta_set_1']);
     return parsed.filter(id => !protectedIds.has(id));
   } catch (e) {
     return [];
@@ -92,6 +92,9 @@ export function saveAllLocalProductOverrides(overrides: Record<string, Partial<P
 export function getCategoryFallbackImage(category: string = '', title: string = ''): string {
   const lower = (title || '').toLowerCase();
   
+  if (lower.includes('kurta') || lower.includes('kurti') || lower.includes('dusty') || lower.includes('rose') || lower.includes('embroidery') || lower.includes('a-line') || lower.includes('pant set')) {
+    return 'https://buywiseai.pajonline.co.in/dusty_rose_kurta.png';
+  }
   if (lower.includes('kamarbandh') || lower.includes('gujarati') || lower.includes('etietnic') || lower.includes('waistband') || lower.includes('tagdi')) {
     return '/kamarbandh.png';
   }
@@ -382,6 +385,41 @@ export const MOCK_PARTNERS: Partner[] = [
 // MOCK PARTNER PRODUCTS SEED DATA
 // ==========================================
 export const MOCK_PARTNER_PRODUCTS: PartnerProduct[] = [
+  {
+    id: 'prod_partner_kurta_set_1',
+    partnerId: 'partner_buywise_official',
+    partnerName: 'Verified BuyWise Partner Network',
+    title: 'Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta from S to 5XL',
+    slug: 'beautiful-embroidery-women-solid-a-line-kurta-pant-set-with-dupatta',
+    description: 'Designer festive dusty rose A-line Kurta, Pant set with intricate embroidery work and matching dupatta. Premium fabric, comfortable tailored fit from S to 5XL.',
+    productUrl: 'https://buywiseai.pajonline.co.in/dusty_rose_kurta.png',
+    category: 'Fashion & Clothing',
+    subcategory: 'Ethnic Wear',
+    brand: 'BuyWise Partner',
+    sku: 'BW-KURTA-ROSE-5XL',
+    mrp: 6999,
+    sellingPrice: 4999,
+    stock: 100,
+    images: ['https://buywiseai.pajonline.co.in/dusty_rose_kurta.png'],
+    primaryImage: 'https://buywiseai.pajonline.co.in/dusty_rose_kurta.png',
+    fulfillment: 'PARTNER_FULFILLED',
+    source: 'DIRECT',
+    tryOnEnabled: true,
+    garmentCategory: 'dresses',
+    returnPolicy: '7 Days Return & Exchange Guaranteed',
+    warranty: '100% Genuine Quality Guarantee',
+    gstPercent: 12,
+    status: 'LIVE',
+    reviewStatus: 'APPROVED',
+    verificationStatus: 'verified_live',
+    commissionType: 'PERCENTAGE',
+    commissionValue: 10,
+    rating: 4.9,
+    reviewCount: 38,
+    showInSlideshow: true,
+    createdAt: '2026-11-20T08:00:00Z',
+    updatedAt: '2026-11-23T10:00:00Z',
+  },
   {
     id: 'prod_partner_meesho_trendy_partywear_1',
     partnerId: 'partner_big20shope',

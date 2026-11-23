@@ -202,6 +202,38 @@ class SmartMarketIntelligenceTest {
         val minLowest = lowestPriceOffers.minOf { it.price }
         assertEquals("Lowest price women dress should be 649.0 on Meesho", 649.0, minLowest, 0.01)
     }
+
+    @Test
+    fun testWomenDustyRoseSearchReturnsBuyWiseStoreKurtaSet() {
+        val queries = listOf(
+            "Women dusty rose",
+            "dusty rose",
+            "Beautiful embroidery women solid A-line Kurta",
+            "kurta pant set with dupatta"
+        )
+
+        for (q in queries) {
+            val result = SmartMarketIntelligence.generateMarketComparison(q)
+            assertTrue("Stores must not be empty for '$q'", result.stores.isNotEmpty())
+
+            // 1. Must never return Roadster Men Casual Wear or yellow sweatpants
+            val anyRoadster = result.stores.any { it.title.contains("Roadster Men", ignoreCase = true) }
+            assertFalse("Query '$q' must not return Roadster Men Casual Wear", anyRoadster)
+
+            // 2. BuyWise Store must be present at ₹4999
+            val buywiseOffer = result.stores.firstOrNull { it.store.contains("BuyWise", ignoreCase = true) }
+            assertTrue("BuyWise Store offer must be present for '$q'", buywiseOffer != null)
+            assertEquals("BuyWise Store price must be ₹4999", 4999.0, buywiseOffer!!.price, 0.01)
+            assertTrue("BuyWise Store title must contain Kurta", buywiseOffer.title.contains("Kurta", ignoreCase = true))
+            assertTrue("BuyWise Store image must point to dusty rose kurta", buywiseOffer.imageUrl?.contains("dusty_rose_kurta.png") == true)
+
+            // 3. Lowest offer must be women ethnic kurta on Meesho
+            val lowestOffer = result.stores.firstOrNull { it.matchType == "LOWEST_PRICE" }
+            assertTrue("Lowest offer must exist for '$q'", lowestOffer != null)
+            assertEquals("Meesho lowest price must be ₹649", 649.0, lowestOffer!!.price, 0.01)
+            assertFalse("Lowest offer must not be Men wear", lowestOffer.title.contains("Men", ignoreCase = false))
+        }
+    }
 }
 
 

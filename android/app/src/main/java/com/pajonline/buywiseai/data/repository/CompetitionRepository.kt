@@ -13,21 +13,21 @@ object CompetitionRepository {
 
     private val initialCompetitions = listOf(
         Competition(
-            id = "comp-1792144504194",
-            title = "Weekly BuyWise Fashion Challenge: Gujarati Navratri Kamarbandh",
-            description = "Try on this week's featured Navratri Waist Belt & Kamarbandh and submit your look!",
-            featuredProductId = "prod-1792144504194",
-            featuredProductTitle = "Gujarati Traditional Navratri Waist Belt (Kamarbandh)",
-            featuredProductImage = "https://buywiseai--pajonline-shopping.asia-southeast1.hosted.app/kamarbandh.png",
-            featuredProductPrice = 499,
-            retailer = "Amazon India",
-            startDate = "2026-10-16T09:55:04.194Z",
-            endDate = "2026-10-23T09:55:04.194Z",
-            votingEndDate = "2026-10-23T09:55:04.194Z",
+            id = "comp-1792144504195",
+            title = "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta from S to 5XL",
+            description = "Compete for the Free Designer Outfit! Upload your real dressed photo or an AI styled look.",
+            featuredProductId = "prod_partner_kurta_set_1",
+            featuredProductTitle = "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta from S to 5XL",
+            featuredProductImage = "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png",
+            featuredProductPrice = 4999,
+            retailer = "BuyWise Verified Partner Network",
+            startDate = "2026-11-20T00:00:00.000Z",
+            endDate = "2026-11-28T12:00:00.000Z",
+            votingEndDate = "2026-11-27T23:59:59.000Z",
             status = "LIVE",
-            prizeDescription = "Free Dress + BuyWise Home & Social Media Spotlight",
+            prizeDescription = "₹4999 dress + BuyWise Home Spotlight",
             createdBy = "pajonline555@gmail.com",
-            createdAt = "2026-10-16T09:55:04.194Z"
+            createdAt = "2026-11-20T00:00:00.000Z"
         )
     )
 

@@ -1108,9 +1108,9 @@ object SmartMarketIntelligence {
     // CATEGORY 6: FASHION, APPAREL & ETHNIC WEAR
     // ==========================================
     private fun isFashionOrEthnic(q: String): Boolean {
-        val wordRegex = Regex("""\b(saree|sari|sarees|saris|kurta|kurtas|kurti|kurtis|lehenga|lehengas|kamarbandh|waistband|tagdi|ethnic|dress|dresses|frock|frocks|gown|gowns|skirt|skirts|shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|jeans|denim|shoes|sneakers|jacket|jackets|suit|suits|blazer|blazers|hoodie|hoodies|coat|coats|overcoat|sweater|sweaters|cardigan|trouser|trousers|pant|pants|top|tops|bomber|windcheater|clothing|apparel|footwear|sandals|boots|innerwear|underwear|lingerie|bra|bras|panty|panties|trunk|trunks|boxer|boxers|brief|briefs|vest|vests|nightwear|sleepwear|activewear|girl|girls|boy|boys|kid|kids|baby|toddler)\b""", RegexOption.IGNORE_CASE)
-        val multiWordKeywords = listOf("running shoes", "casual shoes", "formal shoes", "ethnic wear", "girl dresses", "girls dress", "girls dresses", "summer dress", "party dress", "floral dress", "party wear")
-        return wordRegex.containsMatchIn(q) || multiWordKeywords.any { q.contains(it) }
+        val wordRegex = Regex("""\b(saree|sari|sarees|saris|kurta|kurtas|kurti|kurtis|lehenga|lehengas|kamarbandh|waistband|tagdi|ethnic|dress|dresses|frock|frocks|gown|gowns|skirt|skirts|shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|jeans|denim|shoes|sneakers|jacket|jackets|suit|suits|blazer|blazers|hoodie|hoodies|coat|coats|overcoat|sweater|sweaters|cardigan|trouser|trousers|pant|pants|top|tops|bomber|windcheater|clothing|apparel|footwear|sandals|boots|innerwear|underwear|lingerie|bra|bras|panty|panties|trunk|trunks|boxer|boxers|brief|briefs|vest|vests|nightwear|sleepwear|activewear|girl|girls|boy|boys|kid|kids|baby|toddler|women|womens|woman|ladies|lady|dusty|rose|embroidery|embroidered|anarkali|dupatta|salwar|churidar|palazzo|a-line|solid)\b""", RegexOption.IGNORE_CASE)
+        val multiWordKeywords = listOf("running shoes", "casual shoes", "formal shoes", "ethnic wear", "girl dresses", "girls dress", "girls dresses", "summer dress", "party dress", "floral dress", "party wear", "kurta set", "pant set", "dusty rose", "a-line kurta", "women dress", "pant set with dupatta")
+        return wordRegex.containsMatchIn(q) || multiWordKeywords.any { q.contains(it, ignoreCase = true) }
     }
 
     private fun buildFashionComparison(query: String, lower: String): ComparisonResponse {
@@ -1124,7 +1124,27 @@ object SmartMarketIntelligence {
         // 1. Lowest Price Found (Budget / Best Deal in Market)
         // 2. Branded (Top Authentic Brand)
         if (!hasSpecificBrand(lower)) {
-            val (lowestItem, brandedItem) = when {
+                val isOurKurtaDress = lower.contains("dusty") || lower.contains("rose") || 
+                    (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
+                    lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
+                    (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women")))
+
+                val isWomenQuery = lower.contains("women") || lower.contains("woman") || lower.contains("girl") || lower.contains("ladies") || lower.contains("lady") || lower.contains("female")
+
+                val (lowestItem, brandedItem) = when {
+                isOurKurtaDress -> {
+                    Quad(
+                        "GoSriKi Women Solid Embroidered A-Line Kurta with Pant & Dupatta Set",
+                        649.0,
+                        2599.0,
+                        "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png"
+                    ) to Quad(
+                        "BIBA Women Embroidered Festive A-Line Kurta with Pant & Dupatta Set",
+                        2499.0,
+                        4999.0,
+                        "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png"
+                    )
+                }
                 lower.contains("dress") || lower.contains("frock") || lower.contains("gown") -> {
                     if (lower.contains("girl") || lower.contains("kid") || lower.contains("baby") || lower.contains("child")) {
                         Quad(
@@ -1270,17 +1290,31 @@ object SmartMarketIntelligence {
                     )
                 }
                 else -> {
-                    Quad(
-                        "Roadster Men Essential Casual Daily Wear",
-                        399.0,
-                        999.0,
-                        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80"
-                    ) to Quad(
-                        "Allen Solly Premium Branded Collection Wear",
-                        1199.0,
-                        2499.0,
-                        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80"
-                    )
+                    if (isWomenQuery) {
+                        Quad(
+                            "Rare Women Western Casual Elegant A-Line Dress",
+                            699.0,
+                            1999.0,
+                            "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80"
+                        ) to Quad(
+                            "AND Women Floral Print Tiered Fit and Flare Georgette Midi Dress",
+                            1699.0,
+                            3499.0,
+                            "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80"
+                        )
+                    } else {
+                        Quad(
+                            "Roadster Men Essential Casual Daily Wear",
+                            399.0,
+                            999.0,
+                            "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80"
+                        ) to Quad(
+                            "Allen Solly Premium Branded Collection Wear",
+                            1199.0,
+                            2499.0,
+                            "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80"
+                        )
+                    }
                 }
             }
 
@@ -1291,6 +1325,7 @@ object SmartMarketIntelligence {
             val isKamarbandh = lower.contains("kamarbandh") || lower.contains("tagdi") || lower.contains("gujarati")
 
             val meeshoLowPrice = when {
+                isOurKurtaDress -> 649.0
                 isSaree -> 299.0
                 isKurti -> 249.0
                 isLancer -> 489.0
@@ -1298,22 +1333,27 @@ object SmartMarketIntelligence {
                 else -> (lowestItem.second - 50.0).coerceAtLeast(199.0)
             }
             val buywisePrice = when {
+                isOurKurtaDress -> 4999.0
                 isSaree -> 389.0
                 isKurti -> 299.0
+                isKamarbandh -> 499.0
                 isLancer -> 479.0
                 else -> lowestItem.second
             }
             val fkLowPrice = when {
+                isOurKurtaDress -> 1199.0
                 isLancer -> 499.0
                 isSaree -> 399.0
                 else -> lowestItem.second + 30.0
             }
             val amzLowPrice = when {
+                isOurKurtaDress -> 999.0
                 isLancer -> 472.0
                 isSaree -> 449.0
                 else -> lowestItem.second + 50.0
             }
             val mynLowPrice = when {
+                isOurKurtaDress -> 2499.0
                 isLancer -> 549.0
                 isSaree -> 499.0
                 else -> lowestItem.second + 80.0
@@ -1327,17 +1367,18 @@ object SmartMarketIntelligence {
                     id = "fash_bw_store",
                     store = "🟢 BuyWise Store",
                     title = when {
+                        isOurKurtaDress -> "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta"
                         isSaree -> "BuyWise Direct: Banarasi Festive Silk Saree with Blouse Piece"
                         isDress -> "${lowestItem.first} (BuyWise Partner Collection)"
                         isKamarbandh -> "BuyWise Verified: Etietnic Gujarati Traditional Embroidered Kamarbandh"
                         else -> "${lowestItem.first} (BuyWise Direct)"
                     },
-                    url = "https://buywiseai.pajonline.co.in/partners",
+                    url = if (isOurKurtaDress) "https://buywiseai.pajonline.co.in/partners?product=prod_partner_kurta_set_1" else "https://buywiseai.pajonline.co.in/partners",
                     price = buywisePrice,
-                    mrp = if (isSaree) 1999.0 else lowestItem.third,
-                    discount = Math.round((( (if (isSaree) 1999.0 else lowestItem.third) - buywisePrice) / (if (isSaree) 1999.0 else lowestItem.third)) * 100).toDouble(),
-                    imageUrl = lowestItem.fourth,
-                    rating = 4.8,
+                    mrp = if (isOurKurtaDress) 6999.0 else if (isSaree) 1999.0 else lowestItem.third,
+                    discount = Math.round((( (if (isOurKurtaDress) 6999.0 else if (isSaree) 1999.0 else lowestItem.third) - buywisePrice) / (if (isOurKurtaDress) 6999.0 else if (isSaree) 1999.0 else lowestItem.third)) * 100).toDouble(),
+                    imageUrl = if (isOurKurtaDress) "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png" else lowestItem.fourth,
+                    rating = 4.9,
                     reviewCount = 1420,
                     isLowest = (buywisePrice == minLow),
                     isBestValue = true,
@@ -1346,13 +1387,13 @@ object SmartMarketIntelligence {
                     verificationStatus = "VERIFIED_TODAY",
                     tryOnEnabled = true,
                     productSource = "PARTNER",
-                    deliveryText = "BuyWise Partner Direct: Free 2-Day Express Shipping"
+                    deliveryText = if (isOurKurtaDress) "Verified BuyWise Partner: Free 2-Day Express Shipping & Easy Returns" else "BuyWise Partner Direct: Free 2-Day Express Shipping"
                 ),
                 // 2. Meesho (Lowest Price Found)
                 StoreOffer(
                     id = "fash_low_meesho",
                     store = "Meesho",
-                    title = if (isSaree) "Traditional Georgette Daily Wear & Festive Printed Saree" else lowestItem.first,
+                    title = if (isOurKurtaDress) lowestItem.first else if (isSaree) "Traditional Georgette Daily Wear & Festive Printed Saree" else lowestItem.first,
                     url = buildDirectStoreUrl("Meesho", lowestItem.first),
                     price = meeshoLowPrice,
                     mrp = lowestItem.third,
@@ -1372,11 +1413,11 @@ object SmartMarketIntelligence {
                 StoreOffer(
                     id = "fash_low_fk",
                     store = "Flipkart",
-                    title = lowestItem.first,
-                    url = buildDirectStoreUrl("Flipkart", lowestItem.first),
+                    title = if (isOurKurtaDress) "Libas Women Embroidered A-Line Kurta with Pant Set & Dupatta" else lowestItem.first,
+                    url = buildDirectStoreUrl("Flipkart", if (isOurKurtaDress) "Libas Women Embroidered A-Line Kurta with Pant Set" else lowestItem.first),
                     price = fkLowPrice,
-                    mrp = lowestItem.third,
-                    discount = Math.round(((lowestItem.third - fkLowPrice) / lowestItem.third) * 100).toDouble(),
+                    mrp = if (isOurKurtaDress) 2999.0 else lowestItem.third,
+                    discount = Math.round((( (if (isOurKurtaDress) 2999.0 else lowestItem.third) - fkLowPrice) / (if (isOurKurtaDress) 2999.0 else lowestItem.third)) * 100).toDouble(),
                     imageUrl = lowestItem.fourth,
                     rating = 4.3,
                     reviewCount = 19100,
@@ -1392,11 +1433,11 @@ object SmartMarketIntelligence {
                 StoreOffer(
                     id = "fash_low_amz",
                     store = "Amazon India",
-                    title = lowestItem.first,
-                    url = buildDirectStoreUrl("Amazon India", lowestItem.first),
+                    title = if (isOurKurtaDress) "Rytras Women Solid Embroidered Kurta Pant Set with Dupatta" else lowestItem.first,
+                    url = buildDirectStoreUrl("Amazon India", if (isOurKurtaDress) "Women Embroidered Kurta Pant Set with Dupatta" else lowestItem.first),
                     price = amzLowPrice,
-                    mrp = lowestItem.third,
-                    discount = Math.round(((lowestItem.third - amzLowPrice) / lowestItem.third) * 100).toDouble(),
+                    mrp = if (isOurKurtaDress) 2499.0 else lowestItem.third,
+                    discount = Math.round((( (if (isOurKurtaDress) 2499.0 else lowestItem.third) - amzLowPrice) / (if (isOurKurtaDress) 2499.0 else lowestItem.third)) * 100).toDouble(),
                     imageUrl = lowestItem.fourth,
                     rating = if (isLancer) 3.5 else 4.3,
                     reviewCount = if (isLancer) 40 else 16500,
@@ -1414,9 +1455,9 @@ object SmartMarketIntelligence {
                     store = "Myntra",
                     title = brandedItem.first,
                     url = buildDirectStoreUrl("Myntra", brandedItem.first),
-                    price = brandedItem.second,
+                    price = if (isOurKurtaDress) 2499.0 else brandedItem.second,
                     mrp = brandedItem.third,
-                    discount = Math.round(((brandedItem.third - brandedItem.second) / brandedItem.third) * 100).toDouble(),
+                    discount = Math.round(((brandedItem.third - (if (isOurKurtaDress) 2499.0 else brandedItem.second)) / brandedItem.third) * 100).toDouble(),
                     imageUrl = brandedItem.fourth,
                     rating = 4.6,
                     reviewCount = 48200,
@@ -1432,11 +1473,11 @@ object SmartMarketIntelligence {
                 StoreOffer(
                     id = "fash_low_ajio",
                     store = "AJIO",
-                    title = lowestItem.first,
-                    url = buildDirectStoreUrl("AJIO", lowestItem.first),
-                    price = fkLowPrice + 20.0,
-                    mrp = lowestItem.third,
-                    discount = Math.round(((lowestItem.third - (fkLowPrice + 20.0)) / lowestItem.third) * 100).toDouble(),
+                    title = if (isOurKurtaDress) "GoSriKi Women Solid Embroidered A-Line Kurta with Pant Set" else lowestItem.first,
+                    url = buildDirectStoreUrl("AJIO", if (isOurKurtaDress) "Women Embroidered Kurta Pant Set" else lowestItem.first),
+                    price = if (isOurKurtaDress) 1249.0 else (fkLowPrice + 20.0),
+                    mrp = if (isOurKurtaDress) 2999.0 else lowestItem.third,
+                    discount = Math.round((( (if (isOurKurtaDress) 2999.0 else lowestItem.third) - (if (isOurKurtaDress) 1249.0 else (fkLowPrice + 20.0))) / (if (isOurKurtaDress) 2999.0 else lowestItem.third)) * 100).toDouble(),
                     imageUrl = lowestItem.fourth,
                     rating = 4.3,
                     reviewCount = 14200,
@@ -1450,12 +1491,31 @@ object SmartMarketIntelligence {
                 )
             )
 
-            val lowestStoreName = if (meeshoLowPrice == minLow) "Meesho (₹${meeshoLowPrice.toInt()})" else if (amzLowPrice == minLow) "Amazon India (₹${amzLowPrice.toInt()})" else "BuyWise Store (₹${buywisePrice.toInt()})"
-            val rec = "$lowestStoreName offers the Lowest Price Found, while 🟢 BuyWise Store (₹${buywisePrice.toInt()}) offers Best Value with 99/100 Trust Score and direct fulfillment."
+            val rec = if (isOurKurtaDress) {
+                "BuyWise AI recommends Meesho (₹${meeshoLowPrice.toInt()}) offers the Lowest Price Found, while 🟢 BuyWise Store (₹${buywisePrice.toInt()}) offers the Authentic Partner Outfit with 99/100 Trust Score and direct fulfillment."
+            } else {
+                val lowestStoreName = if (meeshoLowPrice == minLow) "Meesho (₹${meeshoLowPrice.toInt()})" else if (amzLowPrice == minLow) "Amazon India (₹${amzLowPrice.toInt()})" else "BuyWise Store (₹${buywisePrice.toInt()})"
+                "$lowestStoreName offers the Lowest Price Found, while 🟢 BuyWise Store (₹${buywisePrice.toInt()}) offers Best Value with 99/100 Trust Score and direct fulfillment."
+            }
             return wrapResponse(query, stores, today, rec)
         }
 
+            val isOurKurtaDressSingle = lower.contains("dusty") || lower.contains("rose") || 
+                (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
+                lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
+                (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women")))
+
+            val isWomenQuerySingle = lower.contains("women") || lower.contains("woman") || lower.contains("girl") || lower.contains("ladies") || lower.contains("lady") || lower.contains("female")
+
             val (title, basePrice, mrpPrice, imgUrl) = when {
+                isOurKurtaDressSingle -> {
+                    Quad(
+                        "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta",
+                        4999.0,
+                        6999.0,
+                        "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png"
+                    )
+                }
                 lower.contains("dress") || lower.contains("frock") || lower.contains("gown") -> {
                     if (lower.contains("girl") || lower.contains("kid") || lower.contains("baby") || lower.contains("child")) {
                         Quad("Girls Floral Printed Cotton Festive Party Dress", 699.0, 1999.0,
@@ -1496,8 +1556,8 @@ object SmartMarketIntelligence {
                     "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&auto=format&fit=crop&q=80")
             }
             else -> {
-                Quad("$titleCased - Premium Casual Wear", 1199.0, 2499.0,
-                    "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80")
+                val fallbackImg = if (isWomenQuerySingle) "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80" else "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80"
+                Quad("$titleCased - Premium Casual Wear", 1199.0, 2499.0, fallbackImg)
             }
         }
 

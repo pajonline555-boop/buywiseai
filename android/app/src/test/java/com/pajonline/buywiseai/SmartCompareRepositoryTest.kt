@@ -44,6 +44,7 @@ class SmartCompareRepositoryTest {
         override suspend fun compareProductsPost(request: ComparePostRequest): Response<ComparisonResponse> = Response.success(ComparisonResponse())
         override suspend fun scrapeProduct(request: ScrapeProductRequest): Response<Map<String, Any>> = Response.success(emptyMap())
         override suspend fun generateVto(request: VtoGenerateRequest): Response<VtoGenerateResponse> = Response.success(VtoGenerateResponse(true))
+        override suspend fun analyzeVision(request: com.pajonline.buywiseai.data.api.VisionAnalyzeRequest): Response<com.pajonline.buywiseai.data.api.VisionAnalyzeResponse> = Response.success(com.pajonline.buywiseai.data.api.VisionAnalyzeResponse(true, "test"))
     }
 
     @Before
