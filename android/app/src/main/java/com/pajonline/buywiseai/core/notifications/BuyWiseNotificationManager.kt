@@ -372,14 +372,7 @@ object BuyWiseNotificationManager {
                     }
 
                     Log.i(TAG, "Explicit Admin FORCE_UPDATE command detected: $command (version: $syncVersion)")
-
-                    showNotification(
-                        context = context,
-                        title = "⚡ Linked Mobile Updated",
-                        message = "Your mobile device state is synchronized with the latest fashion votes & challenge entries!",
-                        type = "DEVICE_STATE_SYNC",
-                        targetRoute = "competition"
-                    )
+                    // Suppressed Linked Mobile Updated notification to keep alert feed clean
                 }
         } catch (e: Exception) {
             Log.w(TAG, "Linked device listener note: ${e.message}")
@@ -442,74 +435,32 @@ object BuyWiseNotificationManager {
     }
 
     /**
-     * Dispatch an immediate live update ping to linked mobile and confirm in status bar
+     * Dispatch an immediate live update ping to sync device state silently
      */
     fun dispatchSyncPing(context: Context, onComplete: ((Boolean) -> Unit)? = null) {
         val currentUid = getOrCreateDeviceUid(context)
         val linkedMobile = getLinkedMobile(context)
         val cleanPhone = linkedMobile.filter { it.isDigit() }
         val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())
-        val notifId = "notif_sync_${System.currentTimeMillis()}"
-
-        val title = "⚡ Linked Mobile Updated"
-        val message = "Your mobile device ($linkedMobile) is updated! Live Fashion Challenge votes & entries synchronized."
-
-        val notifData = hashMapOf(
-            "id" to notifId,
-            "userId" to currentUid,
-            "userName" to "BuyWise Shopper",
-            "linkedMobile" to linkedMobile,
-            "type" to "DEVICE_STATE_SYNC",
-            "title" to title,
-            "message" to message,
-            "status" to "ONLINE",
-            "read" to false,
-            "createdAt" to now,
-            "deliveredToMobile" to true,
-            "channel" to "FCM_MOBILE_PUSH"
-        )
 
         try {
             val db = FirebaseFirestore.getInstance()
-            db.collection("user_notifications").document(notifId).set(notifData)
-
             if (cleanPhone.isNotBlank()) {
                 val devUpdate = hashMapOf(
                     "status" to "ONLINE",
                     "linkedMobile" to linkedMobile,
                     "lastSyncedAt" to now,
-                    "command" to "FORCE_UPDATE",
-                    "lastNotification" to hashMapOf(
-                        "id" to notifId,
-                        "title" to title,
-                        "message" to message,
-                        "createdAt" to now
-                    )
+                    "command" to "FORCE_UPDATE"
                 )
                 db.collection("user_devices").document("mobile_$cleanPhone").set(devUpdate, SetOptions.merge())
                 db.collection("user_devices").document("device_$currentUid").set(devUpdate, SetOptions.merge())
             }
 
             syncLinkedDeviceState(context) { success ->
-                showNotification(
-                    context = context,
-                    title = title,
-                    message = message,
-                    type = "DEVICE_STATE_SYNC",
-                    targetRoute = "alerts",
-                    notificationId = notifId.hashCode()
-                )
                 onComplete?.invoke(success)
             }
         } catch (e: Exception) {
             Log.w(TAG, "dispatchSyncPing error: ${e.message}")
-            showNotification(
-                context = context,
-                title = title,
-                message = message,
-                type = "DEVICE_STATE_SYNC",
-                targetRoute = "alerts"
-            )
             onComplete?.invoke(false)
         }
     }
@@ -638,8 +589,15 @@ object BuyWiseNotificationManager {
         competitionTitle: String = "Weekly Fashion Challenge",
         linkedMobile: String? = null
     ) {
-        val targetPhone = linkedMobile?.takeIf { it.isNotBlank() } ?: getLinkedMobile(context)
-        val cleanPhone = targetPhone.filter { it.isDigit() }
+        val prefs = context.getSharedPreferences("buywise_app_prefs", Context.MODE_PRIVATE)
+        val lastNotifiedVoteKey = "last_notified_vote_${submissionId}"
+        val lastCount = prefs.getInt(lastNotifiedVoteKey, -1)
+        if (newVoteCount <= lastCount) {
+            Log.i(TAG, "Vote count $newVoteCount for submission $submissionId already notified (last: $lastCount). Suppressing duplicate message.")
+            return
+        }
+        prefs.edit().putInt(lastNotifiedVoteKey, newVoteCount).apply()
+
         val title = "❤️ New Vote Received!"
         val message = "Someone just voted for your look in $competitionTitle! You now have $newVoteCount votes! 🌟"
         val notifId = "notif_vote_${submissionId}_$newVoteCount"
@@ -655,7 +613,6 @@ object BuyWiseNotificationManager {
             "id" to notifId,
             "userId" to recipientUserId,
             "userName" to recipientUserName,
-            "linkedMobile" to targetPhone,
             "type" to "VOTE_RECEIVED",
             "title" to title,
             "message" to message,
@@ -663,24 +620,13 @@ object BuyWiseNotificationManager {
             "voteCount" to newVoteCount,
             "read" to false,
             "createdAt" to now,
-            "deliveredToMobile" to true,
-            "channel" to "FCM_MOBILE_PUSH"
+            "channel" to "IN_APP_PUSH"
         )
 
         // Write to Firestore so the user's active device receives it immediately via snapshot listener
         try {
             val db = FirebaseFirestore.getInstance()
             db.collection("user_notifications").document(notifId).set(notifData)
-
-            if (cleanPhone.isNotBlank()) {
-                val devUpdate = hashMapOf(
-                    "status" to "ONLINE",
-                    "linkedMobile" to targetPhone,
-                    "lastSyncedAt" to now,
-                    "lastVoteNotificationId" to notifId
-                )
-                db.collection("user_devices").document("mobile_$cleanPhone").set(devUpdate, SetOptions.merge())
-            }
         } catch (e: Exception) {
             Log.w(TAG, "Firestore notification note: ${e.message}")
         }

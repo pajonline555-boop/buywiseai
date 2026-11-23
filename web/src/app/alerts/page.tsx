@@ -92,9 +92,28 @@ export default function UserDashboard() {
         const qNotifs = query(collection(db, "user_notifications"), where("userId", "==", userId));
         unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            list.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            setNotifications(list);
+            const rawList = snapshot.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .filter((n: any) => n.type !== 'DEVICE_STATE_SYNC' && !n.title?.includes('Linked Mobile') && !n.message?.includes('Linked Mobile'));
+
+            // Deduplicate vote notifications by submissionId to prevent repeating same vote
+            const deduped: any[] = [];
+            const seenVoteSubmissions = new Map<string, number>();
+
+            rawList.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+            for (const item of (rawList as any[])) {
+              if (item.type === 'VOTE_RECEIVED' && item.submissionId) {
+                const existingVote = seenVoteSubmissions.get(item.submissionId);
+                if (existingVote !== undefined && item.voteCount <= existingVote) {
+                  continue; // Skip duplicate message of same vote
+                }
+                seenVoteSubmissions.set(item.submissionId, item.voteCount || 0);
+              }
+              deduped.push(item);
+            }
+
+            setNotifications(deduped);
           } else {
             setNotifications(sampleNotifications);
           }
@@ -154,7 +173,7 @@ export default function UserDashboard() {
       competitionTitle: "Weekly Gujarati Navratri Kamarbandh Challenge",
       linkedMobile: linkedMobile
     });
-    setPriceDropToast(`❤️ Instant Vote Alert dispatched to linked mobile (${linkedMobile})!`);
+    setPriceDropToast(`❤️ Instant Vote Alert dispatched!`);
     setTimeout(() => setPriceDropToast(null), 5000);
   };
 
@@ -167,18 +186,7 @@ export default function UserDashboard() {
       competitionTitle: "Weekly Gujarati Navratri Kamarbandh Challenge",
       linkedMobile: linkedMobile
     });
-    setPriceDropToast(`🎉 Instant Entry Approved notification dispatched to linked mobile (${linkedMobile})!`);
-    setTimeout(() => setPriceDropToast(null), 5000);
-  };
-
-  const handleUpdateLinkedMobileState = async () => {
-    const targetUid = user?.uid || "guest_user";
-    await updateLinkedDeviceState({
-      userId: targetUid,
-      linkedMobile: linkedMobile,
-      updateData: { lastClientPing: new Date().toISOString() }
-    });
-    setPriceDropToast(`⚡ State updated on linked mobile (${linkedMobile})! Latest fashion votes & approvals synchronized.`);
+    setPriceDropToast(`🎉 Instant Entry Approved notification dispatched!`);
     setTimeout(() => setPriceDropToast(null), 5000);
   };
 
@@ -255,83 +263,8 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        {/* LINKED MOBILE BANNER */}
-        <div className="glass" style={{
-          padding: '22px 28px',
-          borderRadius: '20px',
-          border: '1px solid rgba(0, 212, 255, 0.4)',
-          background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(138, 43, 226, 0.08))',
-          marginBottom: '36px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '20px'
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 900, color: '#00d4ff', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                📲 LINKED MOBILE STATUS
-              </span>
-              <span style={{ fontSize: '11px', fontWeight: 900, color: '#00ff88', background: 'rgba(0, 255, 136, 0.15)', padding: '2px 8px', borderRadius: '8px', border: '1px solid rgba(0, 255, 136, 0.3)' }}>
-                ● INSTANT DELIVERY ACTIVE
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '20px', fontWeight: 900, color: 'white' }}>
-                {linkedMobile}
-              </span>
-              <button
-                onClick={() => { setPhoneInput(linkedMobile); setIsEditingPhone(true); }}
-                style={{ background: 'transparent', border: 'none', color: '#ffd700', fontSize: '12px', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Change Number
-              </button>
-            </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '4px' }}>
-              This phone receives immediate alerts when community votes are cast for your look and when challenge entries are approved.
-            </div>
-            <div style={{ marginTop: '10px' }}>
-              <button
-                onClick={handleUpdateLinkedMobileState}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #00d4ff, #8a2be2)',
-                  color: 'white',
-                  border: 'none',
-                  fontWeight: 900,
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0, 212, 255, 0.25)'
-                }}
-              >
-                🔄 Update State on Linked Mobile
-              </button>
-            </div>
-          </div>
-
-          {isEditingPhone && (
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <input
-                type="tel"
-                value={phoneInput}
-                onChange={e => setPhoneInput(e.target.value)}
-                placeholder="+91 98765 43210"
-                style={{ padding: '8px 14px', borderRadius: '12px', background: '#120e24', border: '1px solid #ffd700', color: 'white', fontSize: '13px' }}
-              />
-              <button onClick={handleSavePhone} style={{ padding: '8px 16px', borderRadius: '12px', background: '#ffd700', color: '#000', fontWeight: 900, border: 'none', cursor: 'pointer', fontSize: '12.5px' }}>
-                Save
-              </button>
-              <button onClick={() => setIsEditingPhone(false)} style={{ padding: '8px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', cursor: 'pointer', fontSize: '12.5px' }}>
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* 2-COLUMN LAYOUT: Left = Competition & Votes Feed; Right = Tracked Items */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '30px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '30px', marginTop: '24px' }}>
           {/* SECTION 1: COMPETITION & VOTE ALERTS */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
@@ -370,7 +303,7 @@ export default function UserDashboard() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
                       <span style={{ color: '#00ff88', fontWeight: 800 }}>
-                        ✓ Delivered to mobile: {item.linkedMobile || linkedMobile}
+                        ✓ Live Real-Time Update
                       </span>
                       <a href="/competition" style={{ color: '#00d4ff', fontWeight: 900, textDecoration: 'none' }}>
                         View Competition →

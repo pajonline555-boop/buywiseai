@@ -82,8 +82,9 @@ data class LiveUserActivityNotification(
     val message: String,
     val type: String,
     val timestamp: String,
-    val linkedMobile: String,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val submissionId: String? = null,
+    val voteCount: Int? = null
 )
 
 @Composable
@@ -92,12 +93,6 @@ fun AlertsScreen(
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("buywise_app_prefs", Context.MODE_PRIVATE) }
-
-    var linkedMobileNumber by remember {
-        mutableStateOf(prefs.getString("saved_user_phone", "")?.takeIf { it.isNotBlank() } ?: "+91 98765 43210")
-    }
-    var showEditPhoneDialog by remember { mutableStateOf(false) }
-    var editPhoneInput by remember { mutableStateOf(linkedMobileNumber) }
 
     var selectedTabIndex by remember { mutableStateOf(0) } // 0: Competition & Votes, 1: Price Trackers
 
@@ -111,28 +106,18 @@ fun AlertsScreen(
     val liveNotifications = remember {
         mutableStateListOf(
             LiveUserActivityNotification(
-                id = "notif_vote_1",
-                title = "❤️ New Vote Received!",
-                message = "Someone just voted for your Gujarati Navratri Kamarbandh look! Total votes: 90 ❤️",
-                type = "VOTE_RECEIVED",
-                timestamp = "Just now",
-                linkedMobile = linkedMobileNumber
-            ),
-            LiveUserActivityNotification(
                 id = "notif_appr_1",
                 title = "🎉 Your Challenge Entry is Approved!",
                 message = "Congratulations! Your Navratri Kamarbandh try-on look has been approved by admin & is live for public voting.",
                 type = "ENTRY_APPROVED",
-                timestamp = "10 mins ago",
-                linkedMobile = linkedMobileNumber
+                timestamp = "10 mins ago"
             ),
             LiveUserActivityNotification(
                 id = "notif_comp_1",
                 title = "🏆 Weekly Challenge LIVE",
                 message = "Weekly Fashion Challenge is live with 4 diverse try-on models (Petite S to Curvy XXL).",
                 type = "COMPETITION_LIVE",
-                timestamp = "2 hours ago",
-                linkedMobile = linkedMobileNumber
+                timestamp = "2 hours ago"
             )
         )
     }
@@ -172,12 +157,12 @@ fun AlertsScreen(
     }
 
     // Connect to Firestore real-time notification stream for live device updates
-    LaunchedEffect(linkedMobileNumber) {
+    LaunchedEffect(Unit) {
         try {
             val currentUid = BuyWiseNotificationManager.getOrCreateDeviceUid(context)
-            val cleanPhone = linkedMobileNumber.filter { it.isDigit() }
             val db = FirebaseFirestore.getInstance()
 
+            // 1. Listen for real-time user notifications (Votes, Approvals, Status changes)
             db.collection("user_notifications")
                 .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(30)
@@ -185,29 +170,97 @@ fun AlertsScreen(
                     if (error == null && snapshot != null && !snapshot.isEmpty) {
                         for (doc in snapshot.documents) {
                             val id = doc.id
+                            val notifType = doc.getString("type") ?: "GENERAL"
+                            val title = doc.getString("title") ?: ""
+                            val message = doc.getString("message") ?: ""
+                            val submissionId = doc.getString("submissionId")
+                            val voteCount = doc.getLong("voteCount")?.toInt()
+
+                            // STRICT: Remove Linked Mobile and Linked Mobile Update notifications
+                            if (notifType == "DEVICE_STATE_SYNC" ||
+                                title.contains("Linked Mobile", ignoreCase = true) ||
+                                message.contains("Linked Mobile", ignoreCase = true) ||
+                                message.contains("mobile device state is synchronized", ignoreCase = true)
+                            ) {
+                                continue
+                            }
+
+                            val docUserId = doc.getString("userId") ?: ""
+                            val matchesUser = docUserId.isBlank() || docUserId == currentUid || docUserId == "all" || docUserId == "guest_user"
+                            if (!matchesUser) continue
+
+                            // AVOID REPEATED MESSAGES FOR THE SAME VOTE
+                            if (notifType == "VOTE_RECEIVED" && !submissionId.isNullOrBlank()) {
+                                val existingIndex = liveNotifications.indexOfFirst {
+                                    it.type == "VOTE_RECEIVED" && it.submissionId == submissionId
+                                }
+                                if (existingIndex != -1) {
+                                    val existing = liveNotifications[existingIndex]
+                                    if (voteCount != null && (existing.voteCount == null || voteCount > existing.voteCount)) {
+                                        liveNotifications[existingIndex] = existing.copy(
+                                            title = title,
+                                            message = message,
+                                            timestamp = "Just now",
+                                            voteCount = voteCount
+                                        )
+                                    }
+                                    continue
+                                }
+                            }
+
                             if (liveNotifications.none { it.id == id }) {
-                                val docUserId = doc.getString("userId") ?: ""
-                                val docMobile = doc.getString("linkedMobile") ?: ""
-                                val docCleanMobile = docMobile.filter { it.isDigit() }
-                                val notifType = doc.getString("type") ?: "GENERAL"
-                                val deliveredToMobile = doc.getBoolean("deliveredToMobile") ?: false
+                                liveNotifications.add(
+                                    0,
+                                    LiveUserActivityNotification(
+                                        id = id,
+                                        title = title.ifBlank { "New Notification" },
+                                        message = message,
+                                        type = notifType,
+                                        timestamp = "Just now",
+                                        submissionId = submissionId,
+                                        voteCount = voteCount
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
 
-                                val matchesUser = docUserId.isNotBlank() && (docUserId == currentUid || docUserId == "all" || docUserId == "guest_user")
-                                val matchesPhone = linkedMobileNumber.isNotBlank() && (docMobile == linkedMobileNumber || (cleanPhone.isNotBlank() && docCleanMobile == cleanPhone))
-                                val isDeviceSync = notifType == "DEVICE_STATE_SYNC" || notifType.contains("SYNC")
+            // 2. Real-time snapshot listener on competition_submissions for instant vote updates
+            db.collection("competition_submissions")
+                .addSnapshotListener { snapshot, error ->
+                    if (error == null && snapshot != null) {
+                        for (doc in snapshot.documents) {
+                            val subId = doc.id
+                            val votes = doc.getLong("voteCount")?.toInt() ?: 0
+                            val subTitle = doc.getString("title") ?: doc.getString("lookTitle") ?: "Your Look"
+                            val subUserId = doc.getString("userId") ?: ""
 
-                                if (matchesUser || matchesPhone || isDeviceSync || deliveredToMobile) {
-                                    val title = doc.getString("title") ?: "New Notification"
-                                    val message = doc.getString("message") ?: ""
+                            if (votes > 0 && (subUserId == currentUid || subUserId == "guest_user" || subUserId.isBlank())) {
+                                val existingIndex = liveNotifications.indexOfFirst {
+                                    it.type == "VOTE_RECEIVED" && it.submissionId == subId
+                                }
+                                if (existingIndex != -1) {
+                                    val existing = liveNotifications[existingIndex]
+                                    if (existing.voteCount == null || votes > existing.voteCount) {
+                                        liveNotifications[existingIndex] = existing.copy(
+                                            title = "❤️ New Vote Received!",
+                                            message = "Someone just voted for your look in $subTitle! You now have $votes votes! 🌟",
+                                            timestamp = "Just now",
+                                            voteCount = votes
+                                        )
+                                    }
+                                } else {
                                     liveNotifications.add(
                                         0,
                                         LiveUserActivityNotification(
-                                            id = id,
-                                            title = title,
-                                            message = message,
-                                            type = notifType,
+                                            id = "vote_realtime_${subId}_$votes",
+                                            title = "❤️ New Vote Received!",
+                                            message = "Someone just voted for your look in $subTitle! You now have $votes votes! 🌟",
+                                            type = "VOTE_RECEIVED",
                                             timestamp = "Just now",
-                                            linkedMobile = docMobile.ifBlank { linkedMobileNumber }
+                                            submissionId = subId,
+                                            voteCount = votes
                                         )
                                     )
                                 }
@@ -241,7 +294,7 @@ fun AlertsScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "Instant Votes & Approval Updates on Mobile",
+                        text = "Live Real-Time Votes, Challenge & Approval Updates",
                         fontSize = 11.sp,
                         color = BuyWiseEmerald,
                         fontWeight = FontWeight.Bold
@@ -250,15 +303,14 @@ fun AlertsScreen(
 
                 Button(
                     onClick = {
-                        // Immediately fire high-priority notification to verify mobile receiving
                         BuyWiseNotificationManager.showNotification(
                             context = context,
-                            title = "🔔 BuyWise Instant Mobile Test",
-                            message = "Instant notification confirmed on linked mobile: $linkedMobileNumber!",
+                            title = "🔔 BuyWise Live Alert System",
+                            message = "Real-time notifications & live voting sync are active!",
                             type = "TEST_NOTIFICATION",
                             targetRoute = "alerts"
                         )
-                        Toast.makeText(context, "Test notification dispatched to status bar!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Test alert dispatched to status bar!", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
                     shape = RoundedCornerShape(12.dp)
@@ -266,120 +318,6 @@ fun AlertsScreen(
                     Icon(Icons.Default.Notifications, contentDescription = "Test", tint = Color.Black, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Test Alert", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // LINKED MOBILE STATUS CARD
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.45f))
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(BuyWiseEmerald)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Linked Mobile", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .background(BuyWiseEmerald.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                                .border(1.dp, BuyWiseEmerald.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text("● LIVE SYNC ACTIVE", fontSize = 9.sp, fontWeight = FontWeight.Black, color = BuyWiseEmerald)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Phone, contentDescription = "Phone", tint = BuyWiseGold, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = linkedMobileNumber,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Black,
-                                color = BuyWiseGold
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    editPhoneInput = linkedMobileNumber
-                                    showEditPhoneDialog = true
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = BuyWiseCyan, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Update", fontSize = 11.sp, color = BuyWiseCyan, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Text(
-                        text = "Receives instant alerts whenever someone votes on your look or when your entry is approved.",
-                        fontSize = 11.sp,
-                        color = Color.LightGray,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                BuyWiseNotificationManager.dispatchSyncPing(context) { success ->
-                                    Toast.makeText(
-                                        context,
-                                        if (success) "⚡ Linked device state updated with latest votes!" else "Device synced.",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = BuyWiseCyan),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("🔄 Sync Linked Device", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 11.5.sp)
-                        }
-
-                        Button(
-                            onClick = {
-                                editPhoneInput = linkedMobileNumber
-                                showEditPhoneDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF261D40)),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("📱 Change Mobile", color = BuyWiseGold, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
-                        }
-                    }
                 }
             }
 
@@ -489,10 +427,10 @@ fun AlertsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.CheckCircle, contentDescription = "Sent", tint = BuyWiseEmerald, modifier = Modifier.size(12.dp))
+                                        Icon(Icons.Default.CheckCircle, contentDescription = "Live", tint = BuyWiseEmerald, modifier = Modifier.size(12.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Delivered to mobile: ${item.linkedMobile}",
+                                            text = "Live Real-Time Update",
                                             fontSize = 10.sp,
                                             color = BuyWiseEmerald,
                                             fontWeight = FontWeight.Bold
@@ -606,66 +544,7 @@ fun AlertsScreen(
         }
     }
 
-    // Modal to Update Linked Mobile Phone Number
-    if (showEditPhoneDialog) {
-        AlertDialog(
-            onDismissRequest = { showEditPhoneDialog = false },
-            containerColor = Color(0xFF141026),
-            title = {
-                Text("📱 Update Linked Mobile Number", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            },
-            text = {
-                Column {
-                    Text(
-                        "Enter your mobile phone number. Instant vote alerts and challenge approvals will be delivered to this device.",
-                        fontSize = 12.sp,
-                        color = Color.LightGray
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = editPhoneInput,
-                        onValueChange = { editPhoneInput = it },
-                        placeholder = { Text("+91 98765 43210", color = Color.Gray) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BuyWiseGold,
-                            unfocusedBorderColor = Color.DarkGray,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val trimmed = editPhoneInput.trim()
-                        if (trimmed.length >= 8) {
-                            linkedMobileNumber = trimmed
-                            prefs.edit().putString("saved_user_phone", trimmed).apply()
-                            BuyWiseNotificationManager.syncDeviceToken(context)
-                            BuyWiseNotificationManager.syncLinkedDeviceState(context)
-                            BuyWiseNotificationManager.startRealtimeNotificationListener(context)
-                            BuyWiseNotificationManager.startLinkedDeviceListener(context)
-                            Toast.makeText(context, "Linked mobile updated to $trimmed", Toast.LENGTH_SHORT).show()
-                        }
-                        showEditPhoneDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BuyWiseGold)
-                ) {
-                    Text("SAVE NUMBER", color = Color.Black, fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showEditPhoneDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                ) {
-                    Text("CANCEL", color = Color.White)
-                }
-            }
-        )
-    }
+
 
     // Modal to create custom price alert
     if (showAddDialog) {

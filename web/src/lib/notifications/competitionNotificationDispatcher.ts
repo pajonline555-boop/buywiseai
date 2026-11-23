@@ -143,11 +143,20 @@ export async function notifyVoteReceived(params: {
   competitionTitle?: string;
   linkedMobile?: string;
 }) {
+  const lastKey = `last_notified_vote_${params.submissionId}`;
+  if (typeof window !== 'undefined') {
+    const lastCount = parseInt(localStorage.getItem(lastKey) || '-1', 10);
+    if (params.newVoteCount <= lastCount) {
+      console.log(`[VOTE NOTIFICATION]: Vote count ${params.newVoteCount} for ${params.submissionId} already notified. Skipping duplicate.`);
+      return { success: false, skipped: true, reason: 'ALREADY_NOTIFIED' };
+    }
+    localStorage.setItem(lastKey, String(params.newVoteCount));
+  }
+
   const compName = params.competitionTitle || 'Weekly Fashion Challenge';
   return dispatchCompetitionNotification({
     userId: params.userId,
     userName: params.userName,
-    linkedMobile: params.linkedMobile,
     type: 'VOTE_RECEIVED',
     title: '❤️ New Vote Received!',
     message: `Someone just voted for your look in "${compName}"! Total votes: ${params.newVoteCount} ❤️`,
@@ -227,31 +236,10 @@ export async function updateLinkedDeviceState(params: {
 
       // 3. Fallback generic doc
       await setDoc(doc(db, 'user_devices', 'device_linked_mobile'), deviceUpdate, { merge: true });
-
-      // 4. Create an instant sync notification in `user_notifications` so mobile listener pops heads-up
-      const syncNotifId = `notif_sync_${Date.now()}`;
-      await setDoc(
-        doc(db, 'user_notifications', syncNotifId),
-        {
-          id: syncNotifId,
-          userId: params.userId,
-          userName: 'BuyWise Shopper',
-          linkedMobile: rawMobile,
-          type: 'DEVICE_STATE_SYNC',
-          title: '⚡ Linked Mobile Updated',
-          message: `Your linked mobile (${rawMobile}) is updated with live challenge votes & approval status!`,
-          status: 'ONLINE',
-          read: false,
-          deliveredToMobile: true,
-          channel: 'FCM_MOBILE_PUSH',
-          createdAt: now,
-        },
-        { merge: true }
-      );
     }
 
     console.log(`[📱 LINKED DEVICE UPDATED]: State synced for user ${params.userId} (${rawMobile})`);
-    return { success: true, message: `Linked mobile (${rawMobile}) state updated successfully!` };
+    return { success: true, message: `Device state synced successfully!` };
   } catch (err: any) {
     return { success: false, message: err?.message || 'Failed to update linked device state' };
   }
