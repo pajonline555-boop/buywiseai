@@ -60,6 +60,19 @@ data class VtoGenerateResponse(
     val message: String? = null
 )
 
+data class VisionAnalyzeRequest(
+    val image: String,
+    val mode: String = "exact"
+)
+
+data class VisionAnalyzeResponse(
+    val success: Boolean = false,
+    val status: String? = null,
+    val productDetected: Boolean = false,
+    val suggestedQuery: String? = null,
+    val error: String? = null
+)
+
 interface BuyWiseApiService {
 
     @GET("/api/health")
@@ -76,4 +89,7 @@ interface BuyWiseApiService {
 
     @POST("/api/vto/generate")
     suspend fun generateVto(@Body request: VtoGenerateRequest): Response<VtoGenerateResponse>
+
+    @POST("/api/vision/analyze")
+    suspend fun analyzeVision(@Body request: VisionAnalyzeRequest): Response<VisionAnalyzeResponse>
 }

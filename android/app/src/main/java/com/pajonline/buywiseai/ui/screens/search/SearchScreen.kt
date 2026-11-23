@@ -2,8 +2,20 @@ package com.pajonline.buywiseai.ui.screens.search
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -231,6 +243,107 @@ fun SearchScreen(
         }
     }
 
+    var showPhotoSearchDialog by remember { mutableStateOf(false) }
+    var isAnalyzingPhoto by remember { mutableStateOf(false) }
+    var photoAnalysisStatus by remember { mutableStateOf("Analyzing image with Vision AI...") }
+    var tempCameraSearchUri by remember { mutableStateOf<Uri?>(null) }
+
+    fun analyzePhotoAndSearch(uri: Uri) {
+        isAnalyzingPhoto = true
+        photoAnalysisStatus = "Analyzing image with Vision AI..."
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+
+                if (originalBitmap == null) {
+                    withContext(Dispatchers.Main) {
+                        isAnalyzingPhoto = false
+                        Toast.makeText(context, "Could not read selected image", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                val maxDim = 1024
+                val width = originalBitmap.width
+                val height = originalBitmap.height
+                val scaledBitmap = if (width > maxDim || height > maxDim) {
+                    val ratio = width.toFloat() / height.toFloat()
+                    val targetW = if (ratio > 1f) maxDim else (maxDim * ratio).toInt()
+                    val targetH = if (ratio > 1f) (maxDim / ratio).toInt() else maxDim
+                    Bitmap.createScaledBitmap(originalBitmap, targetW, targetH, true)
+                } else {
+                    originalBitmap
+                }
+
+                val baos = ByteArrayOutputStream()
+                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+                val imageBytes = baos.toByteArray()
+                val base64Data = "data:image/jpeg;base64," + Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+
+                var ocrExtractedText = ""
+                try {
+                    ocrExtractedText = com.pajonline.buywiseai.core.mlkit.MlKitTextRecognitionService().extractTextFromBitmap(scaledBitmap)
+                } catch (_: Exception) {}
+
+                withContext(Dispatchers.Main) {
+                    photoAnalysisStatus = "Identifying product & comparing 14 stores..."
+                }
+
+                val response = try {
+                    com.pajonline.buywiseai.data.api.ApiClient.apiService.analyzeVision(
+                        com.pajonline.buywiseai.data.api.VisionAnalyzeRequest(image = base64Data)
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+
+                withContext(Dispatchers.Main) {
+                    isAnalyzingPhoto = false
+                    showPhotoSearchDialog = false
+                    val visionResult = response?.body()
+                    val suggestedQuery = visionResult?.suggestedQuery?.takeIf { it.isNotBlank() }
+
+                    if (suggestedQuery != null) {
+                        query = suggestedQuery
+                        Toast.makeText(context, "🔍 Match: $suggestedQuery", Toast.LENGTH_SHORT).show()
+                        viewModel.performSearch(suggestedQuery)
+                    } else if (ocrExtractedText.isNotBlank()) {
+                        val cleanQuery = ocrExtractedText.lines().firstOrNull { it.trim().length > 3 }?.take(40) ?: ocrExtractedText.take(40)
+                        query = cleanQuery
+                        Toast.makeText(context, "🔍 Identified: $cleanQuery", Toast.LENGTH_SHORT).show()
+                        viewModel.performSearch(cleanQuery)
+                    } else {
+                        Toast.makeText(context, "Could not detect product. Please try a clearer photo or search by name.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isAnalyzingPhoto = false
+                    showPhotoSearchDialog = false
+                    Toast.makeText(context, "Analysis error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val pickPhotoForSearchLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            analyzePhotoAndSearch(uri)
+        }
+    }
+
+    val takePhotoForSearchLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success && tempCameraSearchUri != null) {
+            analyzePhotoAndSearch(tempCameraSearchUri!!)
+        }
+    }
+
     // Popular Quick Comparison Suggestions
     val trendingSearches = listOf(
         "👗 Girl Dresses" to "Girl Dresses",
@@ -327,26 +440,42 @@ fun SearchScreen(
                                     )
                                 },
                                 trailingIcon = {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .background(
-                                                if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) BuyWiseNeonPink.copy(alpha = 0.35f)
-                                                else BuyWiseCyan.copy(alpha = 0.25f),
-                                                CircleShape
-                                            )
-                                            .border(
-                                                1.5.dp,
-                                                if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) BuyWiseNeonPink else BuyWiseCyan,
-                                                CircleShape
-                                            )
-                                            .clickable { handleMicClick() },
-                                        contentAlignment = Alignment.Center
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        modifier = Modifier.padding(end = 4.dp)
                                     ) {
-                                        Text(
-                                            text = if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) "🔴" else "🎙️",
-                                            fontSize = 16.sp
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(
+                                                    if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) BuyWiseNeonPink.copy(alpha = 0.35f)
+                                                    else BuyWiseCyan.copy(alpha = 0.25f),
+                                                    CircleShape
+                                                )
+                                                .border(
+                                                    1.5.dp,
+                                                    if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) BuyWiseNeonPink else BuyWiseCyan,
+                                                    CircleShape
+                                                )
+                                                .clickable { handleMicClick() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (voiceState == com.pajonline.buywiseai.core.voice.VoiceSearchState.LISTENING) "🔴" else "🎙️",
+                                                fontSize = 15.sp
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(BuyWiseNeonPink.copy(alpha = 0.25f), CircleShape)
+                                                .border(1.5.dp, BuyWiseNeonPink, CircleShape)
+                                                .clickable { showPhotoSearchDialog = true },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("📷", fontSize = 15.sp)
+                                        }
                                     }
                                 },
                                 shape = RoundedCornerShape(12.dp),
@@ -1640,6 +1769,112 @@ fun SearchScreen(
                         }
                     }
                 )
+            }
+        }
+    }
+
+    // Photo Search Choice Dialog
+    if (showPhotoSearchDialog) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showPhotoSearchDialog = false }) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF16102B),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, BuyWiseNeonPink),
+                modifier = Modifier.fillMaxWidth().padding(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("📷 Search by Image", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Snap or upload any product photo to find the lowest price across Amazon, Flipkart, Myntra & 14+ stores",
+                        fontSize = 11.5.sp,
+                        color = Color.LightGray,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        lineHeight = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = {
+                            showPhotoSearchDialog = false
+                            try {
+                                val photoFile = File(context.cacheDir, "search_photo_${System.currentTimeMillis()}.jpg")
+                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+                                tempCameraSearchUri = uri
+                                takePhotoForSearchLauncher.launch(uri)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Camera error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BuyWiseNeonPink),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("📸", fontSize = 16.sp)
+                            Text("Take Photo with Camera", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = {
+                            showPhotoSearchDialog = false
+                            pickPhotoForSearchLauncher.launch("image/*")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF261D42)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BuyWiseCyan.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("🖼️", fontSize = 16.sp)
+                            Text("Pick Image from Gallery", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = { showPhotoSearchDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancel", color = Color.Gray, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    // Photo Analysis Progress Dialog
+    if (isAnalyzingPhoto) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFF140E29),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, BuyWiseCyan),
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(color = BuyWiseNeonPink, modifier = Modifier.size(44.dp), strokeWidth = 3.5.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("🔍 Vision AI at Work", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.White)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = photoAnalysisStatus,
+                        fontSize = 12.sp,
+                        color = BuyWiseCyan,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
             }
         }
     }
