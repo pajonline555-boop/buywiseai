@@ -65,18 +65,23 @@ fun BuyWiseNavGraph(
                     }
                 },
                 onOfferSelect = { offer ->
-                    try {
-                        val targetUrl = if (offer.url.startsWith("http")) {
-                            offer.url
-                        } else {
-                            com.pajonline.buywiseai.data.repository.SmartMarketIntelligence.buildDirectStoreUrl(offer.store, offer.title)
+                    if (offer.store.contains("BuyWise", ignoreCase = true) || offer.productSource == "PARTNER" || offer.id.contains("bw_store") || offer.id.contains("kurta")) {
+                        compareViewModel.selectOffer(offer)
+                        navController.navigate("details")
+                    } else {
+                        try {
+                            val targetUrl = if (offer.url.startsWith("http")) {
+                                offer.url
+                            } else {
+                                com.pajonline.buywiseai.data.repository.SmartMarketIntelligence.buildDirectStoreUrl(offer.store, offer.title)
+                            }
+                            val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(browserIntent)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                        val browserIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
-                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(browserIntent)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
                 }
             )

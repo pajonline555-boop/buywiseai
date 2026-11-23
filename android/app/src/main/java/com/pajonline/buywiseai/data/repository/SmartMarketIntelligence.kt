@@ -1108,8 +1108,8 @@ object SmartMarketIntelligence {
     // CATEGORY 6: FASHION, APPAREL & ETHNIC WEAR
     // ==========================================
     private fun isFashionOrEthnic(q: String): Boolean {
-        val wordRegex = Regex("""\b(saree|sari|sarees|saris|kurta|kurtas|kurti|kurtis|lehenga|lehengas|kamarbandh|waistband|tagdi|ethnic|dress|dresses|frock|frocks|gown|gowns|skirt|skirts|shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|jeans|denim|shoes|sneakers|jacket|jackets|suit|suits|blazer|blazers|hoodie|hoodies|coat|coats|overcoat|sweater|sweaters|cardigan|trouser|trousers|pant|pants|top|tops|bomber|windcheater|clothing|apparel|footwear|sandals|boots|innerwear|underwear|lingerie|bra|bras|panty|panties|trunk|trunks|boxer|boxers|brief|briefs|vest|vests|nightwear|sleepwear|activewear|girl|girls|boy|boys|kid|kids|baby|toddler|women|womens|woman|ladies|lady|dusty|rose|embroidery|embroidered|anarkali|dupatta|salwar|churidar|palazzo|a-line|solid)\b""", RegexOption.IGNORE_CASE)
-        val multiWordKeywords = listOf("running shoes", "casual shoes", "formal shoes", "ethnic wear", "girl dresses", "girls dress", "girls dresses", "summer dress", "party dress", "floral dress", "party wear", "kurta set", "pant set", "dusty rose", "a-line kurta", "women dress", "pant set with dupatta")
+        val wordRegex = Regex("""\b(saree|sari|sarees|saris|kurta|kurtas|kurti|kurtis|lehenga|lehengas|kamarbandh|waistband|tagdi|ethnic|dress|dresses|frock|frocks|gown|gowns|skirt|skirts|shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|jeans|denim|shoes|sneakers|jacket|jackets|suit|suits|blazer|blazers|hoodie|hoodies|coat|coats|overcoat|sweater|sweaters|cardigan|trouser|trousers|pant|pants|top|tops|bomber|windcheater|clothing|apparel|footwear|sandals|boots|innerwear|underwear|lingerie|bra|bras|panty|panties|trunk|trunks|boxer|boxers|brief|briefs|vest|vests|nightwear|sleepwear|activewear|girl|girls|boy|boys|kid|kids|baby|toddler|women|womens|woman|ladies|lady|dusty|rose|peach|coral|rust|embroidery|embroidered|anarkali|dupatta|salwar|churidar|palazzo|a-line|solid)\b""", RegexOption.IGNORE_CASE)
+        val multiWordKeywords = listOf("running shoes", "casual shoes", "formal shoes", "ethnic wear", "girl dresses", "girls dress", "girls dresses", "summer dress", "party dress", "floral dress", "party wear", "kurta set", "pant set", "dusty rose", "women peach", "peach dress", "a-line kurta", "women dress", "pant set with dupatta")
         return wordRegex.containsMatchIn(q) || multiWordKeywords.any { q.contains(it, ignoreCase = true) }
     }
 
@@ -1124,10 +1124,13 @@ object SmartMarketIntelligence {
         // 1. Lowest Price Found (Budget / Best Deal in Market)
         // 2. Branded (Top Authentic Brand)
         if (!hasSpecificBrand(lower)) {
-                val isOurKurtaDress = lower.contains("dusty") || lower.contains("rose") || 
+                val isOurKurtaDress = lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
+                    lower.contains("kurta") || lower.contains("kurti") || lower.contains("anarkali") || lower.contains("pant set") ||
+                    lower.contains("solid a-line") || lower.contains("a-line kurta") ||
                     (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
                     lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
-                    (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women")))
+                    (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women"))) ||
+                    (lower.contains("women") && (lower.contains("peach") || lower.contains("coral") || lower.contains("rust") || (lower.contains("pink") && lower.contains("embroid"))))
 
                 val isWomenQuery = lower.contains("women") || lower.contains("woman") || lower.contains("girl") || lower.contains("ladies") || lower.contains("lady") || lower.contains("female")
 
@@ -1500,10 +1503,13 @@ object SmartMarketIntelligence {
             return wrapResponse(query, stores, today, rec)
         }
 
-            val isOurKurtaDressSingle = lower.contains("dusty") || lower.contains("rose") || 
+            val isOurKurtaDressSingle = lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
+                lower.contains("kurta") || lower.contains("kurti") || lower.contains("anarkali") || lower.contains("pant set") ||
+                lower.contains("solid a-line") || lower.contains("a-line kurta") ||
                 (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
                 lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
-                (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women")))
+                (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women"))) ||
+                (lower.contains("women") && (lower.contains("peach") || lower.contains("coral") || lower.contains("rust") || (lower.contains("pink") && lower.contains("embroid"))))
 
             val isWomenQuerySingle = lower.contains("women") || lower.contains("woman") || lower.contains("girl") || lower.contains("ladies") || lower.contains("lady") || lower.contains("female")
 

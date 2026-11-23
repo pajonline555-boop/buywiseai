@@ -208,6 +208,8 @@ class SmartMarketIntelligenceTest {
         val queries = listOf(
             "Women dusty rose",
             "dusty rose",
+            "Women Peach",
+            "Peach",
             "Beautiful embroidery women solid A-line Kurta",
             "kurta pant set with dupatta"
         )
