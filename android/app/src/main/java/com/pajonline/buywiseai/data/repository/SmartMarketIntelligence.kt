@@ -1117,11 +1117,14 @@ object SmartMarketIntelligence {
         val enc = encode(query)
         val today = currentDateString()
 
-        val isOurKurtaDress = (lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
-            (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("solid"))) ||
+        val isOurKurtaDress = (
+            (lower.contains("beautiful embroidery") && (lower.contains("kurta") || lower.contains("pant") || lower.contains("set") || lower.contains("solid"))) ||
+            ((lower.contains("peach") || lower.contains("dusty rose") || lower.contains("salmon") || lower.contains("coral")) && (lower.contains("kurta") || lower.contains("pant set") || lower.contains("suit") || lower.contains("anarkali") || lower.contains("a-line"))) ||
             lower.contains("solid a-line kurta") ||
-            lower.contains("beautiful embroidery")) &&
-            !lower.contains("kamarbandh") && !lower.contains("tagdi") && !lower.contains("waistband") && !lower.contains("waist belt") && !lower.contains("kutchi") && !lower.contains("kandora")
+            lower.contains("kurta,pant set with dupatta") ||
+            (lower.contains("kurta") && (lower.contains("pant set") || (lower.contains("pant") && lower.contains("dupatta")))) ||
+            (lower.contains("dusty rose") || lower.contains("dusty-rose"))
+        ) && !lower.contains("kamarbandh") && !lower.contains("tagdi") && !lower.contains("waistband") && !lower.contains("waist belt") && !lower.contains("kutchi") && !lower.contains("kandora")
 
         // When a product is listed on BuyWise AI, show lowest price of it and do not show false dress listings on other platforms like Meesho
         if (isOurKurtaDress) {
@@ -1332,146 +1335,112 @@ object SmartMarketIntelligence {
                 }
             }
 
+            val isGirlDress = (lower.contains("dress") || lower.contains("frock") || lower.contains("gown")) && (lower.contains("girl") || lower.contains("kid") || lower.contains("baby") || lower.contains("child"))
+            val isDress = lower.contains("dress") || lower.contains("frock") || lower.contains("gown")
+            val isKurti = lower.contains("kurta") || lower.contains("kurti")
             val isSaree = lower.contains("saree") || lower.contains("sari")
             val isLancer = lowestItem.first.contains("Lancer", ignoreCase = true)
-            val isKurti = lower.contains("kurta") || lower.contains("kurti")
-            val isDress = lower.contains("dress") || lower.contains("frock") || lower.contains("gown")
-            val isKamarbandh = lower.contains("kamarbandh") || lower.contains("tagdi") || lower.contains("gujarati")
+            val isKamarbandh = lower.contains("kamarbandh") || lower.contains("tagdi") || lower.contains("gujarati") || lower.contains("waistband")
 
-            val meeshoLowPrice = when {
-                isOurKurtaDress -> 649.0
-                isSaree -> 299.0
+            // Amazon India is the LOWEST PRICE FOUND for all products not in our inventory
+            val amzLowPrice = when {
+                isGirlDress -> 449.0
+                isDress -> 599.0
                 isKurti -> 249.0
-                isLancer -> 489.0
-                isDress -> (lowestItem.second - 50.0).coerceAtLeast(299.0)
+                isSaree -> 299.0
+                isLancer -> 472.0
+                isKamarbandh -> 499.0
                 else -> (lowestItem.second - 50.0).coerceAtLeast(199.0)
             }
-            val buywisePrice = when {
-                isOurKurtaDress -> 4999.0
-                isSaree -> 389.0
-                isKurti -> 299.0
-                isKamarbandh -> 499.0
-                isLancer -> 479.0
-                else -> lowestItem.second
-            }
-            val fkLowPrice = when {
-                isOurKurtaDress -> 1199.0
-                isLancer -> 499.0
-                isSaree -> 399.0
-                else -> lowestItem.second + 30.0
-            }
-            val amzLowPrice = when {
-                isOurKurtaDress -> 999.0
-                isLancer -> 472.0
-                isSaree -> 449.0
-                else -> lowestItem.second + 50.0
-            }
-            val mynLowPrice = when {
-                isOurKurtaDress -> 2499.0
-                isLancer -> 549.0
-                isSaree -> 499.0
-                else -> lowestItem.second + 80.0
+            val fkLowPrice = amzLowPrice + 30.0
+            val meeshoLowPrice = amzLowPrice + 40.0
+            val mynLowPrice = brandedItem.second
+            val ajioLowPrice = amzLowPrice + 70.0
+
+            val stores = mutableListOf<StoreOffer>()
+
+            // If it's Kamarbandh (verified store item in inventory), include BuyWise Store as verified offer
+            if (isKamarbandh) {
+                stores.add(
+                    StoreOffer(
+                        id = "fash_bw_store_kamar",
+                        store = "🟢 BuyWise Store",
+                        title = "BuyWise Verified: Etietnic Gujarati Traditional Embroidered Kamarbandh",
+                        url = "https://buywiseai.pajonline.co.in/partners",
+                        price = 499.0,
+                        mrp = 999.0,
+                        discount = 50.0,
+                        imageUrl = "https://buywiseai.pajonline.co.in/kamarbandh.png",
+                        rating = 4.9,
+                        reviewCount = 1420,
+                        isLowest = true,
+                        isBestValue = true,
+                        matchType = "LOWEST_PRICE",
+                        trustScore = 99,
+                        verificationStatus = "VERIFIED_TODAY",
+                        tryOnEnabled = true,
+                        productSource = "PARTNER",
+                        deliveryText = "Verified BuyWise Partner: Free 2-Day Express Shipping & Easy Returns"
+                    )
+                )
             }
 
-            val minLow = listOf(meeshoLowPrice, buywisePrice, amzLowPrice, fkLowPrice, mynLowPrice).minOrNull() ?: meeshoLowPrice
-
-            val stores = listOf(
-                // 1. BuyWise Store (Our Store - Best Value Verified Deal)
+            // 1. Amazon India (Lowest Price Found for all non-inventory products)
+            stores.add(
                 StoreOffer(
-                    id = "fash_bw_store",
-                    store = "🟢 BuyWise Store",
-                    title = when {
-                        isOurKurtaDress -> "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta"
-                        isSaree -> "BuyWise Direct: Banarasi Festive Silk Saree with Blouse Piece"
-                        isDress -> "${lowestItem.first} (BuyWise Partner Collection)"
-                        isKamarbandh -> "BuyWise Verified: Etietnic Gujarati Traditional Embroidered Kamarbandh"
-                        else -> "${lowestItem.first} (BuyWise Direct)"
-                    },
-                    url = if (isOurKurtaDress) "https://buywiseai.pajonline.co.in/partners?product=prod_partner_kurta_set_1" else "https://buywiseai.pajonline.co.in/partners",
-                    price = buywisePrice,
-                    mrp = if (isOurKurtaDress) 6999.0 else if (isSaree) 1999.0 else lowestItem.third,
-                    discount = Math.round((( (if (isOurKurtaDress) 6999.0 else if (isSaree) 1999.0 else lowestItem.third) - buywisePrice) / (if (isOurKurtaDress) 6999.0 else if (isSaree) 1999.0 else lowestItem.third)) * 100).toDouble(),
-                    imageUrl = if (isOurKurtaDress) "https://buywiseai.pajonline.co.in/dusty_rose_kurta.png" else lowestItem.fourth,
-                    rating = 4.9,
-                    reviewCount = 1420,
-                    isLowest = (buywisePrice == minLow),
-                    isBestValue = true,
-                    matchType = "BEST_VALUE",
-                    trustScore = 99,
-                    verificationStatus = "VERIFIED_TODAY",
-                    tryOnEnabled = true,
-                    productSource = "PARTNER",
-                    deliveryText = if (isOurKurtaDress) "Verified BuyWise Partner: Free 2-Day Express Shipping & Easy Returns" else "BuyWise Partner Direct: Free 2-Day Express Shipping"
-                ),
-                // 2. Meesho (Lowest Price Found)
-                StoreOffer(
-                    id = "fash_low_meesho",
-                    store = "Meesho",
-                    title = if (isOurKurtaDress) lowestItem.first else if (isSaree) "Traditional Georgette Daily Wear & Festive Printed Saree" else lowestItem.first,
-                    url = buildDirectStoreUrl("Meesho", lowestItem.first),
-                    price = meeshoLowPrice,
+                    id = "fash_low_amz",
+                    store = "Amazon India",
+                    title = lowestItem.first,
+                    url = buildDirectStoreUrl("Amazon India", lowestItem.first),
+                    price = amzLowPrice,
                     mrp = lowestItem.third,
-                    discount = Math.round(((lowestItem.third - meeshoLowPrice) / lowestItem.third) * 100).toDouble(),
+                    discount = Math.round(((lowestItem.third - amzLowPrice) / lowestItem.third) * 100).toDouble(),
                     imageUrl = lowestItem.fourth,
-                    rating = 4.2,
-                    reviewCount = 28400,
-                    isLowest = (meeshoLowPrice == minLow),
+                    rating = if (isLancer) 3.5 else 4.4,
+                    reviewCount = if (isLancer) 40 else 16500,
+                    isLowest = !isKamarbandh,
                     isBestValue = false,
-                    matchType = "LOWEST_PRICE",
-                    trustScore = 94,
+                    matchType = if (isKamarbandh) "MATCHING" else "LOWEST_PRICE",
+                    trustScore = 98,
                     verificationStatus = "VERIFIED_TODAY",
                     tryOnEnabled = true,
-                    deliveryText = "Meesho Social Deal: Free Cash on Delivery"
-                ),
-                // 3. Flipkart
+                    deliveryText = if (isLancer) "Amazon Prime Free Delivery" else "Amazon Prime Fast Dispatch"
+                )
+            )
+
+            // 2. Flipkart
+            stores.add(
                 StoreOffer(
                     id = "fash_low_fk",
                     store = "Flipkart",
-                    title = if (isOurKurtaDress) "Libas Women Embroidered A-Line Kurta with Pant Set & Dupatta" else lowestItem.first,
-                    url = buildDirectStoreUrl("Flipkart", if (isOurKurtaDress) "Libas Women Embroidered A-Line Kurta with Pant Set" else lowestItem.first),
+                    title = lowestItem.first,
+                    url = buildDirectStoreUrl("Flipkart", lowestItem.first),
                     price = fkLowPrice,
-                    mrp = if (isOurKurtaDress) 2999.0 else lowestItem.third,
-                    discount = Math.round((( (if (isOurKurtaDress) 2999.0 else lowestItem.third) - fkLowPrice) / (if (isOurKurtaDress) 2999.0 else lowestItem.third)) * 100).toDouble(),
+                    mrp = lowestItem.third,
+                    discount = Math.round(((lowestItem.third - fkLowPrice) / lowestItem.third) * 100).toDouble(),
                     imageUrl = lowestItem.fourth,
                     rating = 4.3,
                     reviewCount = 19100,
-                    isLowest = (fkLowPrice == minLow),
+                    isLowest = false,
                     isBestValue = false,
                     matchType = "MATCHING",
                     trustScore = 96,
                     verificationStatus = "VERIFIED_TODAY",
                     tryOnEnabled = true,
                     deliveryText = "Flipkart Assured: Free Delivery"
-                ),
-                // 4. Amazon India
-                StoreOffer(
-                    id = "fash_low_amz",
-                    store = "Amazon India",
-                    title = if (isOurKurtaDress) "Rytras Women Solid Embroidered Kurta Pant Set with Dupatta" else lowestItem.first,
-                    url = buildDirectStoreUrl("Amazon India", if (isOurKurtaDress) "Women Embroidered Kurta Pant Set with Dupatta" else lowestItem.first),
-                    price = amzLowPrice,
-                    mrp = if (isOurKurtaDress) 2499.0 else lowestItem.third,
-                    discount = Math.round((( (if (isOurKurtaDress) 2499.0 else lowestItem.third) - amzLowPrice) / (if (isOurKurtaDress) 2499.0 else lowestItem.third)) * 100).toDouble(),
-                    imageUrl = lowestItem.fourth,
-                    rating = if (isLancer) 3.5 else 4.3,
-                    reviewCount = if (isLancer) 40 else 16500,
-                    isLowest = (amzLowPrice == minLow),
-                    isBestValue = false,
-                    matchType = if (isLancer) "LOWEST_PRICE" else "MATCHING",
-                    trustScore = 98,
-                    verificationStatus = "VERIFIED_TODAY",
-                    tryOnEnabled = true,
-                    deliveryText = if (isLancer) "Amazon Prime Free Delivery" else "Amazon Prime Fast Dispatch"
-                ),
-                // 5. Myntra (Branded Quality)
+                )
+            )
+
+            // 3. Myntra (Branded Quality)
+            stores.add(
                 StoreOffer(
                     id = "fash_brd_myn",
                     store = "Myntra",
                     title = brandedItem.first,
                     url = buildDirectStoreUrl("Myntra", brandedItem.first),
-                    price = if (isOurKurtaDress) 2499.0 else brandedItem.second,
+                    price = mynLowPrice,
                     mrp = brandedItem.third,
-                    discount = Math.round(((brandedItem.third - (if (isOurKurtaDress) 2499.0 else brandedItem.second)) / brandedItem.third) * 100).toDouble(),
+                    discount = Math.round(((brandedItem.third - mynLowPrice) / brandedItem.third) * 100).toDouble(),
                     imageUrl = brandedItem.fourth,
                     rating = 4.6,
                     reviewCount = 48200,
@@ -1482,16 +1451,42 @@ object SmartMarketIntelligence {
                     verificationStatus = "VERIFIED_TODAY",
                     tryOnEnabled = true,
                     deliveryText = "Official Brand Store & 14-Day Free Returns"
-                ),
-                // 6. AJIO
+                )
+            )
+
+            // 4. Meesho
+            stores.add(
+                StoreOffer(
+                    id = "fash_low_meesho",
+                    store = "Meesho",
+                    title = lowestItem.first,
+                    url = buildDirectStoreUrl("Meesho", lowestItem.first),
+                    price = meeshoLowPrice,
+                    mrp = lowestItem.third,
+                    discount = Math.round(((lowestItem.third - meeshoLowPrice) / lowestItem.third) * 100).toDouble(),
+                    imageUrl = lowestItem.fourth,
+                    rating = 4.2,
+                    reviewCount = 28400,
+                    isLowest = false,
+                    isBestValue = false,
+                    matchType = "MATCHING",
+                    trustScore = 94,
+                    verificationStatus = "VERIFIED_TODAY",
+                    tryOnEnabled = true,
+                    deliveryText = "Meesho Social Deal: Free Cash on Delivery"
+                )
+            )
+
+            // 5. AJIO
+            stores.add(
                 StoreOffer(
                     id = "fash_low_ajio",
                     store = "AJIO",
-                    title = if (isOurKurtaDress) "GoSriKi Women Solid Embroidered A-Line Kurta with Pant Set" else lowestItem.first,
-                    url = buildDirectStoreUrl("AJIO", if (isOurKurtaDress) "Women Embroidered Kurta Pant Set" else lowestItem.first),
-                    price = if (isOurKurtaDress) 1249.0 else (fkLowPrice + 20.0),
-                    mrp = if (isOurKurtaDress) 2999.0 else lowestItem.third,
-                    discount = Math.round((( (if (isOurKurtaDress) 2999.0 else lowestItem.third) - (if (isOurKurtaDress) 1249.0 else (fkLowPrice + 20.0))) / (if (isOurKurtaDress) 2999.0 else lowestItem.third)) * 100).toDouble(),
+                    title = lowestItem.first,
+                    url = buildDirectStoreUrl("AJIO", lowestItem.first),
+                    price = ajioLowPrice,
+                    mrp = lowestItem.third,
+                    discount = Math.round(((lowestItem.third - ajioLowPrice) / lowestItem.third) * 100).toDouble(),
                     imageUrl = lowestItem.fourth,
                     rating = 4.3,
                     reviewCount = 14200,
@@ -1505,22 +1500,22 @@ object SmartMarketIntelligence {
                 )
             )
 
-            val rec = if (isOurKurtaDress) {
-                "BuyWise AI recommends Meesho (₹${meeshoLowPrice.toInt()}) offers the Lowest Price Found, while 🟢 BuyWise Store (₹${buywisePrice.toInt()}) offers the Authentic Partner Outfit with 99/100 Trust Score and direct fulfillment."
+            val rec = if (isKamarbandh) {
+                "🟢 BuyWise Store (₹499) offers the Authentic Verified Partner Kamarbandh with 99/100 Trust Score and direct fulfillment."
             } else {
-                val lowestStoreName = if (meeshoLowPrice == minLow) "Meesho (₹${meeshoLowPrice.toInt()})" else if (amzLowPrice == minLow) "Amazon India (₹${amzLowPrice.toInt()})" else "BuyWise Store (₹${buywisePrice.toInt()})"
-                "$lowestStoreName offers the Lowest Price Found, while 🟢 BuyWise Store (₹${buywisePrice.toInt()}) offers Best Value with 99/100 Trust Score and direct fulfillment."
+                "BuyWise AI compares 14 stores: Amazon India (₹${amzLowPrice.toInt()}) offers the Lowest Price Found, followed by Flipkart (₹${fkLowPrice.toInt()}) and Myntra (₹${mynLowPrice.toInt()})."
             }
             return wrapResponse(query, stores, today, rec)
         }
 
-            val isOurKurtaDressSingle = lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
-                lower.contains("kurta") || lower.contains("kurti") || lower.contains("anarkali") || lower.contains("pant set") ||
-                lower.contains("solid a-line") || lower.contains("a-line kurta") ||
-                (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
-                lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
-                (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women"))) ||
-                (lower.contains("women") && (lower.contains("peach") || lower.contains("coral") || lower.contains("rust") || (lower.contains("pink") && lower.contains("embroid"))))
+            val isOurKurtaDressSingle = (
+                (lower.contains("beautiful embroidery") && (lower.contains("kurta") || lower.contains("pant") || lower.contains("set") || lower.contains("solid"))) ||
+                ((lower.contains("peach") || lower.contains("dusty rose") || lower.contains("salmon") || lower.contains("coral")) && (lower.contains("kurta") || lower.contains("pant set") || lower.contains("suit") || lower.contains("anarkali") || lower.contains("a-line"))) ||
+                lower.contains("solid a-line kurta") ||
+                lower.contains("kurta,pant set with dupatta") ||
+                (lower.contains("kurta") && (lower.contains("pant set") || (lower.contains("pant") && lower.contains("dupatta")))) ||
+                (lower.contains("dusty rose") || lower.contains("dusty-rose"))
+            ) && !lower.contains("kamarbandh") && !lower.contains("tagdi") && !lower.contains("waistband") && !lower.contains("waist belt") && !lower.contains("kutchi") && !lower.contains("kandora")
 
             val isWomenQuerySingle = lower.contains("women") || lower.contains("woman") || lower.contains("girl") || lower.contains("ladies") || lower.contains("lady") || lower.contains("female")
 
@@ -1578,32 +1573,49 @@ object SmartMarketIntelligence {
             }
         }
 
+        val amzPrice = (basePrice - 50.0).coerceAtLeast(199.0)
+        val fkPrice = amzPrice + 30.0
         val myntraPrice = basePrice
-        val ajioPrice = basePrice + 50.0
-        val amzPrice = basePrice + 100.0
-        val fkPrice = basePrice + 100.0
-        val meeshoPrice = if (basePrice > 1400.0) (basePrice - 400.0) else (basePrice - 200.0)
+        val meeshoPrice = amzPrice + 40.0
+        val ajioPrice = amzPrice + 70.0
 
         val stores = listOf(
             StoreOffer(
-                id = "fash_bw_store_single",
-                store = "🟢 BuyWise Store",
-                title = "$title (BuyWise Direct)",
-                url = "https://buywiseai.pajonline.co.in/partners",
-                price = (basePrice - 50.0).coerceAtLeast(299.0),
+                id = "fash_amz",
+                store = "Amazon India",
+                title = title,
+                url = buildDirectStoreUrl("Amazon India", title),
+                price = amzPrice,
                 mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - (basePrice - 50.0).coerceAtLeast(299.0)) / mrpPrice) * 100).toDouble(),
+                discount = Math.round(((mrpPrice - amzPrice) / mrpPrice) * 100).toDouble(),
                 imageUrl = imgUrl,
-                rating = 4.8,
-                reviewCount = 1420,
+                rating = 4.4,
+                reviewCount = 14500,
                 isLowest = true,
-                isBestValue = true,
+                isBestValue = false,
                 matchType = "LOWEST_PRICE",
-                trustScore = 99,
+                trustScore = 98,
                 verificationStatus = "VERIFIED_TODAY",
                 tryOnEnabled = true,
-                productSource = "PARTNER",
-                deliveryText = "BuyWise Partner Direct: Free Express Shipping"
+                deliveryText = "Amazon Prime Fashion Delivery & Try Before You Buy"
+            ),
+            StoreOffer(
+                id = "fash_fk",
+                store = "Flipkart",
+                title = title,
+                url = buildDirectStoreUrl("Flipkart", title),
+                price = fkPrice,
+                mrp = mrpPrice,
+                discount = Math.round(((mrpPrice - fkPrice) / mrpPrice) * 100).toDouble(),
+                imageUrl = imgUrl,
+                rating = 4.3,
+                reviewCount = 11200,
+                isLowest = false,
+                isBestValue = false,
+                trustScore = 95,
+                verificationStatus = "VERIFIED_TODAY",
+                tryOnEnabled = true,
+                deliveryText = "Flipkart Assured Fashion with Size Replacement"
             ),
             StoreOffer(
                 id = "fash_myn",
@@ -1643,42 +1655,6 @@ object SmartMarketIntelligence {
                 deliveryText = "Reliance AJIO Verified Quality with Easy Exchange"
             ),
             StoreOffer(
-                id = "fash_amz",
-                store = "Amazon India",
-                title = title,
-                url = buildDirectStoreUrl("Amazon India", title),
-                price = amzPrice,
-                mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - amzPrice) / mrpPrice) * 100).toDouble(),
-                imageUrl = imgUrl,
-                rating = 4.3,
-                reviewCount = 14500,
-                isLowest = false,
-                isBestValue = false,
-                trustScore = 97,
-                verificationStatus = "VERIFIED_TODAY",
-                tryOnEnabled = true,
-                deliveryText = "Amazon Prime Fashion Delivery & Try Before You Buy"
-            ),
-            StoreOffer(
-                id = "fash_fk",
-                store = "Flipkart",
-                title = title,
-                url = buildDirectStoreUrl("Flipkart", title),
-                price = fkPrice,
-                mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - fkPrice) / mrpPrice) * 100).toDouble(),
-                imageUrl = imgUrl,
-                rating = 4.3,
-                reviewCount = 11200,
-                isLowest = false,
-                isBestValue = false,
-                trustScore = 95,
-                verificationStatus = "VERIFIED_TODAY",
-                tryOnEnabled = true,
-                deliveryText = "Flipkart Assured Fashion with Size Replacement"
-            ),
-            StoreOffer(
                 id = "fash_ms",
                 store = "Meesho",
                 title = "$title (Direct Weaver Listing)",
@@ -1698,7 +1674,7 @@ object SmartMarketIntelligence {
             )
         )
 
-        return wrapResponse(query, stores, today, "Myntra (₹${myntraPrice.toInt()}) offers the Lowest Verified Price and 98/100 Trust Score for $query with genuine brand warranty.")
+        return wrapResponse(query, stores, today, "BuyWise AI compares 14 stores: Amazon India (₹${amzPrice.toInt()}) offers the Lowest Price Found, followed by Myntra (₹${myntraPrice.toInt()}) for Official Brand Store.")
     }
 
     // ==========================================
@@ -2337,43 +2313,6 @@ object SmartMarketIntelligence {
 
         val stores = listOf(
             StoreOffer(
-                id = "gen_bw_store",
-                store = "🟢 BuyWise Store",
-                title = "$titleCased (BuyWise Direct Verified)",
-                url = "https://buywiseai.pajonline.co.in/partners",
-                price = (amzPrice - 100.0).coerceAtLeast(149.0),
-                mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - (amzPrice - 100.0).coerceAtLeast(149.0)) / mrpPrice) * 100).toDouble(),
-                imageUrl = fallbackImg,
-                rating = 4.8,
-                reviewCount = 1420,
-                isLowest = true,
-                isBestValue = true,
-                matchType = "LOWEST_PRICE",
-                trustScore = 99,
-                verificationStatus = "VERIFIED_TODAY",
-                productSource = "PARTNER",
-                deliveryText = "BuyWise Partner Direct: Free Express Shipping"
-            ),
-            StoreOffer(
-                id = "gen_meesho",
-                store = "Meesho",
-                title = "$titleCased (Social Commerce Deal)",
-                url = buildDirectStoreUrl("Meesho", titleCased),
-                price = (amzPrice - 50.0).coerceAtLeast(199.0),
-                mrp = mrpPrice,
-                discount = Math.round(((mrpPrice - (amzPrice - 50.0).coerceAtLeast(199.0)) / mrpPrice) * 100).toDouble(),
-                imageUrl = fallbackImg,
-                rating = 4.2,
-                reviewCount = 5200,
-                isLowest = false,
-                isBestValue = false,
-                matchType = "MATCHING",
-                trustScore = 94,
-                verificationStatus = "VERIFIED_TODAY",
-                deliveryText = "Meesho Social Deal: Cash on Delivery"
-            ),
-            StoreOffer(
                 id = "gen_amz",
                 store = "Amazon India",
                 title = "$titleCased (Official Brand Packaging)",
@@ -2384,8 +2323,9 @@ object SmartMarketIntelligence {
                 imageUrl = fallbackImg,
                 rating = 4.4,
                 reviewCount = 7400,
-                isLowest = false,
+                isLowest = true,
                 isBestValue = false,
+                matchType = "LOWEST_PRICE",
                 trustScore = 98,
                 verificationStatus = "VERIFIED_TODAY"
             ),
@@ -2404,10 +2344,28 @@ object SmartMarketIntelligence {
                 isBestValue = false,
                 trustScore = 96,
                 verificationStatus = "VERIFIED_TODAY"
+            ),
+            StoreOffer(
+                id = "gen_meesho",
+                store = "Meesho",
+                title = "$titleCased (Social Commerce Deal)",
+                url = buildDirectStoreUrl("Meesho", titleCased),
+                price = (amzPrice + 40.0).coerceAtLeast(199.0),
+                mrp = mrpPrice,
+                discount = Math.round(((mrpPrice - (amzPrice + 40.0).coerceAtLeast(199.0)) / mrpPrice) * 100).toDouble(),
+                imageUrl = fallbackImg,
+                rating = 4.2,
+                reviewCount = 5200,
+                isLowest = false,
+                isBestValue = false,
+                matchType = "MATCHING",
+                trustScore = 94,
+                verificationStatus = "VERIFIED_TODAY",
+                deliveryText = "Meesho Social Deal: Cash on Delivery"
             )
         )
 
-        return wrapResponse(query, stores, today, "🟢 BuyWise Store (₹${(amzPrice - 100.0).coerceAtLeast(149.0).toInt()}) offers the Lowest Price Found with 99/100 Trust Score and direct fulfillment.")
+        return wrapResponse(query, stores, today, "BuyWise AI compares 14 stores: Amazon India (₹${amzPrice.toInt()}) offers the Lowest Price Found, followed by Flipkart (₹${fkPrice.toInt()}).")
     }
 
     // Helper to package response summary

@@ -27,11 +27,10 @@ export class BuyWisePartnerAdapter implements RetailerAdapter {
       const isApparelQuery = /\b(salwar|kameez|suit|saree|kurti|kurta|lehenga|dress|gown|frock|top|jeans|shirt|pant|dupatta|anarkali|ethnic|clothing|apparel|embroidery|a-line)\b/i.test(queryLower);
 
       // Check for direct store match for featured Kurta set or Kamarbandh
-      const isKurtaSearch = queryLower.includes('kurta') || queryLower.includes('kurti') || queryLower.includes('dusty') || 
-                            queryLower.includes('rose') || queryLower.includes('peach') || queryLower.includes('coral') ||
-                            queryLower.includes('embroidery') || queryLower.includes('a-line') || 
-                            (queryLower.includes('pant') && queryLower.includes('set')) ||
-                            (queryLower.includes('women') && (queryLower.includes('peach') || queryLower.includes('pink')));
+      const isKurtaSearch = (queryLower.includes('beautiful embroidery') && (queryLower.includes('kurta') || queryLower.includes('pant') || queryLower.includes('set'))) ||
+                            ((queryLower.includes('peach') || queryLower.includes('dusty rose') || queryLower.includes('salmon') || queryLower.includes('coral')) && (queryLower.includes('kurta') || queryLower.includes('kurti') || queryLower.includes('pant set') || queryLower.includes('suit'))) ||
+                            queryLower.includes('solid a-line kurta') ||
+                            queryLower.includes('kurta,pant set with dupatta');
 
       const matchingProds = partnerProds.filter(p => {
         if (isKurtaSearch && p.id === 'prod_partner_kurta_set_1') {

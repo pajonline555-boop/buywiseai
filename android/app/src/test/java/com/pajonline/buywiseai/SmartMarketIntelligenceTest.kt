@@ -178,9 +178,11 @@ class SmartMarketIntelligenceTest {
         assertTrue("Title should mention Hopscotch or Dress: ${hopscotchOffer.title}", 
             hopscotchOffer.title.contains("Hopscotch", ignoreCase = true) || hopscotchOffer.title.contains("Dress", ignoreCase = true))
         
-        // Lowest price in Meesho is ₹449.0, BuyWise is ₹499.0
+        // Lowest price on Amazon India is ₹449.0, no BuyWise Store in non-inventory fashion
         val minLowest = lowestPriceOffers.minOf { it.price }
-        assertEquals("Lowest price girl dress should be 449.0 on Meesho", 449.0, minLowest, 0.01)
+        assertEquals("Lowest price girl dress should be 449.0 on Amazon India", 449.0, minLowest, 0.01)
+        assertEquals("Amazon India", lowestPriceOffers.first().store)
+        assertTrue("Non-inventory search must not contain BuyWise Store", result.stores.none { it.store.contains("BuyWise") })
 
         val stores = result.stores.map { it.store }.toSet()
         assertTrue("Must include Amazon India", stores.contains("Amazon India"))
@@ -200,7 +202,9 @@ class SmartMarketIntelligenceTest {
         assertTrue("Title should contain dress: ${lowest.title}", lowest.title.contains("Dress", ignoreCase = true))
         
         val minLowest = lowestPriceOffers.minOf { it.price }
-        assertEquals("Lowest price women dress should be 649.0 on Meesho", 649.0, minLowest, 0.01)
+        assertEquals("Lowest price women dress should be 599.0 on Amazon India", 599.0, minLowest, 0.01)
+        assertEquals("Amazon India", lowest.store)
+        assertTrue("Non-inventory search must not contain BuyWise Store", result.stores.none { it.store.contains("BuyWise") })
     }
 
     @Test
@@ -208,8 +212,7 @@ class SmartMarketIntelligenceTest {
         val queries = listOf(
             "Women dusty rose",
             "dusty rose",
-            "Women Peach",
-            "Peach",
+            "Women Peach Kurta",
             "Beautiful embroidery women solid A-line Kurta",
             "kurta pant set with dupatta"
         )
@@ -286,6 +289,32 @@ class SmartMarketIntelligenceTest {
         )
         assertTrue("Dress must be detected", dressMatch != null)
         assertEquals(com.pajonline.buywiseai.util.PhotoSearchMatcher.QUERY_RARE_DRESS, dressMatch!!.query)
+    }
+
+    @Test
+    fun testNonInventorySearchShowsAmazonAsLowestAndNoBuyWiseStore() {
+        val nonInventoryQueries = listOf(
+            "Women light blue kurti",
+            "Women Peach",
+            "Rytras Women Pure Cotton Printed Straight Kurti",
+            "cotton t-shirt",
+            "running shoes"
+        )
+
+        for (q in nonInventoryQueries) {
+            val result = SmartMarketIntelligence.generateMarketComparison(q)
+            assertTrue("Stores must not be empty for '$q'", result.stores.isNotEmpty())
+
+            // Amazon India must be lowest price
+            val firstStore = result.stores.first()
+            assertEquals("First store for '$q' must be Amazon India", "Amazon India", firstStore.store)
+            assertEquals("Amazon India must have LOWEST_PRICE matchType for '$q'", "LOWEST_PRICE", firstStore.matchType)
+            assertTrue("Amazon India must have isLowest=true for '$q'", firstStore.isLowest == true)
+
+            // No BuyWise Store in non-inventory fashion search
+            val hasBuyWise = result.stores.any { it.store.contains("BuyWise", ignoreCase = true) }
+            assertFalse("Non-inventory search for '$q' must NOT include BuyWise Store", hasBuyWise)
+        }
     }
 }
 
