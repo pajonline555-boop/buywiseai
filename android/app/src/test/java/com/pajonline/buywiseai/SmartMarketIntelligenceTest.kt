@@ -247,6 +247,46 @@ class SmartMarketIntelligenceTest {
             assertEquals(2000.0, result.summary?.maximumSavings ?: 0.0, 0.01)
         }
     }
+
+    @Test
+    fun testKamarbandhSearchDoesNotReturnKurta() {
+        val result = SmartMarketIntelligence.generateMarketComparison("Gujarati Traditional Embroidered Kamarbandh")
+        assertTrue("Stores must not be empty for Kamarbandh", result.stores.isNotEmpty())
+
+        val buywiseOffer = result.stores.firstOrNull { it.store.contains("BuyWise", ignoreCase = true) }
+        assertTrue("BuyWise Store offer must exist for Kamarbandh", buywiseOffer != null)
+        assertTrue("Title must contain Kamarbandh: ${buywiseOffer!!.title}", buywiseOffer.title.contains("Kamarbandh", ignoreCase = true))
+        assertFalse("Kamarbandh search must NOT return Kurta", buywiseOffer.title.contains("Kurta", ignoreCase = true))
+        assertEquals(499.0, buywiseOffer.price, 0.01)
+    }
+
+    @Test
+    fun testPhotoSearchMatcherDistinctInventoryMatching() {
+        // 1. Kamarbandh Vision output
+        val kamarMatch = com.pajonline.buywiseai.util.PhotoSearchMatcher.identifyProduct(
+            suggestedQuery = "Gujarati Traditional Navratri Embroidered Kutchi Kamarbandh Waist Belt",
+            ocrText = "Kutchi Mirror Work"
+        )
+        assertTrue("Kamarbandh must be detected", kamarMatch != null)
+        assertEquals(com.pajonline.buywiseai.util.PhotoSearchMatcher.QUERY_KAMARBANDH, kamarMatch!!.query)
+        assertFalse("Kamarbandh must NOT match Kurta", kamarMatch.query.contains("Kurta"))
+
+        // 2. Peach Kurta Vision output
+        val kurtaMatch = com.pajonline.buywiseai.util.PhotoSearchMatcher.identifyProduct(
+            suggestedQuery = "Women peach embroidered A-line kurta pant set with dupatta",
+            ocrText = ""
+        )
+        assertTrue("Kurta must be detected", kurtaMatch != null)
+        assertEquals(com.pajonline.buywiseai.util.PhotoSearchMatcher.QUERY_KURTA_SET, kurtaMatch!!.query)
+
+        // 3. Western Dress
+        val dressMatch = com.pajonline.buywiseai.util.PhotoSearchMatcher.identifyProduct(
+            suggestedQuery = "Rare Women Western Casual Elegant A-Line Dress",
+            ocrText = ""
+        )
+        assertTrue("Dress must be detected", dressMatch != null)
+        assertEquals(com.pajonline.buywiseai.util.PhotoSearchMatcher.QUERY_RARE_DRESS, dressMatch!!.query)
+    }
 }
 
 

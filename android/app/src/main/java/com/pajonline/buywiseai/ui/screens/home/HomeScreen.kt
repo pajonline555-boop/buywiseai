@@ -281,28 +281,15 @@ fun HomeScreen(
                     val visionResult = response?.body()
                     val suggestedQuery = visionResult?.suggestedQuery?.takeIf { it.isNotBlank() }
 
-                    val rawMatch = (suggestedQuery ?: ocrExtractedText).lowercase()
-                    val isStoreDressMatch = rawMatch.contains("peach") || rawMatch.contains("dusty") || rawMatch.contains("rose") || 
-                        rawMatch.contains("coral") || (rawMatch.contains("embroidery") && (rawMatch.contains("kurta") || rawMatch.contains("women"))) ||
-                        rawMatch.contains("solid a-line") || rawMatch.contains("pant set") || rawMatch.contains("beautiful embroidery")
+                    val matchResult = com.pajonline.buywiseai.util.PhotoSearchMatcher.identifyProduct(
+                        suggestedQuery = suggestedQuery,
+                        ocrText = ocrExtractedText,
+                        bitmap = scaledBitmap
+                    )
 
-                    val finalQuery = if (isStoreDressMatch) {
-                        "Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta"
-                    } else if (suggestedQuery != null) {
-                        suggestedQuery
-                    } else if (ocrExtractedText.isNotBlank()) {
-                        ocrExtractedText.lines().firstOrNull { it.trim().length > 3 }?.take(40) ?: ocrExtractedText.take(40)
-                    } else {
-                        null
-                    }
-
-                    if (finalQuery != null) {
-                        if (isStoreDressMatch) {
-                            Toast.makeText(context, "👗 BuyWise Verified Outfit Found!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "🔍 Match: $finalQuery", Toast.LENGTH_SHORT).show()
-                        }
-                        executeHomeSearch(finalQuery)
+                    if (matchResult != null) {
+                        Toast.makeText(context, matchResult.toastMessage, Toast.LENGTH_SHORT).show()
+                        executeHomeSearch(matchResult.query)
                     } else {
                         Toast.makeText(context, "Could not detect product. Please try a clearer photo or search by name.", Toast.LENGTH_LONG).show()
                     }

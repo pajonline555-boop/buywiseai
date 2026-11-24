@@ -1117,13 +1117,11 @@ object SmartMarketIntelligence {
         val enc = encode(query)
         val today = currentDateString()
 
-        val isOurKurtaDress = lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
-            lower.contains("kurta") || lower.contains("kurti") || lower.contains("anarkali") || lower.contains("pant set") ||
-            lower.contains("solid a-line") || lower.contains("a-line kurta") ||
-            (lower.contains("embroidery") && (lower.contains("kurta") || lower.contains("suit") || lower.contains("dress") || lower.contains("pant") || lower.contains("women"))) ||
-            lower.contains("a-line") || (lower.contains("pant") && lower.contains("set")) || lower.contains("beautiful embroidery") ||
-            (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("women"))) ||
-            (lower.contains("women") && (lower.contains("peach") || lower.contains("coral") || lower.contains("rust") || (lower.contains("pink") && lower.contains("embroid"))))
+        val isOurKurtaDress = (lower.contains("peach") || lower.contains("dusty") || lower.contains("rose") || lower.contains("coral") ||
+            (lower.contains("kurta") && (lower.contains("pant") || lower.contains("dupatta") || lower.contains("set") || lower.contains("solid"))) ||
+            lower.contains("solid a-line kurta") ||
+            lower.contains("beautiful embroidery")) &&
+            !lower.contains("kamarbandh") && !lower.contains("tagdi") && !lower.contains("waistband") && !lower.contains("waist belt") && !lower.contains("kutchi") && !lower.contains("kandora")
 
         // When a product is listed on BuyWise AI, show lowest price of it and do not show false dress listings on other platforms like Meesho
         if (isOurKurtaDress) {

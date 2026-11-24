@@ -108,9 +108,8 @@ Return ONLY a JSON object matching the exact structure requested.`;
       let lastErr: any = null;
 
       const candidateModels = [
-        process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash',
-        'gemini-flash-latest',
-        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
+        'gemini-3.5-flash-lite',
       ];
 
       for (const targetModel of candidateModels) {
@@ -167,14 +166,22 @@ Return ONLY a JSON object matching the exact structure requested.`;
 
       const qLower = topQuery.toLowerCase();
       const allText = `${qLower} ${(primaryProduct.productName || '').toLowerCase()} ${primaryProduct.colors.join(' ').toLowerCase()} ${primaryProduct.styles.join(' ').toLowerCase()}`;
-      const isPeachOrRose = allText.includes('peach') || allText.includes('dusty') || allText.includes('rose') || allText.includes('coral') || allText.includes('pink');
-      const isKurtaOrEthnic = allText.includes('kurta') || allText.includes('kurti') || allText.includes('suit') || 
-                              allText.includes('ethnic') || allText.includes('anarkali') || allText.includes('dupatta') ||
-                              allText.includes('dress') || allText.includes('women');
+      
+      const isKamarbandh = allText.includes('kamarbandh') || allText.includes('waist belt') || allText.includes('waistband') || 
+                           allText.includes('tagdi') || allText.includes('kutchi') || allText.includes('kutch') || allText.includes('mirror work');
+      
+      const isPeachOrRose = allText.includes('peach') || allText.includes('dusty rose') || allText.includes('salmon') || (allText.includes('coral') && allText.includes('kurta'));
+      const isKurtaOrSuit = allText.includes('kurta') || allText.includes('kurti') || allText.includes('pant set') || allText.includes('salwar');
 
-      // If Vision AI identified our featured peach/dusty rose kurta set
-      if (isPeachOrRose && isKurtaOrEthnic) {
+      // Exact BuyWise Store Inventory matching without false overlaps
+      if (isKamarbandh) {
+        topQuery = 'Gujarati Traditional Navratri Waist Belt with Long Tie Hanging | Embroidered Kutchi Mirror Work Kamarbandh';
+      } else if (isPeachOrRose && isKurtaOrSuit) {
         topQuery = 'Beautiful embroidery women solid A-line Kurta,Pant set with Dupatta';
+      } else if (allText.includes('western') && (allText.includes('red') || allText.includes('casual') || allText.includes('rare'))) {
+        topQuery = 'Rare Women Western Casual Elegant A-Line Dress';
+      } else if (allText.includes('kanjivaram') || (allText.includes('silk') && allText.includes('saree'))) {
+        topQuery = 'Kanjivaram Soft Silk Saree with Zari Border';
       } else if (topQuery.split(/\s+/).length <= 2 && primaryProduct.category === 'fashion') {
         const parts = [
           primaryProduct.gender ? (primaryProduct.gender === 'women' ? 'Women' : 'Men') : '',
