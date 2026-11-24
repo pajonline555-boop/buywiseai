@@ -149,7 +149,11 @@ fun BuyWiseNavGraph(
         }
         composable(Screen.Alerts.route) {
             AlertsScreen(
-                onNavigateToChallenge = { navController.navigate(Screen.Competition.route) }
+                onNavigateToChallenge = { navController.navigate(Screen.Competition.route) },
+                onNavigateToSearch = { query ->
+                    compareViewModel.performSearch(query)
+                    navController.navigate(Screen.Search.route)
+                }
             )
         }
         composable(
