@@ -117,7 +117,13 @@ object SmartMarketIntelligence {
 
     fun buildDirectStoreUrl(storeName: String, productTitle: String): String {
         val cleanKeyword = extractCleanKeyword(productTitle)
-        val enc = encode(cleanKeyword)
+        return buildExactSearchUrl(storeName, cleanKeyword)
+    }
+
+    fun buildExactSearchUrl(storeName: String, exactQuery: String): String {
+        val clean = exactQuery.trim()
+        val enc = encode(clean)
+        val myntraSlug = clean.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').ifBlank { enc }
         val lower = storeName.lowercase()
         return when {
             lower.contains("buywise") || lower.contains("our store") -> "https://buywiseai.pajonline.co.in/partners"
@@ -126,7 +132,7 @@ object SmartMarketIntelligence {
             lower.contains("meesho") -> "https://www.meesho.com/search?q=$enc"
             lower.contains("croma") -> "https://www.croma.com/searchB?q=$enc%3Arelevance&text=$enc"
             lower.contains("reliance") -> "https://www.reliancedigital.com/search?q=$enc:relevance"
-            lower.contains("myntra") -> "https://www.myntra.com/$enc"
+            lower.contains("myntra") -> "https://www.myntra.com/$myntraSlug"
             lower.contains("nykaa") -> "https://www.nykaa.com/search/result/?q=$enc"
             lower.contains("tata") || lower.contains("cliq") -> "https://www.tatacliq.com/search/?searchCategory=all&text=$enc"
             lower.contains("ajio") -> "https://www.ajio.com/search/?text=$enc"
@@ -447,13 +453,31 @@ object SmartMarketIntelligence {
                     "Samsung Galaxy A55 5G"
                 )
             }
-            else -> {
+            lower.contains("vivo") || lower.contains("vi vo") -> {
+                val normalizedVivo = query.trim()
+                    .replace(Regex("vi\\s+vo", RegexOption.IGNORE_CASE), "Vivo")
+                    .split(Regex("\\s+")).filter { it.isNotBlank() }
+                    .joinToString(" ") { w -> w.replaceFirstChar { c -> c.uppercase() } }
+                val startPrice = if (lower.contains("t4x") || lower.contains("t3x")) 13499.0 else 16799.0
+                val mrp = if (lower.contains("t4x") || lower.contains("t3x")) 17999.0 else 21999.0
                 Quint(
-                    "5G Smartphone with AMOLED 120Hz Display & 5000mAh Battery", 
-                    19999.0, 
-                    26999.0,
+                    "$normalizedVivo (5G Smartphone)",
+                    startPrice,
+                    mrp,
                     "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=800&auto=format&fit=crop&q=80",
-                    "5G Smartphone 128GB"
+                    query.trim()
+                )
+            }
+            else -> {
+                val titleCased = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                    .joinToString(" ") { w -> w.replaceFirstChar { c -> c.uppercase() } }
+                    .ifBlank { "5G Smartphone" }
+                Quint(
+                    "$titleCased (5G Smartphone)",
+                    12999.0,
+                    17999.0,
+                    "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=800&auto=format&fit=crop&q=80",
+                    query.trim().ifBlank { "5G Smartphone" }
                 )
             }
         }
@@ -1560,7 +1584,18 @@ object SmartMarketIntelligence {
                     "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800&auto=format&fit=crop&q=80")
             }
             lower.contains("shoes") || lower.contains("sneakers") -> {
-                Quad("Men Lightweight Breathable Cushion Running Shoes (Anti-Slip Grip)", 2199.0, 5499.0,
+                val shoePrice = when {
+                    lower.contains("jordan") || lower.contains("air max") || lower.contains("pegasus") -> 6995.0
+                    lower.contains("nike") -> 2995.0
+                    lower.contains("adidas") || lower.contains("puma") || lower.contains("skechers") -> 2499.0
+                    else -> 2199.0
+                }
+                val shoeMrp = when {
+                    lower.contains("jordan") || lower.contains("air max") || lower.contains("pegasus") -> 11995.0
+                    lower.contains("nike") -> 4995.0
+                    else -> 4999.0
+                }
+                Quad("$titleCased (Official Brand Footwear)", shoePrice, shoeMrp,
                     "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80")
             }
             lower.contains("jeans") -> {
@@ -2375,15 +2410,29 @@ object SmartMarketIntelligence {
         today: String,
         recommendation: String
     ): ComparisonResponse {
-        val lowest = stores.minOfOrNull { it.price } ?: 0.0
-        val highest = stores.maxOfOrNull { it.price } ?: 0.0
+        val trimmedQuery = query.trim()
+        val isUrlQuery = trimmedQuery.startsWith("http://", ignoreCase = true) || trimmedQuery.startsWith("https://", ignoreCase = true)
+        val normalizedStores = if (isUrlQuery || trimmedQuery.isBlank()) {
+            stores
+        } else {
+            stores.map { offer ->
+                if (offer.store.contains("BuyWise", ignoreCase = true) || offer.productSource == "PARTNER") {
+                    offer
+                } else {
+                    offer.copy(url = buildExactSearchUrl(offer.store, trimmedQuery))
+                }
+            }
+        }
+
+        val lowest = normalizedStores.minOfOrNull { it.price } ?: 0.0
+        val highest = normalizedStores.maxOfOrNull { it.price } ?: 0.0
         val savings = if (highest > lowest) {
             highest - lowest
         } else {
-            stores.firstOrNull()?.let { (it.mrp ?: it.price) - it.price }?.coerceAtLeast(0.0) ?: 0.0
+            normalizedStores.firstOrNull()?.let { (it.mrp ?: it.price) - it.price }?.coerceAtLeast(0.0) ?: 0.0
         }
 
-        val groups = stores.groupBy { 
+        val groups = normalizedStores.groupBy { 
             it.title.substringBefore("(").trim()
         }
         val sameProductComparisons = groups.map { (title, groupOffers) ->
@@ -2423,12 +2472,12 @@ object SmartMarketIntelligence {
             product = query,
             query = query,
             timestamp = today,
-            stores = stores,
+            stores = normalizedStores,
             bestMatches = bestMatches,
             sameProductComparisons = sameProductComparisons,
             summary = ComparisonSummary(
                 totalStoresChecked = 14,
-                successfulStores = stores.size,
+                successfulStores = normalizedStores.size,
                 lowestPrice = lowest,
                 highestPrice = highest,
                 maximumSavings = savings,

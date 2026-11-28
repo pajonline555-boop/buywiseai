@@ -15,4 +15,6 @@ env:
     value: "true"
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     value: "AIzaSyBHOQ7XP-wLFOfLFxMx3l-iXCsR46Prqow"
+  - variable: SERPER_API_KEY
+    secret: SERPER_API_KEY
 

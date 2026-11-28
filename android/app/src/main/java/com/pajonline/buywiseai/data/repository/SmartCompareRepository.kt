@@ -127,6 +127,9 @@ class SmartCompareRepository(
                     }
 
                     // 2. Ensure our core Indian retail stores are compared across categories
+                    val hasLiveVerifiedOffers = filteredStores.any {
+                        it.verificationStatus.equals("verified_live", ignoreCase = true)
+                    }
                     val intelResponse = SmartMarketIntelligence.generateMarketComparison(cleanQuery)
                     val storesToCompare = if (filteredStores.isEmpty()) {
                         if (allowDevMockFallback) {
@@ -134,7 +137,7 @@ class SmartCompareRepository(
                         } else {
                             filteredStores.toMutableList()
                         }
-                    } else if (allowDevMockFallback && (
+                    } else if (!hasLiveVerifiedOffers && allowDevMockFallback && (
                         filteredStores.size < 3 || 
                         (!isLargeAppliance && !filteredStores.any { it.store.contains("meesho", true) }) || 
                         !filteredStores.any { it.store.contains("buywise", true) } ||

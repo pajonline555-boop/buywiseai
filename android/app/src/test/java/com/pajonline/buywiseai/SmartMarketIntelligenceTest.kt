@@ -316,6 +316,31 @@ class SmartMarketIntelligenceTest {
             assertFalse("Non-inventory search for '$q' must NOT include BuyWise Store", hasBuyWise)
         }
     }
+
+    @Test
+    fun testExactSearchedProductPreservedInStoreUrlsAcrossAllCategories() {
+        // 1. Smartphone fallback query like "vivo t4 5g mobile"
+        val vivoResult = SmartMarketIntelligence.generateMarketComparison("vivo t4 5g mobile")
+        assertTrue("Stores must not be empty", vivoResult.stores.isNotEmpty())
+        val vivoAmz = vivoResult.stores.first { it.store == "Amazon India" }
+        val vivoFk = vivoResult.stores.first { it.store == "Flipkart" }
+        assertTrue("Title must reflect searched product, got: ${vivoAmz.title}", vivoAmz.title.contains("Vivo T4", ignoreCase = true))
+        assertEquals("Vivo T4 5G minimum price should be 16799.0", 16799.0, vivoAmz.price, 0.01)
+        assertEquals("https://www.amazon.in/s?k=vivo+t4+5g+mobile&tag=pajonline-21", vivoAmz.url)
+        assertEquals("https://www.flipkart.com/search?q=vivo+t4+5g+mobile", vivoFk.url)
+
+        // 2. Fashion query like "Women light blue kurti"
+        val kurtiResult = SmartMarketIntelligence.generateMarketComparison("Women light blue kurti")
+        val kurtiAmz = kurtiResult.stores.first { it.store == "Amazon India" }
+        val kurtiMyn = kurtiResult.stores.first { it.store == "Myntra" }
+        assertEquals("https://www.amazon.in/s?k=Women+light+blue+kurti&tag=pajonline-21", kurtiAmz.url)
+        assertEquals("https://www.myntra.com/women-light-blue-kurti", kurtiMyn.url)
+
+        // 3. TV query like "TCL 55 inch QLED TV"
+        val tvResult = SmartMarketIntelligence.generateMarketComparison("TCL 55 inch QLED TV")
+        val tvAmz = tvResult.stores.first { it.store == "Amazon India" }
+        assertEquals("https://www.amazon.in/s?k=TCL+55+inch+QLED+TV&tag=pajonline-21", tvAmz.url)
+    }
 }
 
 

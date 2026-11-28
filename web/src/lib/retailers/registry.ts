@@ -13,6 +13,7 @@ import { walmartAdapter } from './walmart';
 import { cuelinksAdapter } from './cuelinks';
 import { vcommissionAdapter } from './vcommission';
 import { BuyWisePartnerAdapter } from './partnerAdapter';
+import { googleShoppingAdapter } from './googleShopping';
 
 export class RetailerRegistry {
   private adapters: Map<string, RetailerAdapter> = new Map();
@@ -20,6 +21,9 @@ export class RetailerRegistry {
   constructor() {
     // Level 3 — BuyWise Partner Marketplace
     this.register(new BuyWisePartnerAdapter());
+
+    // Live Multi-Store Google Shopping Aggregator (Serper.dev / SerpAPI)
+    this.register(googleShoppingAdapter);
 
     // Level 1 — Direct Retailer Adapters (India Phase A & International Phase B)
     this.register(amazonAdapter);
